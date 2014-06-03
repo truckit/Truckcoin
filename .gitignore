@@ -31,3 +31,4 @@ truckcoin-qt.exe
 truckcoind
 truckcoind.exe
 qrc_bitcoin.cpp
+build/*
