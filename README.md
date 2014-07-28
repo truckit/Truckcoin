@@ -32,6 +32,9 @@ enable Universal Plug and Play (UPnP) with your router/firewall
 or forward port 18775 (TCP) to your computer so you can receive
 incoming connections.
 
+P2P port: 18775
+RPC port: 18776
+
 Upgrade
 -------
 All you existing coins/transactions should be intact with the upgrade.
