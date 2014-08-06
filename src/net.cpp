@@ -1154,16 +1154,13 @@ void MapPort()
 // The first name is used as information source for addrman.
 // The second name should resolve to a list of seed addresses.
 static const char *strDNSSeed[][2] = {
-    {"truckcoin.org", "node1.truckcoin.org"},
-    {"truckcoin.org", "node2.truckcoin.org"},
-    {"truckcoin.org", "node3.truckcoin.org"},
-    {"truckcoin.org", "node4.truckcoin.org"},
+    {"truckcoin.net", "dns.seed.truckcoin.net"},
 };
 
 void ThreadDNSAddressSeed(void* parg)
 {
     // Make this thread recognisable as the DNS seeding thread
-    RenameThread("bitcoin-dnsseed");
+    RenameThread("truckcoin-dnsseed");
 
     try
     {
@@ -1228,7 +1225,7 @@ void ThreadDNSAddressSeed2(void* parg)
 
 unsigned int pnSeed[] =
 {
-	0x8785f050,
+	0x43D32D42, 0x6C3D125B, 0x45C5A17A,
 };
 
 void DumpAddresses()
@@ -1854,18 +1851,11 @@ void StartNode(void* parg)
     // Start threads
     //
 
-/*
     if (!GetBoolArg("-dnsseed", true))
         printf("DNS seeding disabled\n");
     else
         if (!NewThread(ThreadDNSAddressSeed, NULL))
             printf("Error: NewThread(ThreadDNSAddressSeed) failed\n");
-*/
-
-    if (!GetBoolArg("-dnsseed", false))
-        printf("DNS seeding disabled\n");
-    if (GetBoolArg("-dnsseed", false))
-        printf("DNS seeding NYI\n");
 
     // Map ports with UPnP
     if (fUseUPnP)
