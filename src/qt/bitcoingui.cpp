@@ -578,7 +578,7 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
     }
 
     // Set icon state: spinning if catching up, tick otherwise
-    if(secs < 90*60 && count >= nTotalBlocks)
+    if(count >= nTotalBlocks) //remove time requirement
     {
         tooltip = tr("Up to date") + QString(".<br>") + tooltip;
         labelBlocksIcon->setPixmap(QIcon(":/icons/synced").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
@@ -994,7 +994,7 @@ void BitcoinGUI::updateMintingWeights()
         nWeight = 0;
 
         if (pwalletMain)
-            pwalletMain->GetStakeWeight(*pwalletMain, nMinMax, nMinMax, nWeight);
+            pwalletMain->GetStakeWeight2(*pwalletMain, nMinMax, nMinMax, nWeight);
 
         nNetworkWeight = GetPoSKernelPS();
     }

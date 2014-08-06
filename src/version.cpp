@@ -11,7 +11,7 @@
 const std::string CLIENT_NAME("Truckcoin");
 
 // Client version number
-#define CLIENT_VERSION_SUFFIX   "Truckcoin-1.0"
+#define CLIENT_VERSION_SUFFIX   "-Truckcoin"
 
 
 // The following part of the code determines the CLIENT_BUILD variable.

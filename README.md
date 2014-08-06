@@ -2,7 +2,7 @@
 Copyright (c) 2013-2014 TruckCoin Developers
 
 
-TruckCoin 0.5.0 BETA
+TruckCoin
 
 Copyright (c) 2013-2014 TruckCoin Developers
 Copyright (c) 2013 NovaCoin Developers
@@ -17,7 +17,7 @@ cryptographic software written by Eric Young (eay@cryptsoft.com).
 Intro
 -----
 TruckCoin is a free open source project derived from NovaCoin, with
-the goal of providing a long-term energy-efficient X11-based crypto-currency.
+the goal of providing a long-term energy-efficient Proof of Stake crypto-currency.
 Built on the foundation of Bitcoin and NovaCoin, innovations such as proof-of-stake
 help further advance the field of crypto-currency.
 
@@ -29,12 +29,11 @@ Unpack the files into a directory and run:
 
 The software automatically finds other nodes to connect to.  You can
 enable Universal Plug and Play (UPnP) with your router/firewall
-or forward port 
+or forward port 18775 (TCP) to your computer so you can receive
+incoming connections.
 
-18775 (TCP) to your computer so you can receive
-incoming connections.  Truckcoin works without incoming connections,
-but allowing incoming connections helps the Truckcoin network.
-
+P2P port: 18775
+RPC port: 18776
 
 Upgrade
 -------
@@ -46,7 +45,5 @@ truckcoind stop
 Start up the new truckcoind.
 
 
-See the TruckCoin site:
-  http://truckcoin.org/
-for help and more information.
+See the TruckCoin site: http://truckcoin.net/ for help and more information.
 
