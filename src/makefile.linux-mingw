@@ -28,7 +28,6 @@ LIBS= \
  -l db_cxx \
  -l ssl \
  -l crypto \
- -Wl,-B$(LMODE2) \
  -l z \
  -l dl \
  -l pthread
