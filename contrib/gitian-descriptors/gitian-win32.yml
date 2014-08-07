@@ -52,12 +52,12 @@ script: |
   $HOST-strip truckcoind.exe
   mkdir $OUTDIR/daemon
   cp truckcoind.exe $OUTDIR/daemon
-  cd ..
-  mkdir nsis
-  git archive HEAD | tar -x -C nsis
-  cd nsis/src
-  mkdir ../release
-  cp ../../release/* ../release/
-  cp ../../src/*.exe .
-  makensis ../share/setup.nsi
-  cp ../share/truckcoin-*-win32-setup.exe $OUTDIR/
+# cd ..
+#  mkdir nsis
+#  git archive HEAD | tar -x -C nsis
+#  cd nsis/src
+#  mkdir ../release
+#  cp ../../release/* ../release/
+#  cp ../../src/*.exe .
+#  makensis ../share/setup.nsi
+#  cp ../share/truckcoin-*-win32-setup.exe $OUTDIR/
