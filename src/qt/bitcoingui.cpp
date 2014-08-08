@@ -864,8 +864,7 @@ void BitcoinGUI::backupWallet()
     QString filename = QFileDialog::getSaveFileName(this, tr("Backup Wallet"), saveDir, tr("Wallet Data (*.dat)"));
     if(!filename.isEmpty()) {
         if(!walletModel->backupWallet(filename)) {
-            QMesshow();
-        labelEncryptionIcon-sageBox::warning(this, tr("Backup Failed"), tr("There was an error trying to save the wallet data to the new location."));
+QMessageBox::warning(this, tr("Backup Failed"), tr("There was an error trying to save the wallet data to the new location."));
         }
     }
 }
