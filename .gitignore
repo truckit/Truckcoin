@@ -1,4 +1,5 @@
-objects
+*.idx
+*.pack
 
 # Compiled Object files
 *.slo
