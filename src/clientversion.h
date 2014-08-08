@@ -16,4 +16,7 @@
 #define STRINGIZE(X) DO_STRINGIZE(X)
 #define DO_STRINGIZE(X) #X
 
+// Copyright year
+#define COPYRIGHT_YEAR  2014
+
 #endif // CLIENTVERSION_H
