@@ -192,6 +192,8 @@ RPCConsole::RPCConsole(QWidget *parent) :
 {
     ui->setupUi(this);
 
+this->setStyleSheet("QTextEdit, QLineEdit { color: #e2e2e2; background-color: #000; }");
+
 #ifndef Q_OS_MAC
     ui->openDebugLogfileButton->setIcon(QIcon(":/icons/export"));
     ui->showCLOptionsButton->setIcon(QIcon(":/icons/options"));
