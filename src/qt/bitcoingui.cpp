@@ -280,7 +280,7 @@ void BitcoinGUI::createActions()
     changePassphraseAction->setToolTip(tr("Change the passphrase used for wallet encryption"));
     lockWalletToggleAction = new QAction(this);
     signMessageAction = new QAction(QIcon(":/icons/edit"), tr("Sign &message..."), this);
-    verifyMessageAction = new QAction(QIcon(":/icons/transaction_0"), tr("&Verify message..."), this);
+    verifyMessageAction = new QAction(QIcon(":/icons/verify"), tr("&Verify message..."), this);
 
     exportAction = new QAction(QIcon(":/icons/export"), tr("&Export..."), this);
     exportAction->setToolTip(tr("Export the data in the current tab to a file"));
