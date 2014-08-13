@@ -42,6 +42,8 @@
         <file alias="qrcode">res/icons/qrcode.png</file>
         <file alias="debugwindow">res/icons/debugwindow.png</file>
 		<file alias="verify">res/icons/verify.png</file>
+		<file alias="importw">res/icons/importw.png</file>
+        <file alias="exportw">res/icons/exportw.png</file>
     </qresource>
     <qresource prefix="/images">
         <file alias="about">res/images/about.png</file>
