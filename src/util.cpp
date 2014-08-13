@@ -1292,7 +1292,7 @@ void AddTimeData(const CNetAddr& ip, int64 nTime)
                     string strMessage = _("Warning: Please check that your computer's date and time are correct! If your clock is wrong Truckcoin will not work properly.");
                     strMiscWarning = strMessage;
                     printf("*** %s\n", strMessage.c_str());
-                    uiInterface.ThreadSafeMessageBox(strMessage+" ", string("Truckcoin"), CClientUIInterface::OK | CClientUIInterface::ICON_ETRKLAMATION);
+                    uiInterface.ThreadSafeMessageBox(strMessage+" ", string("Truckcoin"), CClientUIInterface::MSG_WARNING);
                 }
             }
         }
