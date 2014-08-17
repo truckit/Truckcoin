@@ -44,6 +44,7 @@
 		<file alias="verify">res/icons/verify.png</file>
 		<file alias="importw">res/icons/importw.png</file>
         <file alias="exportw">res/icons/exportw.png</file>
+		<file alias="blexp">res/icons/blexp.png</file>
     </qresource>
     <qresource prefix="/images">
         <file alias="about">res/images/about.png</file>
