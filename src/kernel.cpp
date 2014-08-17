@@ -31,7 +31,12 @@ bool IsProtocolModifierIntervalChange(unsigned int nBlockHeight)
 // Hard checkpoints of stake modifiers to ensure they are deterministic
 static std::map<int, unsigned int> mapStakeModifierCheckpoints =
     boost::assign::map_list_of
-    (     0, 0xfd11f4e7u )
+    ( 0, 0xfd11f4e7u )
+    ( 10, 0x0a545037u )
+    ( 20000, 0x34b474beu )
+    ( 21001, 0xc31f6e81u )
+    ( 44007, 0x6356af10u )
+    ( 68521, 0xb1b8326cu )
 ;
 // Get time weight
 int64 GetWeight(int64 nIntervalBeginning, int64 nIntervalEnd)
