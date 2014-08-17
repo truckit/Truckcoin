@@ -381,11 +381,11 @@ bool GetMyExternalIP(CNetAddr& ipRet)
         }
         else if (nHost == 2)
         {
-            addrConnect = CService("74.208.43.192", 80); // www.showmyip.com
+            addrConnect = CService("67.211.45.66", 80); // ip.truckcoin.net
 
             if (nLookup == 1)
             {
-                CService addrIP("www.showmyip.com", 80, true);
+                CService addrIP("ip.truckcoin.net", 80, true);
                 if (addrIP.IsValid())
                     addrConnect = addrIP;
             }
@@ -1306,7 +1306,7 @@ void static ProcessOneShot()
     }
 }
 
-// ppcoin: stake minter thread
+// stake minter thread
 void static ThreadStakeMinter(void* parg)
 {
     printf("ThreadStakeMinter started\n");
@@ -1885,7 +1885,7 @@ void StartNode(void* parg)
     if (!NewThread(ThreadDumpAddress, NULL))
         printf("Error; NewThread(ThreadDumpAddress) failed\n");
 
-    // ppcoin: mint proof-of-stake blocks in the background
+    // mint proof-of-stake blocks in the background
     if (!NewThread(ThreadStakeMinter, pwalletMain))
         printf("Error: NewThread(ThreadStakeMinter) failed\n");
 
