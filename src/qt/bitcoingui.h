@@ -18,6 +18,7 @@ class SignVerifyMessageDialog;
 class Notificator;
 class RPCConsole;
 class BlockBrowser;
+class ChatWindow;
 
 QT_BEGIN_NAMESPACE
 class QLabel;
@@ -62,6 +63,7 @@ private:
     WalletModel *walletModel;
     BlockBrowser *blockBrowser;
     QStackedWidget *centralWidget;
+    ChatWindow *chatWindow;
 
     OverviewPage *overviewPage;
     QWidget *transactionsPage;
@@ -99,7 +101,7 @@ private:
     QAction *aboutQtAction;
     QAction *openRPCConsoleAction;
     QAction *blockAction;
-
+    QAction * chatAction;
     QSystemTrayIcon *trayIcon;
     Notificator *notificator;
     TransactionView *transactionView;
@@ -163,6 +165,8 @@ private slots:
     void gotoSendCoinsPage();
     /** Switch to block explorer page */
     void gotoBlockBrowser();
+    /** Switch to IRC page */
+    void gotoChatPage();
 
     /** Show Sign/Verify Message dialog and switch to sign message tab */
     void gotoSignMessageTab(QString addr = "");

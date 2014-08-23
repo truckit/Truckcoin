@@ -41,10 +41,19 @@
         <file alias="filesave">res/icons/filesave.png</file>
         <file alias="qrcode">res/icons/qrcode.png</file>
         <file alias="debugwindow">res/icons/debugwindow.png</file>
-		<file alias="verify">res/icons/verify.png</file>
-		<file alias="importw">res/icons/importw.png</file>
+	<file alias="verify">res/icons/verify.png</file>
+	<file alias="importw">res/icons/importw.png</file>
         <file alias="exportw">res/icons/exportw.png</file>
-		<file alias="blexp">res/icons/blexp.png</file>
+	<file alias="blexp">res/icons/blexp.png</file>
+	<file alias="irc">res/icons/irc.png</file>
+	<file alias="reddit">res/icons/reddit.png</file>
+	<file alias="twitter">res/icons/twitter.png</file>
+	<file alias="facebook">res/icons/facebook.png</file>
+	<file alias="webexplorer">res/icons/webexplorer.png</file>
+	<file alias="truckcoinweb">res/icons/truckcoinweb.png</file>
+	<file alias="github">res/icons/github.png</file>
+	<file alias="cryptocointalk">res/icons/cryptocointalk.png</file>
+	<file alias="bitcointalk">res/icons/bitcointalk.png</file>
     </qresource>
     <qresource prefix="/images">
         <file alias="about">res/images/about.png</file>
