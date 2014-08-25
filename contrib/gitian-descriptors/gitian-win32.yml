@@ -17,6 +17,7 @@ files:
 - "qt-win32-4.8.5-gitian-r6.zip"
 - "boost-win32-1.55.0-gitian-r6.zip"
 - "bitcoin08-deps-win32-gitian-r11.zip"
+- "truckcoin.zip"
 script: |
   #
   STAGING=$HOME/staging
@@ -27,9 +28,10 @@ script: |
   unzip ../build/qt-win32-4.8.5-gitian-r6.zip
   unzip ../build/boost-win32-1.55.0-gitian-r6.zip
   unzip ../build/bitcoin08-deps-win32-gitian-r11.zip
+  unzip ../build/truckcoin.zip -d $HOME/build/
   cd $HOME/build/
   #
-  git clone https://github.com/noise23/truckcoin.git
+
   cd truckcoin
   export PATH=$STAGING/host/bin:$PATH
   mkdir -p $OUTDIR/src
