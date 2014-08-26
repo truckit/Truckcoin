@@ -320,6 +320,11 @@ bool WalletModel::importWallet(const QString &filename)
   return ImportWallet(wallet, filename.toLocal8Bit().data());
 }
 
+void WalletModel::getStakeWeightFromValue(const int64& nTime, const int64& nValue, uint64& nWeight) 
+{ 
+	wallet->GetStakeWeightFromValue(nTime, nValue, nWeight); 
+} 
+
 // Handlers for core signals
 static void NotifyKeyStoreStatusChanged(WalletModel *walletmodel, CCryptoKeyStore *wallet)
 {

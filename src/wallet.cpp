@@ -1385,6 +1385,20 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64> >& vecSend, CW
     return true;
 }
 
+bool CWallet::GetStakeWeightFromValue(const int64& nTime, const int64& nValue, uint64& nWeight) 
+{ 
+	//This is a negative value when there is no weight. But set it to zero 
+	//so the user is not confused. Used in reporting in Coin Control. 
+	// Descisions based on this function should be used with care. 
+	int64 nTimeWeight = GetWeight2(nTime, (int64)GetTime()); 
+	if (nTimeWeight < 0 ) 
+		nTimeWeight=0; 
+	 
+	CBigNum bnCoinDayWeight = CBigNum(nValue) * nTimeWeight / COIN / (24 * 60 * 60); 
+	nWeight = bnCoinDayWeight.getuint64(); 
+	return true; 
+} 
+
 bool CWallet::CreateTransaction(CScript scriptPubKey, int64 nValue, CWalletTx& wtxNew, CReserveKey& reservekey, int64& nFeeRet, const CCoinControl* coinControl)
 {
     vector< pair<CScript, int64> > vecSend;
