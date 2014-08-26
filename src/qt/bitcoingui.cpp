@@ -349,11 +349,12 @@ void BitcoinGUI::createMenuBar()
     file->addAction(quitAction);
 
     QMenu *settings = appMenuBar->addMenu(tr("&Settings"));
-    settings->addAction(encryptWalletAction);
-    settings->addAction(changePassphraseAction);
-    settings->addAction(lockWalletToggleAction);
-    settings->addSeparator();
     settings->addAction(optionsAction);
+	
+	QMenu *wallet = appMenuBar->addMenu(tr("&Wallet")); 
+    wallet->addAction(encryptWalletAction); 
+    wallet->addAction(changePassphraseAction); 
+	wallet->addAction(lockWalletToggleAction);
 
     QMenu *help = appMenuBar->addMenu(tr("&Help"));
     help->addAction(openRPCConsoleAction);
@@ -380,7 +381,7 @@ void BitcoinGUI::createToolBars()
     QToolBar *toolbar2 = addToolBar(tr("Actions toolbar"));
     toolbar2->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     toolbar2->addAction(openRPCConsoleAction);
-    toolbar2->addAction(lockWalletToggleAction);
+//    toolbar2->addAction(lockWalletToggleAction);
     toolbar2->addAction(exportAction);
 }
 
