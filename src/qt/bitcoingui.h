@@ -93,11 +93,11 @@ private:
     QAction *toggleHideAction;
     QAction *exportAction;
     QAction *encryptWalletAction;
+	QAction *unlockWalletAction;
     QAction *backupWalletAction;
     QAction *dumpWalletAction;
     QAction *importWalletAction;
     QAction *changePassphraseAction;
-    QAction *lockWalletToggleAction;
     QAction *aboutQtAction;
     QAction *openRPCConsoleAction;
     QAction *blockAction;
@@ -195,10 +195,11 @@ private slots:
     void backupWallet();
     /** Change encrypted wallet passphrase */
     void changePassphrase();
-    /** Toggle unlocking wallet temporarily */
-    void lockWalletToggle();
+    /** Ask for passphrase to unlock wallet temporarily */
+    void unlockWallet();
+    /** Ask for passphrase to unlock wallet for the session to mint */ 
+    void unlockWalletForMint(); 
 
- void unlockWallet();
 
     /** Show window if hidden, unminimize when minimized, rise when obscured or show if hidden and fToggleHidden is true */
     void showNormalIfMinimized(bool fToggleHidden = false);
