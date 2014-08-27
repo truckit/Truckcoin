@@ -95,10 +95,13 @@ public:
     bool changePassphrase(const SecureString &oldPass, const SecureString &newPass);
     // Wallet backup
     bool backupWallet(const QString &filename);
-    //Wallet Inport/Export
+	// Wallet Check/Repair 
+    void checkWallet(int& nMismatchSpent, qint64& nBalanceInQuestion, int& nOrphansFound); 
+    void repairWallet(int& nMismatchSpent, qint64& nBalanceInQuestion, int& nOrphansFound); 
+    // Wallet Import/Export
     bool dumpWallet(const QString &filename);
     bool importWallet(const QString &filename);
-	//Stake Weight for coin control dialog 
+	// Stake Weight for coin control dialog 
 	void getStakeWeightFromValue(const qint64& nTime, const qint64& nValue, quint64& nWeight); 
     // RAI object for unlocking wallet, returned by requestUnlock()
     class UnlockContext
