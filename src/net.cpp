@@ -428,11 +428,10 @@ void AddressCurrentlyConnected(const CService& addr)
     addrman.Connected(addr);
 }
 
-
-
-
-
-
+uint64 CNode::nTotalBytesRecv = 0; 
+uint64 CNode::nTotalBytesSent = 0; 
+CCriticalSection CNode::cs_totalBytesRecv; 
+CCriticalSection CNode::cs_totalBytesSent; 
 
 CNode* FindNode(const CNetAddr& ip)
 {
@@ -738,7 +737,7 @@ void ThreadSocketHandler2(void* parg)
         if (vNodes.size() != nPrevNodeCount)
         {
             nPrevNodeCount = vNodes.size();
-            uiInterface.NotifyNumConnectionsChanged(vNodes.size());
+            uiInterface.NotifyNumConnectionsChanged(nPrevNodeCount);
         }
 
 
@@ -903,6 +902,7 @@ void ThreadSocketHandler2(void* parg)
                             vRecv.resize(nPos + nBytes);
                             memcpy(&vRecv[nPos], pchBuf, nBytes);
                             pnode->nLastRecv = GetTime();
+							pnode->RecordBytesRecv(nBytes);
                         }
                         else if (nBytes == 0)
                         {
@@ -944,6 +944,7 @@ void ThreadSocketHandler2(void* parg)
                         {
                             vSend.erase(vSend.begin(), vSend.begin() + nBytes);
                             pnode->nLastSend = GetTime();
+							pnode->RecordBytesSent(nBytes);
                         }
                         else if (nBytes < 0)
                         {
@@ -1957,3 +1958,27 @@ public:
     }
 }
 instance_of_cnetcleanup;
+
+void CNode::RecordBytesRecv(uint64 bytes) 
+{ 
+    LOCK(cs_totalBytesRecv); 
+    nTotalBytesRecv += bytes; 
+} 
+ 
+void CNode::RecordBytesSent(uint64 bytes) 
+{ 
+    LOCK(cs_totalBytesSent); 
+    nTotalBytesSent += bytes; 
+} 
+ 
+uint64 CNode::GetTotalBytesRecv() 
+{ 
+    LOCK(cs_totalBytesRecv); 
+    return nTotalBytesRecv; 
+} 
+ 
+uint64 CNode::GetTotalBytesSent() 
+{ 
+    LOCK(cs_totalBytesSent); 
+    return nTotalBytesSent; 
+} 
