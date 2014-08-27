@@ -141,7 +141,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     QHBoxLayout *frameBlocksLayout = new QHBoxLayout(frameBlocks);
     frameBlocksLayout->setContentsMargins(3,0,3,0);
     frameBlocksLayout->setSpacing(3);
-    labelEncryptionIcon = new QLabel();
+    labelEncryptionIcon = new GUIUtil::ClickableLabel();
     labelMintingIcon = new QLabel();
     labelConnectionsIcon = new QLabel();
     labelBlocksIcon = new QLabel();
@@ -525,6 +525,15 @@ void BitcoinGUI::aboutClicked()
     dlg.setModel(clientModel);
     dlg.exec();
 }
+
+void BitcoinGUI::lockIconClicked() 
+{ 
+    if(!walletModel) 
+        return; 
+ 
+    if(walletModel->getEncryptionStatus() == WalletModel::Locked) 
+        unlockWalletForMint(); 
+} 
 
 void BitcoinGUI::setNumConnections(int count)
 {
@@ -913,6 +922,8 @@ void BitcoinGUI::setEncryptionStatus(int status)
 		unlockWalletAction->setEnabled(false);
 		lockWalletAction->setEnabled(false);
         changePassphraseAction->setEnabled(false);
+        disconnect(labelEncryptionIcon,SIGNAL(clicked()), this, SLOT(lockIconClicked()));labelEncryptionIcon->setToolTip(tr("Wallet is <b>not encrypted</b> and currently <b>unlocked</b>"));
+
         break;
     case WalletModel::Unlocked:
         labelEncryptionIcon->show();
@@ -925,6 +936,7 @@ void BitcoinGUI::setEncryptionStatus(int status)
 		unlockWalletAction->setEnabled(false);
 		lockWalletAction->setEnabled(true);
         changePassphraseAction->setEnabled(true);
+		disconnect(labelEncryptionIcon,SIGNAL(clicked()), this, SLOT(lockIconClicked()));
         break;
     case WalletModel::Locked:
         labelEncryptionIcon->show();
@@ -937,6 +949,7 @@ void BitcoinGUI::setEncryptionStatus(int status)
 		unlockWalletAction->setEnabled(true);
 		lockWalletAction->setEnabled(false);
         changePassphraseAction->setEnabled(true);
+		connect(labelEncryptionIcon,SIGNAL(clicked()), this, SLOT(lockIconClicked()));
         break;
     }
 }
