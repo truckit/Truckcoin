@@ -291,7 +291,7 @@ void BitcoinGUI::createActions()
     optionsAction->setMenuRole(QAction::PreferencesRole);
     toggleHideAction = new QAction(QIcon(":/icons/bitcoin"), tr("&Show / Hide"), this);
     encryptWalletAction = new QAction(QIcon(":/icons/lock_closed"), tr("&Encrypt Wallet..."), this);
-    encryptWalletAction->setToolTip(tr("Encrypt or decrypt wallet"));
+    encryptWalletAction->setToolTip(tr("Encrypt wallet"));
     encryptWalletAction->setCheckable(true);
 	unlockWalletAction = new QAction(QIcon(":/icons/lock_open"), tr("&Unlock Wallet For PoS..."), this); 
     unlockWalletAction->setStatusTip(tr("Unlock the wallet for PoS")); 
@@ -785,15 +785,15 @@ void BitcoinGUI::gotoBlockBrowser()
     centralWidget->setCurrentWidget(blockBrowser);
 
     exportAction->setEnabled(false);
-   disconnect(exportAction, SIGNAL(triggered()), 0, 0);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 }
 void BitcoinGUI::gotoChatPage()
 {
     chatAction->setChecked(true);
     centralWidget->setCurrentWidget(chatWindow);
-    exportAction->setVisible(false);
-        exportAction->setEnabled(false);
-        disconnect(exportAction, SIGNAL(triggered()), 0, 0);
+//    exportAction->setVisible(false);
+    exportAction->setEnabled(false);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 }
 
 void BitcoinGUI::gotoHistoryPage()
@@ -921,7 +921,7 @@ void BitcoinGUI::setEncryptionStatus(int status)
         labelEncryptionIcon->setPixmap(QIcon(":/icons/lock_closed").pixmap(STATUSBAR_ICONSIZE,STATUSBAR_ICONSIZE));
         labelEncryptionIcon->setToolTip(tr("Wallet is <b>encrypted</b> and currently <b>locked</b>"));
         encryptWalletAction->setChecked(true);
-		unlockWalletAction->setChecked(true);
+		unlockWalletAction->setChecked(false);
         encryptWalletAction->setEnabled(false); // TODO: decrypt currently not supported
 		unlockWalletAction->setEnabled(true);
         changePassphraseAction->setEnabled(true);
