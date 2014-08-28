@@ -242,7 +242,8 @@ public:
         setInventoryKnown.max_size(SendBufferSize() / 1000);
 
         // Be shy and don't send version until we hear
-        if (!fInbound)
+		// Don't announce non-peer CNodes
+        if (hSocket != INVALID_SOCKET && !fInbound)
             PushVersion();
     }
 
