@@ -474,6 +474,9 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)
 
         // Ask for passphrase if needed
         connect(walletModel, SIGNAL(requireUnlock()), this, SLOT(unlockWallet()));
+	
+	// Show IRC / Web button option
+	chatAction->setVisible(walletModel->getOptionsModel()->getShowIrcButton());
     }
 }
 

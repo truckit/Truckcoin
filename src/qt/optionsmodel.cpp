@@ -45,7 +45,8 @@ void OptionsModel::Init()
     bDisplayAddresses = settings.value("bDisplayAddresses", false).toBool();
     fMinimizeToTray = settings.value("fMinimizeToTray", false).toBool();
     fMinimizeOnClose = settings.value("fMinimizeOnClose", false).toBool();
-	fCoinControlFeatures = settings.value("fCoinControlFeatures", false).toBool();
+    fCoinControlFeatures = settings.value("fCoinControlFeatures", false).toBool();
+    bShowIrcButton = settings.value("bShowIrcButton", true).toBool();
     nTransactionFee = settings.value("nTransactionFee").toLongLong();
     language = settings.value("language", "").toString();
 
@@ -173,6 +174,8 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const
             return settings.value("language", "");
         case CoinControlFeatures:
             return QVariant(fCoinControlFeatures);
+        case ShowIrcButton:
+            return QVariant(bShowIrcButton);
         default:
             return QVariant();
         }
@@ -267,6 +270,10 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
             settings.setValue("fCoinControlFeatures", fCoinControlFeatures);
             emit coinControlFeaturesChanged(fCoinControlFeatures);
             }
+	case ShowIrcButton: {
+            bShowIrcButton = value.toBool();
+            settings.setValue("bShowIrcButton", bShowIrcButton);
+            }
             break;
         default:
             break;
@@ -287,7 +294,11 @@ bool OptionsModel::getCoinControlFeatures()
      return fCoinControlFeatures;
 }
  
-
+ bool OptionsModel::getShowIrcButton()
+{
+     return bShowIrcButton;
+}
+ 
 bool OptionsModel::getMinimizeToTray()
 {
     return fMinimizeToTray;
