@@ -315,11 +315,11 @@ void RPCConsole::clear()
     // Set default style sheet
     ui->messagesWidget->document()->setDefaultStyleSheet(
                 "table { }"
-                "td.time { color: #808080; padding-top: 3px; } "
+                "td.time { color: #b0cbe6; padding-top: 3px; } "
                 "td.message { font-family: Monospace; font-size: 12px; } "
-                "td.cmd-request { color: #006060; } "
-                "td.cmd-error { color: red; } "
-                "b { color: #006060; } "
+                "td.cmd-request { color: #77ac92; } "
+                "td.cmd-error { color: #fe5f30; } "
+                "b { color: #77ac92; } 
                 );
 
     message(CMD_REPLY, (tr("Welcome to the Truckcoin RPC console.") + "<br>" +
