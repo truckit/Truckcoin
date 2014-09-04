@@ -319,7 +319,7 @@ void RPCConsole::clear()
                 "td.message { font-family: Monospace; font-size: 12px; } "
                 "td.cmd-request { color: #77ac92; } "
                 "td.cmd-error { color: #fe5f30; } "
-                "b { color: #77ac92; } 
+                "b { color: #77ac92; } "
                 );
 
     message(CMD_REPLY, (tr("Welcome to the Truckcoin RPC console.") + "<br>" +
