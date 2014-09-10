@@ -382,7 +382,7 @@
         <height>41</height>
        </rect>
       </property>
-      <layout class="QHBoxLayout" name="horizontalLayoutPanel" stretch="0,0,0,0">
+      <layout class="QHBoxLayout" name="horizontalLayoutPanel" stretch="0,0,0,0,0,0,0">
        <property name="spacing">
         <number>14</number>
        </property>
@@ -428,6 +428,35 @@
          </property>
         </widget>
        </item>
+        <item> 
+        <widget class="QPushButton" name="pushButtonCustomCC"> 
+         <property name="text"> 
+          <string>Select Blocks With</string> 
+         </property> 
+        </widget> 
+       </item> 
+       <item> 
+        <widget class="QComboBox" name="QComboBoxFilterCoins"/> 
+       </item> 
+       <item> 
+        <widget class="QLineEdit" name="lineEditCustomCC"> 
+         <property name="enabled"> 
+          <bool>true</bool> 
+         </property> 
+         <property name="sizePolicy"> 
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed"> 
+           <horstretch>0</horstretch> 
+           <verstretch>0</verstretch> 
+          </sizepolicy> 
+         </property> 
+         <property name="baseSize"> 
+          <size> 
+           <width>50</width> 
+           <height>0</height> 
+          </size> 
+         </property> 
+        </widget> 
+       </item>    
        <item>
         <spacer name="horizontalSpacer">
          <property name="orientation">
