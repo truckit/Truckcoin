@@ -234,7 +234,6 @@ void CoinControlDialog::customSelectCoins()
 				coinControl->Select(outpt); 
 				itemOutput->setCheckState(COLUMN_CHECKBOX,Qt::Checked); 
 			}
-          CoinControlDialog::updateLabels(model, this);			
 		} 
 		else if (strComboText == "Amount >") 
 		{ 
@@ -244,7 +243,6 @@ void CoinControlDialog::customSelectCoins()
 				coinControl->Select(outpt); 
 				itemOutput->setCheckState(COLUMN_CHECKBOX,Qt::Checked); 
 			}
-          CoinControlDialog::updateLabels(model, this);			
 		} 
 		else if (strComboText == "Weight <") 
 		{ 
@@ -254,7 +252,6 @@ void CoinControlDialog::customSelectCoins()
 				coinControl->Select(outpt); 
 				itemOutput->setCheckState(COLUMN_CHECKBOX,Qt::Checked); 
 			}
-          CoinControlDialog::updateLabels(model, this);			
 		} 
 		else if (strComboText == "Weight >") 
 		{ 
@@ -264,7 +261,6 @@ void CoinControlDialog::customSelectCoins()
 				coinControl->Select(outpt); 
 				itemOutput->setCheckState(COLUMN_CHECKBOX,Qt::Checked); 
 			}
-          CoinControlDialog::updateLabels(model, this);			
 		} 
 		else if (strComboText == "Age <") 
 		{ 
@@ -274,7 +270,6 @@ void CoinControlDialog::customSelectCoins()
 				coinControl->Select(outpt); 
 				itemOutput->setCheckState(COLUMN_CHECKBOX,Qt::Checked); 
 			}
-          CoinControlDialog::updateLabels(model, this);			
 		} 
 		else if (strComboText == "Age >") 
 		{ 
@@ -284,10 +279,10 @@ void CoinControlDialog::customSelectCoins()
 				coinControl->Select(outpt); 
 				itemOutput->setCheckState(COLUMN_CHECKBOX,Qt::Checked); 
 			}
-          CoinControlDialog::updateLabels(model, this);			
 		} 
 	} 
     } 
+    CoinControlDialog::updateLabels(model, this);
 	updateView(); 
 } 
 
