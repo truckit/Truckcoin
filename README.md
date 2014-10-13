@@ -1,4 +1,6 @@
+********************************************************************************************
 IMPORTANT! THIS REPO IS OUTDATED, PLEASE USE THE NEW OFFICIAL TRUCKCOIN REPOSITORY AT https://github.com/noise23/Truckcoin
+********************************************************************************************
 
 Copyright (c) 2013-2014 TruckCoin Developers
 
