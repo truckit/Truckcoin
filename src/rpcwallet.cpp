@@ -28,7 +28,7 @@ void EnsureWalletIsUnlocked()
 {
     if (pwalletMain->IsLocked())
         throw JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Error: Please enter the wallet passphrase with walletpassphrase first.");
-    if (fWalletUnlockMintOnly)
+    if (pwalletMain->fWalletUnlockMintOnly)
         throw JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Error: Wallet unlocked for block minting only.");
 }
 
@@ -81,7 +81,8 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("connections",   (int)vNodes.size()));
     obj.push_back(Pair("proxy",         (proxy.first.IsValid() ? proxy.first.ToStringIPPort() : string())));
     obj.push_back(Pair("ip",            addrSeenByPeer.ToStringIP()));
-    obj.push_back(Pair("difficulty",    (double)GetDifficulty()));
+//    obj.push_back(Pair("PoW difficulty",    (double)GetDifficulty()));
+	obj.push_back(Pair("PoS difficulty", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
     obj.push_back(Pair("testnet",       fTestNet));
     obj.push_back(Pair("keypoololdest", (boost::int64_t)pwalletMain->GetOldestKeyPoolTime()));
     obj.push_back(Pair("keypoolsize",   pwalletMain->GetKeyPoolSize()));
@@ -1249,6 +1250,64 @@ Value listsinceblock(const Array& params, bool fHelp)
     return ret;
 }
 
+Value getstaketx(const Array& params, bool fHelp) 
+{ 
+    if (fHelp || params.size() != 1) 
+        throw runtime_error( 
+            "getstaketx <txid>\n" 
+            "Get detailed information about a specific stake <txid>"); 
+ 
+    uint256 hash; 
+    hash.SetHex(params[0].get_str()); 
+ 
+    Object entry; 
+	Array vin; 
+ 
+    if (pwalletMain->mapWallet.count(hash)) 
+    { 
+        const CWalletTx& wtx = pwalletMain->mapWallet[hash]; 
+		 
+		 BOOST_FOREACH(const CTxIn& txin, wtx.vin) 
+		{ 
+			Object in; 
+			if (wtx.IsCoinBase()) 
+				entry.push_back(Pair("coinbase", HexStr(txin.scriptSig.begin(), txin.scriptSig.end()))); 
+			else 
+			{ 
+				CTransaction& txPrev = pwalletMain->mapWallet[txin.prevout.hash]; //first transaction 
+				uint64_t nTime = wtx.nTime; //stake tx time 
+				uint64_t nPrevTime = txPrev.nTime; //previous tx time
+				uint64_t nTimeToStake = nTime - nPrevTime; // time to stake in seconds 
+				double dDaysToStake = nTimeToStake / 60.00 / 60 / 24; 
+				 
+				//entry.push_back(Pair("txid", txin.prevout.hash.GetHex())); previous txid - not necessary to display right now 
+				entry.push_back(Pair("Stake TX Time", nTime)); 
+				entry.push_back(Pair("Previous Time", nPrevTime)); 
+				entry.push_back(Pair("Days To Stake", dDaysToStake));  
+ 
+				int64 nDebit = wtx.GetDebit(); 
+				int64 nFee = (wtx.IsFromMe() ? wtx.GetValueOut() - nDebit : 0); 
+				 
+				int64 nGeneratedImmature, nGeneratedMature, nFee2; 
+				string strSentAccount; 
+				list<pair<CTxDestination, int64> > listReceived; 
+				list<pair<CTxDestination, int64> > listSent; 
+				wtx.GetAmounts(nGeneratedImmature, nGeneratedMature, listReceived, listSent, nFee2, strSentAccount); 
+				uint64_t nGeneratedAmount = max (nGeneratedMature, nGeneratedImmature);
+				double nGeneratedAmount2 = max (nGeneratedMature, nGeneratedImmature); //uint64_t math not working
+				double percentReward = nFee / (nGeneratedAmount2 - nFee);
+				 
+				entry.push_back(Pair("Original Amount", ValueFromAmount(nGeneratedAmount - nFee))); 
+				entry.push_back(Pair("PoS Reward", ValueFromAmount(nFee)));
+				entry.push_back(Pair("Reward %", percentReward*100));
+				entry.push_back(Pair("Total New Amount", ValueFromAmount(nGeneratedAmount))); 
+				entry.push_back(Pair("Size of Each New Block", ValueFromAmount(nGeneratedAmount/2))); 
+			} 
+		} 
+    } 
+    return entry; 
+} 
+
 Value gettransaction(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
@@ -1439,11 +1498,11 @@ Value walletpassphrase(const Array& params, bool fHelp)
     int64* pnSleepTime = new int64(params[1].get_int64());
     NewThread(ThreadCleanWalletPassphrase, pnSleepTime);
 
-    // ppcoin: if user OS account compromised prevent trivial sendmoney commands
+    // if user OS account compromised prevent trivial sendmoney commands
     if (params.size() > 2)
-        fWalletUnlockMintOnly = params[2].get_bool();
+        pwalletMain->fWalletUnlockMintOnly = params[2].get_bool();
     else
-        fWalletUnlockMintOnly = false;
+        pwalletMain->fWalletUnlockMintOnly = false;
 
     return Value::null;
 }
@@ -1638,7 +1697,7 @@ Value validatepubkey(const Array& params, bool fHelp)
     return ret;
 }
 
-// ppcoin: reserve balance from being staked for network protection
+// reserve balance from being staked for network protection
 Value reservebalance(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 2)
@@ -1680,7 +1739,7 @@ Value reservebalance(const Array& params, bool fHelp)
 }
 
 
-// ppcoin: check wallet integrity
+// check wallet integrity
 Value checkwallet(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 0)
@@ -1690,20 +1749,23 @@ Value checkwallet(const Array& params, bool fHelp)
 
     int nMismatchSpent;
     int64 nBalanceInQuestion;
-    pwalletMain->FixSpentCoins(nMismatchSpent, nBalanceInQuestion, true);
+    int nOrphansFound;
+
+    pwalletMain->FixSpentCoins(nMismatchSpent, nBalanceInQuestion, nOrphansFound, true);
     Object result;
-    if (nMismatchSpent == 0)
+    if (nMismatchSpent == 0 && nOrphansFound == 0)
         result.push_back(Pair("wallet check passed", true));
     else
     {
         result.push_back(Pair("mismatched spent coins", nMismatchSpent));
         result.push_back(Pair("amount in question", ValueFromAmount(nBalanceInQuestion)));
+        result.push_back(Pair("orphan blocks found", nOrphansFound));
     }
     return result;
 }
 
 
-// ppcoin: repair wallet
+// repair wallet
 Value repairwallet(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 0)
@@ -1713,14 +1775,16 @@ Value repairwallet(const Array& params, bool fHelp)
 
     int nMismatchSpent;
     int64 nBalanceInQuestion;
-    pwalletMain->FixSpentCoins(nMismatchSpent, nBalanceInQuestion);
+    int nOrphansFound;
+    pwalletMain->FixSpentCoins(nMismatchSpent, nBalanceInQuestion, nOrphansFound);
     Object result;
-    if (nMismatchSpent == 0)
+    if (nMismatchSpent == 0 && nOrphansFound == 0)
         result.push_back(Pair("wallet check passed", true));
     else
     {
         result.push_back(Pair("mismatched spent coins", nMismatchSpent));
         result.push_back(Pair("amount affected by repair", ValueFromAmount(nBalanceInQuestion)));
+        result.push_back(Pair("orphan blocks removed", nOrphansFound));
     }
     return result;
 }
@@ -1739,7 +1803,7 @@ Value resendtx(const Array& params, bool fHelp)
     return Value::null;
 }
 
-// ppcoin: make a public-private key pair
+// make a public-private key pair
 Value makekeypair(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)

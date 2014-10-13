@@ -349,11 +349,21 @@
           <string>Whether to show coin control features or not.</string>
          </property>
          <property name="text">
-          <string>Display coin &amp;control features (experts only!)</string>
+          <string>Display coin control features (experts only!)</string>
          </property>
         </widget>
        </item>
-       <item>
+	   <item>
+        <widget class="QCheckBox" name="showIrcButton">
+	  <property name="toolTip">
+          <string>Whether to show IRC button or not.</string>
+         </property>
+         <property name="text">
+          <string>Display IRC / Web button (wallet restart required)</string>
+         </property>
+        </widget>
+       </item>
+	   <item>
         <spacer name="verticalSpacer_Display">
          <property name="orientation">
           <enum>Qt::Vertical</enum>

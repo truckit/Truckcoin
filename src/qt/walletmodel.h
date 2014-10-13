@@ -91,11 +91,18 @@ public:
     // Wallet encryption
     bool setWalletEncrypted(bool encrypted, const SecureString &passphrase);
     // Passphrase only needed when unlocking
-    bool setWalletLocked(bool locked, const SecureString &passPhrase=SecureString());
+    bool setWalletLocked(bool locked, const SecureString &passPhrase=SecureString(), bool formint=false);
     bool changePassphrase(const SecureString &oldPass, const SecureString &newPass);
     // Wallet backup
     bool backupWallet(const QString &filename);
-
+	// Wallet Check/Repair 
+    void checkWallet(int& nMismatchSpent, qint64& nBalanceInQuestion, int& nOrphansFound); 
+    void repairWallet(int& nMismatchSpent, qint64& nBalanceInQuestion, int& nOrphansFound); 
+    // Wallet Import/Export
+    bool dumpWallet(const QString &filename);
+    bool importWallet(const QString &filename);
+	// Stake Weight for coin control dialog 
+	void getStakeWeightFromValue(const qint64& nTime, const qint64& nValue, quint64& nWeight); 
     // RAI object for unlocking wallet, returned by requestUnlock()
     class UnlockContext
     {
@@ -177,8 +184,8 @@ signals:
     // this means that the unlocking failed or was cancelled.
     void requireUnlock();
 
-    // Asynchronous error notification
-    void error(const QString &title, const QString &message, bool modal);
+    // Asynchronous message notification
+    void message(const QString &title, const QString &message,  unsigned int style);
 };
 
 

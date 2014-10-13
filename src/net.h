@@ -144,6 +144,9 @@ public:
     int64 nReleaseTime;
     int nStartingHeight;
     int nMisbehavior;
+	uint64 nSendBytes; 
+    uint64 nRecvBytes; 
+    uint64 nBlocksRequested; 
 };
 
 
@@ -165,6 +168,9 @@ public:
     int64 nLastRecv;
     int64 nLastSendEmpty;
     int64 nTimeConnected;
+	uint64 nBlocksRequested; 
+    uint64 nRecvBytes; 
+    uint64 nSendBytes; 
     int nHeaderStart;
     unsigned int nMessageStart;
     CAddress addr;
@@ -202,7 +208,7 @@ public:
     std::set<CAddress> setAddrKnown;
     bool fGetAddr;
     std::set<uint256> setKnown;
-    uint256 hashCheckpointKnown; // ppcoin: known sent sync-checkpoint
+    uint256 hashCheckpointKnown; // known sent sync-checkpoint
 
     // inventory based relay
     mruset<CInv> setInventoryKnown;
@@ -210,7 +216,7 @@ public:
     CCriticalSection cs_inventory;
     std::multimap<int64, CInv> mapAskFor;
 
-    CNode(SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = "", bool fInboundIn=false) : vSend(SER_NETWORK, MIN_PROTO_VERSION), vRecv(SER_NETWORK, MIN_PROTO_VERSION)
+    CNode(SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = "", bool fInboundIn=false) : vSend(SER_NETWORK, INIT_PROTO_VERSION), vRecv(SER_NETWORK, INIT_PROTO_VERSION)
     {
         nServices = 0;
         hSocket = hSocketIn;
@@ -218,6 +224,9 @@ public:
         nLastRecv = 0;
         nLastSendEmpty = GetTime();
         nTimeConnected = GetTime();
+		nSendBytes = 0; 
+        nRecvBytes = 0; 
+        nBlocksRequested = 0; 
         nHeaderStart = -1;
         nMessageStart = -1;
         addr = addrIn;
@@ -242,7 +251,8 @@ public:
         setInventoryKnown.max_size(SendBufferSize() / 1000);
 
         // Be shy and don't send version until we hear
-        if (!fInbound)
+		// Don't announce non-peer CNodes
+        if (hSocket != INVALID_SOCKET && !fInbound)
             PushVersion();
     }
 
@@ -256,10 +266,16 @@ public:
     }
 
 private:
+    // Network usage totals 
+    static CCriticalSection cs_totalBytesRecv; 
+    static CCriticalSection cs_totalBytesSent; 
+    static uint64 nTotalBytesRecv; 
+    static uint64 nTotalBytesSent; 
+
     CNode(const CNode&);
     void operator=(const CNode&);
-public:
 
+public:
 
     int GetRefCount()
     {
@@ -640,6 +656,13 @@ public:
     static bool IsBanned(CNetAddr ip);
     bool Misbehaving(int howmuch); // 1 == a little, 100 == a lot
     void copyStats(CNodeStats &stats);
+	
+    // Network stats 
+    static void RecordBytesRecv(uint64 bytes); 
+    static void RecordBytesSent(uint64 bytes); 
+ 
+    static uint64 GetTotalBytesRecv(); 
+    static uint64 GetTotalBytesSent(); 
 };
 
 

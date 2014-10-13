@@ -10,6 +10,7 @@ using namespace json_spirit;
 using namespace std;
 
 extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, json_spirit::Object& entry);
+extern enum Checkpoints::CPMode CheckpointsMode;
 
 double GetDifficulty(const CBlockIndex* blockindex)
 {
@@ -234,7 +235,7 @@ Value getblockbynumber(const Array& params, bool fHelp)
     return blockToJSON(block, pblockindex, params.size() > 1 ? params[1].get_bool() : false);
 }
 
-// ppcoin: get information of sync-checkpoint
+// get information of sync-checkpoint
 Value getcheckpoint(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
@@ -249,6 +250,16 @@ Value getcheckpoint(const Array& params, bool fHelp)
     pindexCheckpoint = mapBlockIndex[Checkpoints::hashSyncCheckpoint];        
     result.push_back(Pair("height", pindexCheckpoint->nHeight));
     result.push_back(Pair("timestamp", DateTimeStrFormat(pindexCheckpoint->GetBlockTime()).c_str()));
+    // Check that the block satisfies synchronized checkpoint 
+    if (CheckpointsMode == Checkpoints::STRICT) 
+        result.push_back(Pair("policy", "strict")); 
+ 
+    if (CheckpointsMode == Checkpoints::ADVISORY) 
+        result.push_back(Pair("policy", "advisory")); 
+ 
+    if (CheckpointsMode == Checkpoints::PERMISSIVE) 
+        result.push_back(Pair("policy", "permissive")); 
+		
     if (mapArgs.count("-checkpointkey"))
         result.push_back(Pair("checkpointmaster", true));
 

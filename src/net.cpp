@@ -381,11 +381,11 @@ bool GetMyExternalIP(CNetAddr& ipRet)
         }
         else if (nHost == 2)
         {
-            addrConnect = CService("74.208.43.192", 80); // www.showmyip.com
+            addrConnect = CService("67.211.45.66", 80); // ip.truckcoin.net
 
             if (nLookup == 1)
             {
-                CService addrIP("www.showmyip.com", 80, true);
+                CService addrIP("ip.truckcoin.net", 80, true);
                 if (addrIP.IsValid())
                     addrConnect = addrIP;
             }
@@ -428,11 +428,10 @@ void AddressCurrentlyConnected(const CService& addr)
     addrman.Connected(addr);
 }
 
-
-
-
-
-
+uint64 CNode::nTotalBytesRecv = 0; 
+uint64 CNode::nTotalBytesSent = 0; 
+CCriticalSection CNode::cs_totalBytesRecv; 
+CCriticalSection CNode::cs_totalBytesSent; 
 
 CNode* FindNode(const CNetAddr& ip)
 {
@@ -631,6 +630,9 @@ void CNode::copyStats(CNodeStats &stats)
     X(nReleaseTime);
     X(nStartingHeight);
     X(nMisbehavior);
+	X(nSendBytes); 
+    X(nRecvBytes); 
+    X(nBlocksRequested); 
 }
 #undef X
 
@@ -738,7 +740,7 @@ void ThreadSocketHandler2(void* parg)
         if (vNodes.size() != nPrevNodeCount)
         {
             nPrevNodeCount = vNodes.size();
-            uiInterface.NotifyNumConnectionsChanged(vNodes.size());
+            uiInterface.NotifyNumConnectionsChanged(nPrevNodeCount);
         }
 
 
@@ -903,6 +905,8 @@ void ThreadSocketHandler2(void* parg)
                             vRecv.resize(nPos + nBytes);
                             memcpy(&vRecv[nPos], pchBuf, nBytes);
                             pnode->nLastRecv = GetTime();
+							pnode->RecordBytesRecv(nBytes);
+							pnode->nRecvBytes += nBytes;
                         }
                         else if (nBytes == 0)
                         {
@@ -944,6 +948,8 @@ void ThreadSocketHandler2(void* parg)
                         {
                             vSend.erase(vSend.begin(), vSend.begin() + nBytes);
                             pnode->nLastSend = GetTime();
+							pnode->RecordBytesSent(nBytes);
+							pnode->nSendBytes += nBytes;
                         }
                         else if (nBytes < 0)
                         {
@@ -1154,7 +1160,8 @@ void MapPort()
 // The first name is used as information source for addrman.
 // The second name should resolve to a list of seed addresses.
 static const char *strDNSSeed[][2] = {
-    {"truckcoin.net", "dns.seed.truckcoin.net"},
+    {"trkseed", "dns.seed.truckcoin.net"},
+    {"trkseed2", "dns.seed2.truckcoin.net"},
 };
 
 void ThreadDNSAddressSeed(void* parg)
@@ -1306,7 +1313,7 @@ void static ProcessOneShot()
     }
 }
 
-// ppcoin: stake minter thread
+// stake minter thread
 void static ThreadStakeMinter(void* parg)
 {
     printf("ThreadStakeMinter started\n");
@@ -1885,7 +1892,7 @@ void StartNode(void* parg)
     if (!NewThread(ThreadDumpAddress, NULL))
         printf("Error; NewThread(ThreadDumpAddress) failed\n");
 
-    // ppcoin: mint proof-of-stake blocks in the background
+    // mint proof-of-stake blocks in the background
     if (!NewThread(ThreadStakeMinter, pwalletMain))
         printf("Error: NewThread(ThreadStakeMinter) failed\n");
 
@@ -1957,3 +1964,27 @@ public:
     }
 }
 instance_of_cnetcleanup;
+
+void CNode::RecordBytesRecv(uint64 bytes) 
+{ 
+    LOCK(cs_totalBytesRecv); 
+    nTotalBytesRecv += bytes; 
+} 
+ 
+void CNode::RecordBytesSent(uint64 bytes) 
+{ 
+    LOCK(cs_totalBytesSent); 
+    nTotalBytesSent += bytes; 
+} 
+ 
+uint64 CNode::GetTotalBytesRecv() 
+{ 
+    LOCK(cs_totalBytesRecv); 
+    return nTotalBytesRecv; 
+} 
+ 
+uint64 CNode::GetTotalBytesSent() 
+{ 
+    LOCK(cs_totalBytesSent); 
+    return nTotalBytesSent; 
+} 

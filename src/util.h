@@ -29,6 +29,9 @@ typedef int pid_t; /* define for Windows compatibility */
 
 #include "netbase.h" // for AddTimeData
 
+// to obtain PRId64 on some old systems 
+#define __STDC_FORMAT_MACROS 1
+
 typedef long long  int64;
 typedef unsigned long long  uint64;
 
@@ -206,6 +209,10 @@ std::vector<unsigned char> DecodeBase32(const char* p, bool* pfInvalid = NULL);
 std::string DecodeBase32(const std::string& str);
 std::string EncodeBase32(const unsigned char* pch, size_t len);
 std::string EncodeBase32(const std::string& str);
+std::string EncodeDumpTime(int64 nTime);
+int64 DecodeDumpTime(const std::string& s);
+std::string EncodeDumpString(const std::string &str);
+std::string DecodeDumpString(const std::string &str);
 void ParseParameters(int argc, const char*const argv[]);
 bool WildcardMatch(const char* psz, const char* mask);
 bool WildcardMatch(const std::string& str, const std::string& mask);
