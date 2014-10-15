@@ -3,7 +3,6 @@
 
 #include "clientmodel.h"
 #include "main.h"
-#include <QWidget>
 #include <QDialog>
 
 namespace Ui {
@@ -11,7 +10,7 @@ class BlockBrowser;
 }
 class ClientModel;
 
-class BlockBrowser : public QWidget
+class BlockBrowser : public QDialog
 {
     Q_OBJECT
 

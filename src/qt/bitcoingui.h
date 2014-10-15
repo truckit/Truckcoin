@@ -61,7 +61,6 @@ protected:
 private:
     ClientModel *clientModel;
     WalletModel *walletModel;
-    BlockBrowser *blockBrowser;
     QStackedWidget *centralWidget;
     ChatWindow *chatWindow;
 
@@ -109,6 +108,7 @@ private:
     Notificator *notificator;
     TransactionView *transactionView;
     RPCConsole *rpcConsole;
+	BlockBrowser *blockBrowser;
 
     QMovie *syncIconMovie;
 
@@ -168,8 +168,6 @@ private slots:
     void gotoReceiveCoinsPage();
     /** Switch to send coins page */
     void gotoSendCoinsPage();
-    /** Switch to block explorer page */
-    void gotoBlockBrowser();
     /** Switch to IRC page */
     void gotoChatPage();
 

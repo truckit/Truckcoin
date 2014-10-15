@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>BlockBrowser</class>
- <widget class="QWidget" name="BlockBrowser">
+ <widget class="QDialog" name="BlockBrowser">
   <property name="windowModality">
    <enum>Qt::NonModal</enum>
   </property>
@@ -12,7 +12,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>822</width>
+    <width>850</width>
     <height>524</height>
    </rect>
   </property>
@@ -32,7 +32,7 @@
    <bool>false</bool>
   </property>
   <property name="windowTitle">
-   <string>Form</string>
+   <string>Truckcoin Block Explorer</string>
   </property>
   <layout class="QGridLayout">
    <property name="sizeConstraint">

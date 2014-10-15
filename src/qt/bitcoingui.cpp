@@ -77,7 +77,8 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     aboutQtAction(0),
     trayIcon(0),
     notificator(0),
-    rpcConsole(0)
+    rpcConsole(0),
+	blockBrowser(0)
 {
     resize(860, 600);
     setWindowTitle(tr("Truckcoin") + " - " + tr("Wallet ") + QString::fromStdString(FormatFullVersion()));
@@ -201,6 +202,9 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 
     rpcConsole = new RPCConsole(this);
     connect(openRPCConsoleAction, SIGNAL(triggered()), rpcConsole, SLOT(show()));
+	
+	blockBrowser = new BlockBrowser(this);
+    connect(blockAction, SIGNAL(triggered()), blockBrowser, SLOT(show()));
 
     // Clicking on "Verify Message" in the address book sends you to the verify message tab
     connect(addressBookPage, SIGNAL(verifyMessage(QString)), this, SLOT(gotoVerifyMessageTab(QString)));
@@ -255,11 +259,6 @@ void BitcoinGUI::createActions()
     addressBookAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_5));
     tabGroup->addAction(addressBookAction);
 
-    blockAction = new QAction(QIcon(":/icons/blexp"), tr("&Block Explorer"), this);
-    blockAction->setToolTip(tr("Explore the BlockChain"));
-    blockAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_6));
-    blockAction->setCheckable(true);
-    tabGroup->addAction(blockAction);
     chatAction = new QAction(QIcon(":/icons/irc"), tr("& IRC / Web"), this);
     chatAction->setToolTip(tr("TRK IRC chat, visit Truckcoin on the Web"));
     chatAction->setCheckable(true);
@@ -274,7 +273,6 @@ void BitcoinGUI::createActions()
     connect(historyAction, SIGNAL(triggered()), this, SLOT(gotoHistoryPage()));
     connect(addressBookAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(addressBookAction, SIGNAL(triggered()), this, SLOT(gotoAddressBookPage()));
-    connect(blockAction, SIGNAL(triggered()), this, SLOT(gotoBlockBrowser()));
     connect(chatAction, SIGNAL(triggered()), this, SLOT(gotoChatPage()));
 
     quitAction = new QAction(QIcon(":/icons/quit"), tr("E&xit"), this);
@@ -319,6 +317,8 @@ void BitcoinGUI::createActions()
     exportAction->setToolTip(tr("Export the data in the current tab to a file"));
     openRPCConsoleAction = new QAction(QIcon(":/icons/debugwindow"), tr("&Debug window"), this);
     openRPCConsoleAction->setToolTip(tr("Open debugging and diagnostic console"));
+	blockAction = new QAction(QIcon(":/icons/blexp"), tr("&Block Explorer"), this);
+    blockAction->setToolTip(tr("Explore the BlockChain"));
 
     connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(aboutClicked()));
@@ -393,11 +393,11 @@ void BitcoinGUI::createToolBars()
     toolbar->addAction(receiveCoinsAction);
     toolbar->addAction(historyAction);
     toolbar->addAction(addressBookAction);
-    toolbar->addAction(blockAction);
     toolbar->addAction(chatAction);
 	
     QToolBar *toolbar2 = addToolBar(tr("Actions toolbar"));
     toolbar2->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+	toolbar2->addAction(blockAction);
     toolbar2->addAction(openRPCConsoleAction);
     toolbar2->addAction(exportAction);
 }
@@ -816,14 +816,6 @@ void BitcoinGUI::gotoOverviewPage()
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 }
 
-void BitcoinGUI::gotoBlockBrowser()
-{
-    blockAction->setChecked(true);
-    centralWidget->setCurrentWidget(blockBrowser);
-
-    exportAction->setEnabled(false);
-    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
-}
 void BitcoinGUI::gotoChatPage()
 {
     chatAction->setChecked(true);
