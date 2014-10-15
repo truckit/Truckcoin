@@ -170,6 +170,9 @@ private slots:
     void gotoSendCoinsPage();
     /** Switch to IRC page */
     void gotoChatPage();
+	
+	/** Show block explorer page */
+	void gotoBlockBrowser(QString transactionId = "");
 
     /** Show Sign/Verify Message dialog and switch to sign message tab */
     void gotoSignMessageTab(QString addr = "");
