@@ -1278,3 +1278,8 @@ void BitcoinGUI::updateMintingWeights()
         nNetworkWeight = GetPoSKernelPS();
     }
 }
+
+WId BitcoinGUI::getMainWinId() const 
+{ 
+    return winId(); 
+}

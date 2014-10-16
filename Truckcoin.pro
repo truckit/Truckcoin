@@ -225,7 +225,8 @@ HEADERS += src/qt/bitcoingui.h \
     src/sph_types.h \
     src/qt/macnotificationhandler.h \
     src/qt/blockbrowser.h \
-    src/qt/trafficgraphwidget.h
+    src/qt/trafficgraphwidget.h \
+	src/qt/winshutdownmonitor.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/transactiontablemodel.cpp \
@@ -292,6 +293,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/rpcconsole.cpp \
     src/qt/blockbrowser.cpp \
     src/qt/trafficgraphwidget.cpp \
+	src/qt/winshutdownmonitor.cpp \
     src/noui.cpp \
     src/kernel.cpp \
     src/pbkdf2.cpp \

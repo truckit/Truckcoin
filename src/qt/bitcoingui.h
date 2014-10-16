@@ -51,6 +51,9 @@ public:
         functionality.
     */
     void setWalletModel(WalletModel *walletModel);
+	
+   /// Get window identifier of QMainWindow (BitcoinGUI) 
+   WId getMainWinId() const; 
 
 protected:
     void changeEvent(QEvent *e);
