@@ -1223,6 +1223,11 @@ void BitcoinGUI::updateMintingIcon()
         labelMintingIcon->setToolTip(tr("Not minting because wallet is offline."));
         labelMintingIcon->setEnabled(false);
     }
+    	else if (!GetBoolArg("-staking", true))
+    {
+        labelMintingIcon->setToolTip(tr("Not minting because staking is disabled."));
+        labelMintingIcon->setEnabled(false);
+    }
     else if (IsInitialBlockDownload())
     {
         labelMintingIcon->setToolTip(tr("Not minting because wallet is syncing."));
