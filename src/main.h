@@ -48,6 +48,10 @@ static const int64 MAX_MONEY = 60000000 * COIN;
 static const int64 MAX_MONEY2 = 60000000 * COIN;			// 60 mil
 /** Base Rate for Proof of Stake Reward */
 static const int64 MAX_MINT_PROOF_OF_STAKE = 2.00 * COIN;	// 200% annual interest
+/** Split Threshold Default */ 
+static const int64 DEF_SPLIT_AMOUNT = 50 * COIN; 
+/** Split Threshold Max */
+static const int64 MAX_SPLIT_AMOUNT = 400 * COIN; 
 
 static const int MAX_TIME_SINCE_BEST_BLOCK = 10; // how many seconds to wait before sending next PushGetBlocks()
 
@@ -102,6 +106,7 @@ extern std::map<uint256, CBlock*> mapOrphanBlocks;
 
 // Settings
 extern int64 nTransactionFee;
+extern int64 nSplitThreshold;
 
 // Minimum disk space required - used in CheckDiskSpace()
 static const uint64 nMinDiskSpace = 52428800;
