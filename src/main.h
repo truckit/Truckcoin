@@ -49,9 +49,9 @@ static const int64 MAX_MONEY2 = 60000000 * COIN;			// 60 mil
 /** Base Rate for Proof of Stake Reward */
 static const int64 MAX_MINT_PROOF_OF_STAKE = 2.00 * COIN;	// 200% annual interest
 /** Split Threshold Default */ 
-static const int64 DEF_SPLIT_AMOUNT = 50 * COIN; 
+static const int64 DEF_SPLIT_AMOUNT = 30 * COIN; 
 /** Split Threshold Max */
-static const int64 MAX_SPLIT_AMOUNT = 400 * COIN; 
+static const int64 MAX_SPLIT_AMOUNT = 300 * COIN; 
 
 static const int MAX_TIME_SINCE_BEST_BLOCK = 10; // how many seconds to wait before sending next PushGetBlocks()
 
