@@ -71,6 +71,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     clientModel(0),
     walletModel(0),
     encryptWalletAction(0),
+	unlockWalletforposAction(0),
 	unlockWalletAction(0),
 	lockWalletAction(0),
     changePassphraseAction(0),
@@ -293,8 +294,11 @@ void BitcoinGUI::createActions()
     encryptWalletAction = new QAction(QIcon(":/icons/lock_closed"), tr("&Encrypt Wallet..."), this);
     encryptWalletAction->setToolTip(tr("Encrypt the private keys that belong to your wallet"));
     encryptWalletAction->setCheckable(true);
-	unlockWalletAction = new QAction(QIcon(":/icons/lock_open"), tr("&Unlock Wallet For PoS..."), this); 
-    unlockWalletAction->setStatusTip(tr("Unlock the wallet for PoS")); 
+	unlockWalletforposAction = new QAction(QIcon(":/icons/lock_open"), tr("&Unlock Wallet For PoS..."), this); 
+    unlockWalletforposAction->setStatusTip(tr("Unlock the wallet for PoS")); 
+    unlockWalletforposAction->setCheckable(true); 
+	unlockWalletAction = new QAction(QIcon(":/icons/lock_open"), tr("&Unlock Wallet..."), this); 
+    unlockWalletAction->setStatusTip(tr("Unlock the wallet")); 
     unlockWalletAction->setCheckable(true); 
 	lockWalletAction = new QAction(QIcon(":/icons/lock_closed"), tr("&Lock Wallet..."), this); 
     lockWalletAction->setStatusTip(tr("Lock the wallet")); 
@@ -335,7 +339,8 @@ void BitcoinGUI::createActions()
     connect(verifyMessageAction, SIGNAL(triggered()), this, SLOT(gotoVerifyMessageTab()));
     connect(dumpWalletAction, SIGNAL(triggered()), this, SLOT(dumpWallet()));
     connect(importWalletAction, SIGNAL(triggered()), this, SLOT(importWallet()));
-	connect(unlockWalletAction, SIGNAL(triggered()), this, SLOT(unlockWalletForMint()));
+	connect(unlockWalletforposAction, SIGNAL(triggered()), this, SLOT(unlockWalletForMint()));
+	connect(unlockWalletAction, SIGNAL(triggered()), this, SLOT(unlockWallet()));
 	connect(lockWalletAction, SIGNAL(triggered()), this, SLOT(lockWallet()));
 	connect(blockAction, SIGNAL(triggered()), this, SLOT(gotoBlockBrowser()));
 }
@@ -367,6 +372,7 @@ void BitcoinGUI::createMenuBar()
 	QMenu *wallet = appMenuBar->addMenu(tr("&Wallet")); 
     wallet->addAction(encryptWalletAction); 
     wallet->addAction(changePassphraseAction); 
+	wallet->addAction(unlockWalletforposAction);
 	wallet->addAction(unlockWalletAction);
 	wallet->addAction(lockWalletAction);
 	wallet->addSeparator(); 
@@ -942,9 +948,11 @@ void BitcoinGUI::setEncryptionStatus(int status)
     case WalletModel::Unencrypted:
         labelEncryptionIcon->hide();
         encryptWalletAction->setChecked(false);
+		unlockWalletforposAction->setChecked(false);
 		unlockWalletAction->setChecked(false);
 		lockWalletAction->setChecked(false);
         encryptWalletAction->setEnabled(true);
+		unlockWalletforposAction->setEnabled(false);
 		unlockWalletAction->setEnabled(false);
 		lockWalletAction->setEnabled(false);
         changePassphraseAction->setEnabled(false);
@@ -956,9 +964,11 @@ void BitcoinGUI::setEncryptionStatus(int status)
         labelEncryptionIcon->setPixmap(QIcon(":/icons/lock_open").pixmap(STATUSBAR_ICONSIZE,STATUSBAR_ICONSIZE));
         labelEncryptionIcon->setToolTip(tr("Wallet is <b>encrypted</b> and currently <b>unlocked</b>"));
         encryptWalletAction->setChecked(true);
+		unlockWalletforposAction->setChecked(true);
 		unlockWalletAction->setChecked(true);
 		lockWalletAction->setChecked(false);
         encryptWalletAction->setEnabled(false); // TODO: decrypt currently not supported
+		unlockWalletforposAction->setEnabled(false);
 		unlockWalletAction->setEnabled(false);
 		lockWalletAction->setEnabled(true);
         changePassphraseAction->setEnabled(true);
@@ -969,9 +979,11 @@ void BitcoinGUI::setEncryptionStatus(int status)
         labelEncryptionIcon->setPixmap(QIcon(":/icons/lock_closed").pixmap(STATUSBAR_ICONSIZE,STATUSBAR_ICONSIZE));
         labelEncryptionIcon->setToolTip(tr("Wallet is <b>encrypted</b> and currently <b>locked</b>"));
         encryptWalletAction->setChecked(true);
+		unlockWalletforposAction->setChecked(false);
 		unlockWalletAction->setChecked(false);
 		lockWalletAction->setChecked(true);
         encryptWalletAction->setEnabled(false); // TODO: decrypt currently not supported
+		unlockWalletforposAction->setEnabled(true);
 		unlockWalletAction->setEnabled(true);
 		lockWalletAction->setEnabled(false);
         changePassphraseAction->setEnabled(true);

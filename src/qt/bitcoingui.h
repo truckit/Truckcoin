@@ -95,6 +95,7 @@ private:
     QAction *toggleHideAction;
     QAction *exportAction;
     QAction *encryptWalletAction;
+	QAction *unlockWalletforposAction;
 	QAction *unlockWalletAction;
 	QAction *lockWalletAction;
 	QAction *checkWalletAction; 
