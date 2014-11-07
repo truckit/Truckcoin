@@ -4,6 +4,7 @@
 #include "base58.h"
 #include "clientmodel.h"
 #include "db.h"
+#include "wallet.h"
 
 double GetPoSKernelPS(const CBlockIndex* blockindex);
 double GetDifficulty(const CBlockIndex* blockindex);
