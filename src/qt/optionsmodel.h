@@ -25,6 +25,8 @@ public:
         ProxyIP,           // QString
         ProxyPort,         // int
         ProxySocksVersion, // int
+        SplitThreshold,    // int
+        MaxSplitThreshold, // int
         Fee,               // qint64
         DisplayUnit,       // BitcoinUnits::Unit
         DisplayAddresses,  // bool
@@ -49,6 +51,7 @@ public:
     bool getMinimizeToTray();
     bool getMinimizeOnClose();
     int getDisplayUnit();
+    int getSplitThreshold();
     bool getDisplayAddresses();
     bool getCoinControlFeatures();
     bool getShowIrcButton();
@@ -56,6 +59,7 @@ public:
 
 private:
     int nDisplayUnit;
+    int nSplitThreshold;
     bool bDisplayAddresses;
     bool fMinimizeToTray;
     bool fMinimizeOnClose;
@@ -64,6 +68,7 @@ private:
     QString language;
 
 signals:
+    void splitThresholdChanged(int unit);
     void displayUnitChanged(int unit);
 	void transactionFeeChanged(qint64);
     void coinControlFeaturesChanged(bool);
