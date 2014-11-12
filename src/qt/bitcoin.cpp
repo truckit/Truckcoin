@@ -8,6 +8,7 @@
 #include "splashscreen.h"
 #include "guiutil.h"
 #include "guiconstants.h"
+#include "winshutdownmonitor.h"
 
 #include "init.h"
 #include "ui_interface.h"
@@ -143,7 +144,7 @@ int main(int argc, char *argv[])
     // Application identification (must be set before OptionsModel is initialized,
     // as it is used to locate QSettings)
     app.setOrganizationName("Truckcoin");
-    app.setOrganizationDomain("Truckcoin.su");
+    app.setOrganizationDomain("Truckcoin.net");
     if(GetBoolArg("-testnet")) // Separate UI settings for testnet
         app.setApplicationName("Truckcoin-Qt-testnet");
     else
@@ -232,6 +233,10 @@ int main(int argc, char *argv[])
 
                 window.setClientModel(&clientModel);
                 window.setWalletModel(&walletModel);
+				
+#if defined(Q_OS_WIN) && QT_VERSION >= 0x050000
+                app.installNativeEventFilter(new WinShutdownMonitor());
+#endif
 
                 // If -min option passed, start window minimized.
                 if(GetBoolArg("-min"))
@@ -245,6 +250,10 @@ int main(int argc, char *argv[])
 
                 // Place this here as guiref has to be defined if we don't want to lose URIs
                 ipcInit(argc, argv);
+				
+#if defined(Q_OS_WIN) && QT_VERSION >= 0x050000
+                WinShutdownMonitor::registerShutdownBlockReason(QObject::tr("Truckcoin shutting down. Please wait..."), (HWND)window.getMainWinId()); 
+#endif
 
                 app.exec();
 

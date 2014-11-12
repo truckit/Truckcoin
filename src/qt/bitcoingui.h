@@ -51,6 +51,9 @@ public:
         functionality.
     */
     void setWalletModel(WalletModel *walletModel);
+	
+   /// Get window identifier of QMainWindow (BitcoinGUI) 
+   WId getMainWinId() const; 
 
 protected:
     void changeEvent(QEvent *e);
@@ -61,7 +64,6 @@ protected:
 private:
     ClientModel *clientModel;
     WalletModel *walletModel;
-    BlockBrowser *blockBrowser;
     QStackedWidget *centralWidget;
     ChatWindow *chatWindow;
 
@@ -93,6 +95,7 @@ private:
     QAction *toggleHideAction;
     QAction *exportAction;
     QAction *encryptWalletAction;
+	QAction *unlockWalletforposAction;
 	QAction *unlockWalletAction;
 	QAction *lockWalletAction;
 	QAction *checkWalletAction; 
@@ -109,6 +112,7 @@ private:
     Notificator *notificator;
     TransactionView *transactionView;
     RPCConsole *rpcConsole;
+	BlockBrowser *blockBrowser;
 
     QMovie *syncIconMovie;
 
@@ -168,10 +172,11 @@ private slots:
     void gotoReceiveCoinsPage();
     /** Switch to send coins page */
     void gotoSendCoinsPage();
-    /** Switch to block explorer page */
-    void gotoBlockBrowser();
     /** Switch to IRC page */
     void gotoChatPage();
+	
+	/** Show block explorer page */
+	void gotoBlockBrowser(QString transactionId = "");
 
     /** Show Sign/Verify Message dialog and switch to sign message tab */
     void gotoSignMessageTab(QString addr = "");

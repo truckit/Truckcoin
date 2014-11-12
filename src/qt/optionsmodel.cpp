@@ -62,6 +62,8 @@ void OptionsModel::Init()
         SoftSetBoolArg("-detachdb", settings.value("detachDB").toBool());
     if (!language.isEmpty())
         SoftSetArg("-lang", language.toStdString());
+    if (settings.contains("nSplitThreshold"))
+        SoftSetArg("-splitthreshold", settings.value("nSplitThreshold").toString().toStdString());
 }
 
 bool OptionsModel::Upgrade()
@@ -77,7 +79,7 @@ bool OptionsModel::Upgrade()
     CWalletDB walletdb("wallet.dat");
 
     QList<QString> intOptions;
-    intOptions << "nDisplayUnit" << "nTransactionFee";
+    intOptions << "nDisplayUnit" << "nTransactionFee" << "nSplitThreshold";
     foreach(QString key, intOptions)
     {
         int value = 0;
@@ -162,6 +164,10 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const
         }
         case ProxySocksVersion:
             return settings.value("nSocksVersion", 5);
+        case SplitThreshold:
+            return settings.value("nSplitThreshold", DEF_SPLIT_AMOUNT/1000000);
+        case MaxSplitThreshold:
+            return settings.value("nMaxSplitThreshold", MAX_SPLIT_AMOUNT/1000000);
         case Fee:
             return QVariant(nTransactionFee);
         case DisplayUnit:
@@ -247,6 +253,11 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
             settings.setValue("nTransactionFee", nTransactionFee);
             emit transactionFeeChanged(nTransactionFee);
             break;
+        case SplitThreshold:
+            nSplitThreshold = value.toInt();
+            settings.setValue("nSplitThreshold", nSplitThreshold);
+            emit splitThresholdChanged(nSplitThreshold);
+            break;
         case DisplayUnit:
             nDisplayUnit = value.toInt();
             settings.setValue("nDisplayUnit", nDisplayUnit);
@@ -282,6 +293,11 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
     emit dataChanged(index, index);
 
     return successful;
+}
+
+int OptionsModel::getSplitThreshold()
+{
+    return nSplitThreshold;
 }
 
 qint64 OptionsModel::getTransactionFee()

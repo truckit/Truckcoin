@@ -1162,6 +1162,9 @@ void MapPort()
 static const char *strDNSSeed[][2] = {
     {"trkseed", "dns.seed.truckcoin.net"},
     {"trkseed2", "dns.seed2.truckcoin.net"},
+    {"node1", "node1.truckcoin.net"},
+    {"node2", "node2.truckcoin.net"},
+    {"node3", "node3.truckcoin.net"},
 };
 
 void ThreadDNSAddressSeed(void* parg)
@@ -1893,6 +1896,9 @@ void StartNode(void* parg)
         printf("Error; NewThread(ThreadDumpAddress) failed\n");
 
     // mint proof-of-stake blocks in the background
+    if (!GetBoolArg("-staking", true))
+        printf("Staking disabled\n");
+    else
     if (!NewThread(ThreadStakeMinter, pwalletMain))
         printf("Error: NewThread(ThreadStakeMinter) failed\n");
 

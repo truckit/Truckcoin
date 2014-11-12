@@ -43,14 +43,17 @@ double GetDifficulty(const CBlockIndex* blockindex)
     return dDiff;
 }
 
-double GetPoSKernelPS()
+double GetPoSKernelPS(const CBlockIndex* blockindex)
 {
     int nPoSInterval = 72;
     double dStakeKernelsTriedAvg = 0;
     int nStakesHandled = 0, nStakesTime = 0;
 
-    CBlockIndex* pindex = pindexBest;;
-    CBlockIndex* pindexPrevStake = NULL;
+    const CBlockIndex* pindex = pindexBest;
+    const CBlockIndex* pindexPrevStake = NULL;
+	
+	if (blockindex != NULL)
+		pindex = blockindex;
 
     while (pindex && nStakesHandled < nPoSInterval)
     {
@@ -66,6 +69,34 @@ double GetPoSKernelPS()
     }
 
     return nStakesTime ? dStakeKernelsTriedAvg / nStakesTime : 0;
+}
+
+double GetPoWMHashPS(const CBlockIndex* blockindex)
+{
+    int nPoWInterval = 72;
+    int64 nTargetSpacingWorkMin = 1, nTargetSpacingWork = 1;
+
+    CBlockIndex* pindex = pindexGenesisBlock;
+    CBlockIndex* pindexPrevWork = pindexGenesisBlock;
+    const CBlockIndex* pindexStop = pindexBest;
+
+    if (blockindex != NULL)
+        pindexStop = blockindex;
+
+    while (pindex && pindex->nHeight < pindexStop->nHeight)
+    {
+        if (pindex->IsProofOfWork())
+        {
+            int64 nActualSpacingWork = pindex->GetBlockTime() - pindexPrevWork->GetBlockTime();
+            nTargetSpacingWork = ((nPoWInterval - 1) * nTargetSpacingWork + nActualSpacingWork + nActualSpacingWork) / (nPoWInterval + 1);
+            nTargetSpacingWork = max(nTargetSpacingWork, nTargetSpacingWorkMin);
+            pindexPrevWork = pindex;
+        }
+
+        pindex = pindex->pnext;
+    }
+
+    return GetDifficulty(pindexPrevWork) * 4294.967296 / nTargetSpacingWork;
 }
 
 Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fPrintTransactionDetail)

@@ -77,6 +77,72 @@
         </layout>
        </item>
        <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_Main1">
+         <item>
+          <widget class="QLabel" name="splitThresholdLabel">
+           <property name="text">
+            <string>Split threshold:</string>
+           </property>
+           <property name="textFormat">
+            <enum>Qt::PlainText</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="SplitThresholdField" name="splitThreshold">
+           <property name="minimum">
+            <number>0</number>
+           </property>
+           <property name="suffix">
+            <string> TRK</string>
+           </property>
+           <property name="toolTip">
+            <string>Staking engine will not split blocks smaller than this amount (wallet restart required).</string>
+           </property>
+	  </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="maxSplitThresholdLabel">
+           <property name="text">
+            <string>Max:</string>
+           </property>
+           <property name="textFormat">
+            <enum>Qt::PlainText</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="maxSplitThreshold">
+         <property name="disabled">
+          <bool>true</bool>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>40</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>Maximum allowed split threshold.</string>
+         </property>
+          </widget>
+         </item>	 
+         <item>
+          <spacer name="horizontalSpacer_Main1">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item>
         <widget class="QCheckBox" name="bitcoinAtStartup">
          <property name="toolTip">
           <string>Automatically start Truckcoin after logging in to the system.</string>
@@ -463,6 +529,11 @@
    <class>BitcoinAmountField</class>
    <extends>QSpinBox</extends>
    <header>bitcoinamountfield.h</header>
+  </customwidget>
+  <customwidget>
+   <class>SplitThresholdField</class>
+   <extends>QSpinBox</extends>
+   <header>splitthresholdfield.h</header>
   </customwidget>
   <customwidget>
    <class>QValueComboBox</class>

@@ -71,13 +71,15 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     clientModel(0),
     walletModel(0),
     encryptWalletAction(0),
+	unlockWalletforposAction(0),
 	unlockWalletAction(0),
 	lockWalletAction(0),
     changePassphraseAction(0),
     aboutQtAction(0),
     trayIcon(0),
     notificator(0),
-    rpcConsole(0)
+    rpcConsole(0),
+	blockBrowser(0)
 {
     resize(860, 600);
     setWindowTitle(tr("Truckcoin") + " - " + tr("Wallet ") + QString::fromStdString(FormatFullVersion()));
@@ -201,14 +203,18 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 
     rpcConsole = new RPCConsole(this);
     connect(openRPCConsoleAction, SIGNAL(triggered()), rpcConsole, SLOT(show()));
+	
+	blockBrowser = new BlockBrowser(this);
+    connect(blockAction, SIGNAL(triggered()), blockBrowser, SLOT(show()));
 
     // Clicking on "Verify Message" in the address book sends you to the verify message tab
     connect(addressBookPage, SIGNAL(verifyMessage(QString)), this, SLOT(gotoVerifyMessageTab(QString)));
     // Clicking on "Sign Message" in the receive coins page sends you to the sign message tab
     connect(receiveCoinsPage, SIGNAL(signMessage(QString)), this, SLOT(gotoSignMessageTab(QString)));
-
-    
-
+	
+	// Clicking on "Block Explorer" in the transaction page sends you to the blockbrowser
+	connect(transactionView, SIGNAL(blockBrowserSignal(QString)), this, SLOT(gotoBlockBrowser(QString)));
+  
     gotoOverviewPage();
 }
 
@@ -255,11 +261,6 @@ void BitcoinGUI::createActions()
     addressBookAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_5));
     tabGroup->addAction(addressBookAction);
 
-    blockAction = new QAction(QIcon(":/icons/blexp"), tr("&Block Explorer"), this);
-    blockAction->setToolTip(tr("Explore the BlockChain"));
-    blockAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_6));
-    blockAction->setCheckable(true);
-    tabGroup->addAction(blockAction);
     chatAction = new QAction(QIcon(":/icons/irc"), tr("& IRC / Web"), this);
     chatAction->setToolTip(tr("TRK IRC chat, visit Truckcoin on the Web"));
     chatAction->setCheckable(true);
@@ -274,7 +275,6 @@ void BitcoinGUI::createActions()
     connect(historyAction, SIGNAL(triggered()), this, SLOT(gotoHistoryPage()));
     connect(addressBookAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(addressBookAction, SIGNAL(triggered()), this, SLOT(gotoAddressBookPage()));
-    connect(blockAction, SIGNAL(triggered()), this, SLOT(gotoBlockBrowser()));
     connect(chatAction, SIGNAL(triggered()), this, SLOT(gotoChatPage()));
 
     quitAction = new QAction(QIcon(":/icons/quit"), tr("E&xit"), this);
@@ -294,8 +294,11 @@ void BitcoinGUI::createActions()
     encryptWalletAction = new QAction(QIcon(":/icons/lock_closed"), tr("&Encrypt Wallet..."), this);
     encryptWalletAction->setToolTip(tr("Encrypt the private keys that belong to your wallet"));
     encryptWalletAction->setCheckable(true);
-	unlockWalletAction = new QAction(QIcon(":/icons/lock_open"), tr("&Unlock Wallet For PoS..."), this); 
-    unlockWalletAction->setStatusTip(tr("Unlock the wallet for PoS")); 
+	unlockWalletforposAction = new QAction(QIcon(":/icons/lock_open"), tr("&Unlock Wallet For PoS..."), this); 
+    unlockWalletforposAction->setStatusTip(tr("Unlock the wallet for PoS")); 
+    unlockWalletforposAction->setCheckable(true); 
+	unlockWalletAction = new QAction(QIcon(":/icons/lock_open"), tr("&Unlock Wallet..."), this); 
+    unlockWalletAction->setStatusTip(tr("Unlock the wallet")); 
     unlockWalletAction->setCheckable(true); 
 	lockWalletAction = new QAction(QIcon(":/icons/lock_closed"), tr("&Lock Wallet..."), this); 
     lockWalletAction->setStatusTip(tr("Lock the wallet")); 
@@ -319,6 +322,8 @@ void BitcoinGUI::createActions()
     exportAction->setToolTip(tr("Export the data in the current tab to a file"));
     openRPCConsoleAction = new QAction(QIcon(":/icons/debugwindow"), tr("&Debug window"), this);
     openRPCConsoleAction->setToolTip(tr("Open debugging and diagnostic console"));
+	blockAction = new QAction(QIcon(":/icons/blexp"), tr("&Block Explorer"), this);
+    blockAction->setToolTip(tr("Explore the BlockChain"));
 
     connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(aboutClicked()));
@@ -334,8 +339,10 @@ void BitcoinGUI::createActions()
     connect(verifyMessageAction, SIGNAL(triggered()), this, SLOT(gotoVerifyMessageTab()));
     connect(dumpWalletAction, SIGNAL(triggered()), this, SLOT(dumpWallet()));
     connect(importWalletAction, SIGNAL(triggered()), this, SLOT(importWallet()));
-	connect(unlockWalletAction, SIGNAL(triggered()), this, SLOT(unlockWalletForMint()));
+	connect(unlockWalletforposAction, SIGNAL(triggered()), this, SLOT(unlockWalletForMint()));
+	connect(unlockWalletAction, SIGNAL(triggered()), this, SLOT(unlockWallet()));
 	connect(lockWalletAction, SIGNAL(triggered()), this, SLOT(lockWallet()));
+	connect(blockAction, SIGNAL(triggered()), this, SLOT(gotoBlockBrowser()));
 }
 
 void BitcoinGUI::createMenuBar()
@@ -365,6 +372,7 @@ void BitcoinGUI::createMenuBar()
 	QMenu *wallet = appMenuBar->addMenu(tr("&Wallet")); 
     wallet->addAction(encryptWalletAction); 
     wallet->addAction(changePassphraseAction); 
+	wallet->addAction(unlockWalletforposAction);
 	wallet->addAction(unlockWalletAction);
 	wallet->addAction(lockWalletAction);
 	wallet->addSeparator(); 
@@ -393,11 +401,11 @@ void BitcoinGUI::createToolBars()
     toolbar->addAction(receiveCoinsAction);
     toolbar->addAction(historyAction);
     toolbar->addAction(addressBookAction);
-    toolbar->addAction(blockAction);
     toolbar->addAction(chatAction);
 	
     QToolBar *toolbar2 = addToolBar(tr("Actions toolbar"));
     toolbar2->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+	toolbar2->addAction(blockAction);
     toolbar2->addAction(openRPCConsoleAction);
     toolbar2->addAction(exportAction);
 }
@@ -816,14 +824,6 @@ void BitcoinGUI::gotoOverviewPage()
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 }
 
-void BitcoinGUI::gotoBlockBrowser()
-{
-    blockAction->setChecked(true);
-    centralWidget->setCurrentWidget(blockBrowser);
-
-    exportAction->setEnabled(false);
-    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
-}
 void BitcoinGUI::gotoChatPage()
 {
     chatAction->setChecked(true);
@@ -851,6 +851,14 @@ void BitcoinGUI::gotoAddressBookPage()
     exportAction->setEnabled(true);
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
     connect(exportAction, SIGNAL(triggered()), addressBookPage, SLOT(exportClicked()));
+}
+
+void BitcoinGUI::gotoBlockBrowser(QString transactionId)
+{
+	if(!transactionId.isEmpty())
+		blockBrowser->setTransactionId(transactionId);
+	
+	blockBrowser->show();
 }
 
 void BitcoinGUI::gotoReceiveCoinsPage()
@@ -940,9 +948,11 @@ void BitcoinGUI::setEncryptionStatus(int status)
     case WalletModel::Unencrypted:
         labelEncryptionIcon->hide();
         encryptWalletAction->setChecked(false);
+		unlockWalletforposAction->setChecked(false);
 		unlockWalletAction->setChecked(false);
 		lockWalletAction->setChecked(false);
         encryptWalletAction->setEnabled(true);
+		unlockWalletforposAction->setEnabled(false);
 		unlockWalletAction->setEnabled(false);
 		lockWalletAction->setEnabled(false);
         changePassphraseAction->setEnabled(false);
@@ -954,9 +964,11 @@ void BitcoinGUI::setEncryptionStatus(int status)
         labelEncryptionIcon->setPixmap(QIcon(":/icons/lock_open").pixmap(STATUSBAR_ICONSIZE,STATUSBAR_ICONSIZE));
         labelEncryptionIcon->setToolTip(tr("Wallet is <b>encrypted</b> and currently <b>unlocked</b>"));
         encryptWalletAction->setChecked(true);
+		unlockWalletforposAction->setChecked(true);
 		unlockWalletAction->setChecked(true);
 		lockWalletAction->setChecked(false);
         encryptWalletAction->setEnabled(false); // TODO: decrypt currently not supported
+		unlockWalletforposAction->setEnabled(false);
 		unlockWalletAction->setEnabled(false);
 		lockWalletAction->setEnabled(true);
         changePassphraseAction->setEnabled(true);
@@ -967,9 +979,11 @@ void BitcoinGUI::setEncryptionStatus(int status)
         labelEncryptionIcon->setPixmap(QIcon(":/icons/lock_closed").pixmap(STATUSBAR_ICONSIZE,STATUSBAR_ICONSIZE));
         labelEncryptionIcon->setToolTip(tr("Wallet is <b>encrypted</b> and currently <b>locked</b>"));
         encryptWalletAction->setChecked(true);
+		unlockWalletforposAction->setChecked(false);
 		unlockWalletAction->setChecked(false);
 		lockWalletAction->setChecked(true);
         encryptWalletAction->setEnabled(false); // TODO: decrypt currently not supported
+		unlockWalletforposAction->setEnabled(true);
 		unlockWalletAction->setEnabled(true);
 		lockWalletAction->setEnabled(false);
         changePassphraseAction->setEnabled(true);
@@ -1221,6 +1235,11 @@ void BitcoinGUI::updateMintingIcon()
         labelMintingIcon->setToolTip(tr("Not minting because wallet is offline."));
         labelMintingIcon->setEnabled(false);
     }
+    	else if (!GetBoolArg("-staking", true))
+    {
+        labelMintingIcon->setToolTip(tr("Not minting because staking is disabled."));
+        labelMintingIcon->setEnabled(false);
+    }
     else if (IsInitialBlockDownload())
     {
         labelMintingIcon->setToolTip(tr("Not minting because wallet is syncing."));
@@ -1275,4 +1294,9 @@ void BitcoinGUI::updateMintingWeights()
 
         nNetworkWeight = GetPoSKernelPS();
     }
+}
+
+WId BitcoinGUI::getMainWinId() const 
+{ 
+    return winId(); 
 }
