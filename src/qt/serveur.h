@@ -17,7 +17,11 @@
 #ifndef SERVEUR_H
 #define SERVEUR_H
 
+#if QT_VERSION < 0x050000
 #include <QtGui>
+#else 
+#include <QtWidgets>
+#endif
 #include <QtNetwork>
 
 class Serveur : public QTcpSocket
@@ -39,7 +43,6 @@ class Serveur : public QTcpSocket
 		QString parseCommande(QString comm,bool serveur=false);
 
 		QWidget *parent;
-
 
 	signals:
 		void pseudoChanged(QString newPseudo);
