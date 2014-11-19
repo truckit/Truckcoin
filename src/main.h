@@ -71,8 +71,8 @@ static const uint256 hashGenesisBlockOfficial("0x000005fe04e512585c3611369c7ce23
 static const uint256 hashGenesisBlockTestNet ("0x0000076130e1a816bab8f26310839ab601305b2315dc3b8b1a250faa0cb1f9a8");
 
 // HighBlock is used to speed up blockchain download. It is being sent by server instead of last PoW block. 
-static const uint256 hashHighBlock ("0xad21a22aa57a2c91eed428468744e88976d88d18012bb9541ad7b5af10691d18"); 
-static const int HIGH_BLOCK_INDEX = 99999;
+static const uint256 hashHighBlock ("0x6a0dae9f4e7266b93b86573e1af98f92298a1034de98aec4c5b15cabf8746b57"); 
+static const int HIGH_BLOCK_INDEX = 147450;
 
 static const int64 nMaxClockDrift = 15 * 60;        // fifteen minutes
 
