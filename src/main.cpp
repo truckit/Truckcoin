@@ -2885,14 +2885,10 @@ string GetWarnings(string strFor)
     return "error";
 }
 
-
-
-
 //////////////////////////////////////////////////////////////////////////////
 //
 // Messages
 //
-
 
 bool static AlreadyHave(CTxDB& txdb, const CInv& inv)
 {
@@ -2918,9 +2914,6 @@ bool static AlreadyHave(CTxDB& txdb, const CInv& inv)
     return true;
 }
 
-
-
-
 // The message start string is designed to be unlikely to occur in normal data.
 // The characters are rarely used upper ASCII, not valid as UTF-8, and produce
 // a large 4-byte int at any alignment.
@@ -2938,10 +2931,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         return true;
     }
 
-
-
-
-
     if (strCommand == "version")
     {
         // Each connection can only send one version message
@@ -2956,10 +2945,19 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         CAddress addrFrom;
         uint64 nNonce = 1;
         vRecv >> pfrom->nVersion >> pfrom->nServices >> nTime >> addrMe;
-        if (pfrom->nVersion < MIN_PEER_PROTO_VERSION)
+ //       if (pfrom->nVersion < MIN_PEER_PROTO_VERSION)
+          if (nTime > FORK_TIME && pfrom->nVersion < 75000) 
         {
             // Disconnect from peers older than this proto version
             printf("partner %s using obsolete version %i; disconnecting\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
+            pfrom->fDisconnect = true;
+            return false;
+        }
+		
+        if (pfrom->nVersion == 72000)
+        {
+            // Disconnect from HYP peers
+            printf("HYP peer %s version %i detected; disconnecting\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
             pfrom->fDisconnect = true;
             return false;
         }
