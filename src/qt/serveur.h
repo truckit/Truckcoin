@@ -17,9 +17,13 @@
 #ifndef SERVEUR_H
 #define SERVEUR_H
 
-#if QT_VERSION < 0x050000
+#ifndef QT_VERSION
+#include <qglobal.h>
+#endif
+
+#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
 #include <QtGui>
-#else 
+#else
 #include <QtWidgets>
 #endif
 #include <QtNetwork>
