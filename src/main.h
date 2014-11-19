@@ -26,7 +26,6 @@ class CInv;
 class CRequestTracker;
 class CNode;
 
-
 #define POW_CUTOFF_HEIGHT 21000
 
 /** The maximum allowed size for a serialized block, in bytes (network rule) */
@@ -52,6 +51,7 @@ static const int64 MAX_MINT_PROOF_OF_STAKE = 2.00 * COIN;	// 200% annual interes
 static const int64 DEF_SPLIT_AMOUNT = 30 * COIN; 
 /** Split Threshold Max */
 static const int64 MAX_SPLIT_AMOUNT = 300 * COIN; 
+static const unsigned int FORK_TIME = 1418934203; // Thursday, 18 Dec 2014 20:23:23 GMT
 
 static const int MAX_TIME_SINCE_BEST_BLOCK = 10; // how many seconds to wait before sending next PushGetBlocks()
 
@@ -111,7 +111,6 @@ extern int64 nSplitThreshold;
 // Minimum disk space required - used in CheckDiskSpace()
 static const uint64 nMinDiskSpace = 52428800;
 
-
 class CReserveKey;
 class CTxDB;
 class CTxIndex;
@@ -137,6 +136,8 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey);
 bool CheckProofOfWork(uint256 hash, unsigned int nBits);
 int64 GetProofOfWorkReward(int nHeight, int64 nFees, uint256 prevHash);
 int64 GetProofOfStakeReward(int64 nCoinAge, unsigned int nBits, unsigned int nTime, int nHeight, bool bCoinYearOnly);
+int64 GetProofOfStakeRewardV1(int64 nCoinAge, unsigned int nBits, unsigned int nTime, int nHeight, bool bCoinYearOnly);
+int64 GetProofOfStakeRewardV2(int64 nCoinAge, unsigned int nBits, unsigned int nTime, int nHeight, bool bCoinYearOnly);
 unsigned int ComputeMinWork(unsigned int nBase, int64 nTime);
 unsigned int ComputeMinStake(unsigned int nBase, int64 nTime, unsigned int nBlockTime);
 int GetNumBlocksOfPeers();
@@ -147,15 +148,6 @@ uint256 WantedByOrphan(const CBlock* pblockOrphan);
 const CBlockIndex* GetLastBlockIndex(const CBlockIndex* pindex, bool fProofOfStake);
 void BitcoinMiner(CWallet *pwallet, bool fProofOfStake);
 void ResendWalletTransactions();
-
-
-
-
-
-
-
-
-
 
 bool GetWalletFile(CWallet* pwallet, std::string &strWalletFileOut);
 
@@ -210,8 +202,6 @@ public:
     }
 };
 
-
-
 /** An inpoint - a combination of a transaction and an index n into its vin */
 class CInPoint
 {
@@ -224,8 +214,6 @@ public:
     void SetNull() { ptx = NULL; n = (unsigned int) -1; }
     bool IsNull() const { return (ptx == NULL && n == (unsigned int) -1); }
 };
-
-
 
 /** An outpoint - a combination of a transaction hash and an index n into its vout */
 class COutPoint
@@ -265,9 +253,6 @@ public:
         printf("%s\n", ToString().c_str());
     }
 };
-
-
-
 
 /** An input of a transaction.  It contains the location of the previous
  * transaction's output that it claims and a signature that matches the
@@ -348,9 +333,6 @@ public:
         printf("%s\n", ToString().c_str());
     }
 };
-
-
-
 
 /** An output of a transaction.  It contains the public key that the next input
  * must be able to sign with to claim it.
@@ -434,9 +416,6 @@ public:
         printf("%s\n", ToString().c_str());
     }
 };
-
-
-
 
 enum GetMinFee_mode
 {
@@ -561,7 +540,6 @@ public:
     {
         return (IsCoinBase() || IsCoinStake());
     }
-
 
     /** Check for standard transaction types
         @return True if all outputs (scriptPubKeys) use only standard transaction forms
@@ -696,7 +674,6 @@ public:
         printf("%s", ToString().c_str());
     }
 
-
     bool ReadFromDisk(CTxDB& txdb, COutPoint prevout, CTxIndex& txindexRet);
     bool ReadFromDisk(CTxDB& txdb, COutPoint prevout);
     bool ReadFromDisk(COutPoint prevout);
@@ -739,10 +716,6 @@ protected:
     const CTxOut& GetOutputFor(const CTxIn& input, const MapPrevTx& inputs) const;
 };
 
-
-
-
-
 /** A transaction with a merkle branch linking it to the block chain. */
 class CMerkleTx : public CTransaction
 {
@@ -753,7 +726,6 @@ public:
 
     // memory only
     mutable bool fMerkleVerified;
-
 
     CMerkleTx()
     {
@@ -771,7 +743,6 @@ public:
         nIndex = -1;
         fMerkleVerified = false;
     }
-
 
     IMPLEMENT_SERIALIZE
     (
@@ -791,9 +762,6 @@ public:
     bool AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs=true);
     bool AcceptToMemoryPool();
 };
-
-
-
 
 /**  A txdb record that contains the disk location of a transaction and the
  * locations of transactions that spend its outputs.  vSpent is really only
@@ -848,10 +816,6 @@ public:
     int GetDepthInMainChain() const;
 
 };
-
-
-
-
 
 /** Nodes collect new transactions into a block, hash them into a hash tree,
  * and scan through nonce values to make the block's hash satisfy proof-of-work
@@ -1032,7 +996,6 @@ public:
         return hash;
     }
 
-
     bool WriteToDisk(unsigned int& nFileRet, unsigned int& nBlockPosRet)
     {
         // Open history file to append
@@ -1085,8 +1048,6 @@ public:
         return true;
     }
 
-
-
     void print() const
     {
         printf("CBlock(hash=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, nNonce=%u, vtx=%"PRIszu", vchBlockSig=%s)\n",
@@ -1108,7 +1069,6 @@ public:
         printf("\n");
     }
 
-
     bool DisconnectBlock(CTxDB& txdb, CBlockIndex* pindex);
     bool ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck=false);
     bool ReadFromDisk(const CBlockIndex* pindex, bool fReadTransactions=true);
@@ -1123,11 +1083,6 @@ public:
 private:
     bool SetBestChainInner(CTxDB& txdb, CBlockIndex *pindexNew);
 };
-
-
-
-
-
 
 /** The block chain is a tree shaped structure starting with the
  * genesis block at the root, with each block potentially having multiple
@@ -1302,7 +1257,6 @@ public:
     static bool IsSuperMajority(int minVersion, const CBlockIndex* pstart,
                                 unsigned int nRequired, unsigned int nToCheck);
 
-
     bool IsProofOfWork() const
     {
         return !(nFlags & BLOCK_PROOF_OF_STAKE);
@@ -1361,8 +1315,6 @@ public:
         printf("%s\n", ToString().c_str());
     }
 };
-
-
 
 /** Used to marshal pointers into hashes for db storage. */
 class CDiskBlockIndex : public CBlockIndex
@@ -1447,13 +1399,6 @@ public:
         printf("%s\n", ToString().c_str());
     }
 };
-
-
-
-
-
-
-
 
 /** Describes a place in the block chain to another node such that if the
  * other node doesn't have the same branch, it can find a recent common trunk.
@@ -1581,13 +1526,6 @@ public:
         return pindex->nHeight;
     }
 };
-
-
-
-
-
-
-
 
 class CTxMemPool
 {
