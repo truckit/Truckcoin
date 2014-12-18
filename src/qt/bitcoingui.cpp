@@ -1243,12 +1243,19 @@ void BitcoinGUI::updateMintingIcon()
         labelMintingIcon->setToolTip(tr("Not minting because wallet is offline."));
         labelMintingIcon->setEnabled(false);
     }
+	
+    else if (clientModel->getNumConnections() < 3 )
+    {
+        labelMintingIcon->setToolTip(tr("Not minting because wallet is still acquiring nodes."));
+        labelMintingIcon->setEnabled(false);
+    }
+	
     	else if (!GetBoolArg("-staking", true))
     {
         labelMintingIcon->setToolTip(tr("Not minting because staking is disabled."));
         labelMintingIcon->setEnabled(false);
     }
-    else if (IsInitialBlockDownload())
+    else if (IsInitialBlockDownload() || clientModel->getNumBlocks() < clientModel->getNumBlocksOfPeers())
     {
         labelMintingIcon->setToolTip(tr("Not minting because wallet is syncing."));
         labelMintingIcon->setEnabled(false);

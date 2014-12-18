@@ -2764,7 +2764,7 @@ bool LoadExternalBlockFile(FILE* fileIn)
 extern map<uint256, CAlert> mapAlerts;
 extern CCriticalSection cs_mapAlerts;
 
-static string strMintMessage = "Info: Minting suspended due to locked wallet.";
+static string strMintMessage;
 static string strMintWarning;
 
 string GetWarnings(string strFor)
@@ -4309,8 +4309,10 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
 
     // Make this thread recognisable as the mining thread
-    RenameThread("bitcoin-miner");
+    RenameThread("truckcoin-miner");
 
+    bool fTryToSync = true;
+	
     // Each thread has its own key and counter
     CReserveKey reservekey(pwallet);
     unsigned int nExtraNonce = 0;
@@ -4320,7 +4322,7 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
         if (fShutdown)
             return;
 
-        while (vNodes.empty() || IsInitialBlockDownload() || pwallet->IsLocked())
+        while (pwallet->IsLocked())
         {
             nLastCoinStakeSearchInterval = 0;
             Sleep(1000);
@@ -4329,7 +4331,28 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
             if (!fGenerateBitcoins && !fProofOfStake)
                 return;
         }
-
+				
+        while (vNodes.empty() || IsInitialBlockDownload())
+        {
+            nLastCoinStakeSearchInterval = 0;
+            fTryToSync = true;
+            Sleep(1000);
+            if (fShutdown)
+                return;
+            if (!fGenerateBitcoins && !fProofOfStake)
+                return;
+        }
+		
+		        if (fTryToSync)
+        {
+            fTryToSync = false;
+            if (vNodes.size() < 3 || nBestHeight < GetNumBlocksOfPeers())
+            {
+                Sleep(60000);
+                continue;
+            }
+        }
+	
         //
         // Create new block
         //
