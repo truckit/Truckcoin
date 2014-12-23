@@ -924,7 +924,9 @@ int64 GetProofOfStakeReward(int64 nCoinAge, unsigned int nBits, unsigned int nTi
 {
 	int64 nSubsidy = 0;
 	
-	if ( nTime > FORK_TIME )
+	if ( nTime > FORK_TIME2 )
+		nSubsidy = GetProofOfStakeRewardV3(nCoinAge, nBits, nTime, nHeight, bCoinYearOnly);
+	else if ( nTime > FORK_TIME )
 		nSubsidy = GetProofOfStakeRewardV2(nCoinAge, nBits, nTime, nHeight, bCoinYearOnly);
 	else
 		nSubsidy = GetProofOfStakeRewardV1(nCoinAge, nBits, nTime, nHeight, bCoinYearOnly);
@@ -997,6 +999,29 @@ int64 GetProofOfStakeRewardV2(int64 nCoinAge, unsigned int nBits, unsigned int n
  nSubsidy = min(nSubsidy, nSubsidyLimit);
  
  return nSubsidy;
+}
+
+int64 GetProofOfStakeRewardV3(int64 nCoinAge, unsigned int nBits, unsigned int nTime, int nHeight, bool bCoinYearOnly)
+{
+    int64 nRewardCoinYear;
+	int64 nSubsidyLimit = 200 * COIN;
+
+	nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE;
+
+// miner's coin stake reward based on nBits and coin age spent (coin-days)
+// simple algorithm, not depend on the diff
+	
+    int64 nSubsidy = (nCoinAge * 33 * nRewardCoinYear) / (365 * 33 + 8);
+	
+    if(bCoinYearOnly)
+    return nRewardCoinYear / CENT;
+
+	if (fDebug && GetBoolArg("-printcreation"))
+        printf("GetProofOfStakeReward(): create=%s nCoinAge=%"PRI64d" nBits=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge, nBits);
+		
+    nSubsidy = min(nSubsidy, nSubsidyLimit);
+		
+    return nSubsidy;
 }
 
 static const int64 nTargetTimespan = 60 * 60;
