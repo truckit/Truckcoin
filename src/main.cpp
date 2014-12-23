@@ -2890,8 +2890,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         CAddress addrFrom;
         uint64 nNonce = 1;
         vRecv >> pfrom->nVersion >> pfrom->nServices >> nTime >> addrMe;
- //       if (pfrom->nVersion < MIN_PEER_PROTO_VERSION)
-          if (nTime > FORK_TIME && pfrom->nVersion < 75000) 
+        if (pfrom->nVersion < MIN_PEER_PROTO_VERSION)
         {
             // Disconnect from peers older than this proto version
             printf("partner %s using obsolete version %i; disconnecting\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
@@ -2899,14 +2898,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             return false;
         }
 		
-        if (pfrom->nVersion == 72000)
-        {
-            // Disconnect from HYP peers
-            printf("HYP peer %s version %i detected; disconnecting\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
-            pfrom->fDisconnect = true;
-            return false;
-        }
-
         if (pfrom->nVersion == 10300)
             pfrom->nVersion = 300;
         if (!vRecv.empty())
