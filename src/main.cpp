@@ -924,7 +924,9 @@ int64 GetProofOfStakeReward(int64 nCoinAge, unsigned int nBits, unsigned int nTi
 {
 	int64 nSubsidy = 0;
 	
-	if ( nTime > FORK_TIME )
+	if ( nTime > FORK_TIME2 )
+		nSubsidy = GetProofOfStakeRewardV3(nCoinAge, nBits, nTime, nHeight, bCoinYearOnly);
+	else if ( nTime > FORK_TIME )
 		nSubsidy = GetProofOfStakeRewardV2(nCoinAge, nBits, nTime, nHeight, bCoinYearOnly);
 	else
 		nSubsidy = GetProofOfStakeRewardV1(nCoinAge, nBits, nTime, nHeight, bCoinYearOnly);
@@ -997,6 +999,29 @@ int64 GetProofOfStakeRewardV2(int64 nCoinAge, unsigned int nBits, unsigned int n
  nSubsidy = min(nSubsidy, nSubsidyLimit);
  
  return nSubsidy;
+}
+
+int64 GetProofOfStakeRewardV3(int64 nCoinAge, unsigned int nBits, unsigned int nTime, int nHeight, bool bCoinYearOnly)
+{
+    int64 nRewardCoinYear;
+	int64 nSubsidyLimit = 200 * COIN;
+
+	nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE;
+
+// miner's coin stake reward based on nBits and coin age spent (coin-days)
+// simple algorithm, not depend on the diff
+	
+    int64 nSubsidy = (nCoinAge * 33 * nRewardCoinYear) / (365 * 33 + 8);
+	
+    if(bCoinYearOnly)
+    return nRewardCoinYear / CENT;
+
+	if (fDebug && GetBoolArg("-printcreation"))
+        printf("GetProofOfStakeReward(): create=%s nCoinAge=%"PRI64d" nBits=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge, nBits);
+		
+    nSubsidy = min(nSubsidy, nSubsidyLimit);
+		
+    return nSubsidy;
 }
 
 static const int64 nTargetTimespan = 60 * 60;
@@ -2764,7 +2789,7 @@ bool LoadExternalBlockFile(FILE* fileIn)
 extern map<uint256, CAlert> mapAlerts;
 extern CCriticalSection cs_mapAlerts;
 
-static string strMintMessage = "Info: Minting suspended due to locked wallet.";
+static string strMintMessage;
 static string strMintWarning;
 
 string GetWarnings(string strFor)
@@ -2890,8 +2915,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         CAddress addrFrom;
         uint64 nNonce = 1;
         vRecv >> pfrom->nVersion >> pfrom->nServices >> nTime >> addrMe;
- //       if (pfrom->nVersion < MIN_PEER_PROTO_VERSION)
-          if (nTime > FORK_TIME && pfrom->nVersion < 75000) 
+        if (pfrom->nVersion < MIN_PEER_PROTO_VERSION)
         {
             // Disconnect from peers older than this proto version
             printf("partner %s using obsolete version %i; disconnecting\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
@@ -2899,14 +2923,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             return false;
         }
 		
-        if (pfrom->nVersion == 72000)
-        {
-            // Disconnect from HYP peers
-            printf("HYP peer %s version %i detected; disconnecting\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
-            pfrom->fDisconnect = true;
-            return false;
-        }
-
         if (pfrom->nVersion == 10300)
             pfrom->nVersion = 300;
         if (!vRecv.empty())
@@ -4309,8 +4325,10 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
 
     // Make this thread recognisable as the mining thread
-    RenameThread("bitcoin-miner");
+    RenameThread("truckcoin-miner");
 
+    bool fTryToSync = true;
+	
     // Each thread has its own key and counter
     CReserveKey reservekey(pwallet);
     unsigned int nExtraNonce = 0;
@@ -4320,7 +4338,7 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
         if (fShutdown)
             return;
 
-        while (vNodes.empty() || IsInitialBlockDownload() || pwallet->IsLocked())
+        while (pwallet->IsLocked())
         {
             nLastCoinStakeSearchInterval = 0;
             Sleep(1000);
@@ -4329,7 +4347,28 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
             if (!fGenerateBitcoins && !fProofOfStake)
                 return;
         }
-
+				
+        while (vNodes.empty() || IsInitialBlockDownload())
+        {
+            nLastCoinStakeSearchInterval = 0;
+            fTryToSync = true;
+            Sleep(1000);
+            if (fShutdown)
+                return;
+            if (!fGenerateBitcoins && !fProofOfStake)
+                return;
+        }
+		
+		        if (fTryToSync)
+        {
+            fTryToSync = false;
+            if (vNodes.size() < 3 || nBestHeight < GetNumBlocksOfPeers())
+            {
+                Sleep(60000);
+                continue;
+            }
+        }
+	
         //
         // Create new block
         //

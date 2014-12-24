@@ -52,6 +52,7 @@ static const int64 DEF_SPLIT_AMOUNT = 30 * COIN;
 /** Split Threshold Max */
 static const int64 MAX_SPLIT_AMOUNT = 300 * COIN; 
 static const unsigned int FORK_TIME = 1418934203; // Thursday, 18 Dec 2014 20:23:23 GMT
+static const unsigned int FORK_TIME2 = 1420748603; // Thursday, 08 Jan 2015 20:23:23 GMT
 
 static const int MAX_TIME_SINCE_BEST_BLOCK = 10; // how many seconds to wait before sending next PushGetBlocks()
 
@@ -138,6 +139,7 @@ int64 GetProofOfWorkReward(int nHeight, int64 nFees, uint256 prevHash);
 int64 GetProofOfStakeReward(int64 nCoinAge, unsigned int nBits, unsigned int nTime, int nHeight, bool bCoinYearOnly);
 int64 GetProofOfStakeRewardV1(int64 nCoinAge, unsigned int nBits, unsigned int nTime, int nHeight, bool bCoinYearOnly);
 int64 GetProofOfStakeRewardV2(int64 nCoinAge, unsigned int nBits, unsigned int nTime, int nHeight, bool bCoinYearOnly);
+int64 GetProofOfStakeRewardV3(int64 nCoinAge, unsigned int nBits, unsigned int nTime, int nHeight, bool bCoinYearOnly);
 unsigned int ComputeMinWork(unsigned int nBase, int64 nTime);
 unsigned int ComputeMinStake(unsigned int nBase, int64 nTime, unsigned int nBlockTime);
 int GetNumBlocksOfPeers();
