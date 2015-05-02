@@ -3538,6 +3538,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                 // This isn't a Misbehaving(100) (immediate ban) because the
                 // peer might be an older or different implementation with
                 // a different signature key, etc.
+				if(!alert.CheckSignature())
                 pfrom->Misbehaving(10);
             }
         }
