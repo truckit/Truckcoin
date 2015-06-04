@@ -2123,7 +2123,7 @@ Address: %4
     </message>
 </context>
 <context>
-    <name>bitcoin-core</name>
+    <name>truckcoin-core</name>
     <message>
         <location filename="../bitcoinstrings.cpp" line="+82"/>
         <source>Truckcoin version</source>

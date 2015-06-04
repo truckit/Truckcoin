@@ -87,7 +87,7 @@ void Shutdown(void* parg)
         printf("Truckcoin exited\n\n");
         fExit = true;
 #ifndef QT_GUI
-        // ensure non-UI client gets exited here, but let Bitcoin-Qt reach 'return 0;' in bitcoin.cpp
+        // ensure non-UI client gets exited here, but let Truckcoin-Qt reach 'return 0;' in bitcoin.cpp
         exit(0);
 #endif
     }
@@ -712,7 +712,7 @@ bool AppInit2()
         return InitError(_("Error loading blkindex.dat"));
 
     // as LoadBlockIndex can take several minutes, it's possible the user
-    // requested to kill bitcoin-qt during the last operation. If so, exit.
+    // requested to kill truckcoin-qt during the last operation. If so, exit.
     // As the program has not fully started yet, Shutdown() is possibly overkill.
     if (fRequestShutdown)
     {
