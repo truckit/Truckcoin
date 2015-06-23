@@ -4328,8 +4328,6 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
     // Make this thread recognisable as the mining thread
     RenameThread("truckcoin-miner");
 
-    bool fTryToSync = true;
-	
     // Each thread has its own key and counter
     CReserveKey reservekey(pwallet);
     unsigned int nExtraNonce = 0;
@@ -4349,10 +4347,9 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
                 return;
         }
 				
-        while (vNodes.empty() || IsInitialBlockDownload())
+        while (vNodes.empty() || IsInitialBlockDownload() || vNodes.size() < 2 || nBestHeight < GetNumBlocksOfPeers())
         {
             nLastCoinStakeSearchInterval = 0;
-            fTryToSync = true;
             Sleep(1000);
             if (fShutdown)
                 return;
@@ -4360,16 +4357,6 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
                 return;
         }
 		
-		        if (fTryToSync)
-        {
-            fTryToSync = false;
-            if (vNodes.size() < 3 || nBestHeight < GetNumBlocksOfPeers())
-            {
-                Sleep(60000);
-                continue;
-            }
-        }
-	
         //
         // Create new block
         //

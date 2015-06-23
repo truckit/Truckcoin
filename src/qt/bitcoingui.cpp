@@ -1244,7 +1244,7 @@ void BitcoinGUI::updateMintingIcon()
         labelMintingIcon->setEnabled(false);
     }
 	
-    else if (clientModel->getNumConnections() < 3 )
+    else if (clientModel->getNumConnections() < 2 )
     {
         labelMintingIcon->setToolTip(tr("Not minting because wallet is still acquiring nodes."));
         labelMintingIcon->setEnabled(false);
