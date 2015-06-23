@@ -381,7 +381,7 @@ bool GetMyExternalIP(CNetAddr& ipRet)
         }
         else if (nHost == 2)
         {
-            addrConnect = CService("67.211.45.66", 80); // ip.truckcoin.net
+            addrConnect = CService("104.193.43.106", 80); // ip.truckcoin.net
 
             if (nLookup == 1)
             {
@@ -391,7 +391,7 @@ bool GetMyExternalIP(CNetAddr& ipRet)
             }
 
             pszGet = "GET /simple/ HTTP/1.1\r\n"
-                     "Host: www.showmyip.com\r\n"
+                     "Host: ip.truckcoin.net\r\n"
                      "User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)\r\n"
                      "Connection: close\r\n"
                      "\r\n";
