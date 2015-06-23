@@ -385,7 +385,7 @@
       <layout class="QHBoxLayout" name="horizontalLayoutPanel" stretch="0,0,0,0,0,0,0">
        <property name="spacing">
         <number>14</number>
-       </property>
+       </property>	   
        <item>
         <widget class="QPushButton" name="pushButtonSelectAll">
          <property name="sizePolicy">
@@ -428,18 +428,21 @@
          </property>
         </widget>
        </item>
-        <item> 
-        <widget class="QPushButton" name="pushButtonCustomCC"> 
-         <property name="text"> 
-          <string>Select Blocks With</string> 
-         </property> 
-        </widget> 
-       </item> 
+          <item>
+           <widget class="QLabel" name="labelSelectBlocksWith">
+            <property name="text">
+             <string>Select blocks with:</string>
+            </property>
+               <property name="leftMargin">
+                <number>14</number>
+               </property>
+           </widget>
+          </item>
        <item> 
         <widget class="QComboBox" name="QComboBoxFilterCoins"/> 
        </item> 
        <item> 
-        <widget class="QLineEdit" name="lineEditCustomCC"> 
+	   <widget class="QLineEdit" name="lineEditCustomCC"> 
          <property name="enabled"> 
           <bool>true</bool> 
          </property> 
@@ -454,6 +457,13 @@
            <width>50</width> 
            <height>0</height> 
           </size> 
+         </property> 
+        </widget> 
+       </item> 
+        <item> 
+        <widget class="QPushButton" name="pushButtonCustomCC"> 
+         <property name="text"> 
+          <string>Select</string> 
          </property> 
         </widget> 
        </item>    
