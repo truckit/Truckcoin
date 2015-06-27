@@ -290,6 +290,8 @@ void BitcoinGUI::createActions()
     aboutQtAction = new QAction(QIcon(":/trolltech/qmessagebox/images/qtlogo-64.png"), tr("About &Qt"), this);
     aboutQtAction->setToolTip(tr("Show information about Qt"));
     aboutQtAction->setMenuRole(QAction::AboutQtRole);
+    stakeMinerToggleAction = new QAction(this);
+    stakeMinerToggle(true);
     optionsAction = new QAction(QIcon(":/icons/options"), tr("&Options..."), this);
     optionsAction->setToolTip(tr("Modify configuration options for Truckcoin"));
     optionsAction->setMenuRole(QAction::PreferencesRole);
@@ -331,6 +333,7 @@ void BitcoinGUI::createActions()
     connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(aboutClicked()));
     connect(aboutQtAction, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
+    connect(stakeMinerToggleAction, SIGNAL(triggered()), this, SLOT(stakeMinerToggle()));
     connect(optionsAction, SIGNAL(triggered()), this, SLOT(optionsClicked()));
     connect(toggleHideAction, SIGNAL(triggered()), this, SLOT(toggleHidden()));
     connect(encryptWalletAction, SIGNAL(triggered(bool)), this, SLOT(encryptWallet(bool)));
@@ -370,6 +373,8 @@ void BitcoinGUI::createMenuBar()
     file->addAction(quitAction);
 
     QMenu *settings = appMenuBar->addMenu(tr("&Settings"));
+	settings->addAction(stakeMinerToggleAction);
+	settings->addSeparator();
     settings->addAction(optionsAction);
 	
 	QMenu *wallet = appMenuBar->addMenu(tr("&Wallet")); 
@@ -1203,6 +1208,30 @@ void BitcoinGUI::lockWallet()
                "Proof of Stake has stopped.\n") 
             ,CClientUIInterface::MSG_INFORMATION); 
 } 
+
+// Enables or disables the internal stake miner;
+// only sets the menu icon and text on the initial run 
+void BitcoinGUI::stakeMinerToggle(bool fInitial) {
+    bool fStakingInt = fStaking;
+
+    if(fInitial) {
+        fStakingInt = GetBoolArg("-staking", fStaking);
+        fStakingInt = ~fStakingInt & 0x1;
+    }
+
+    if(fStakingInt) {
+        if(!fInitial) fStaking = false;
+        stakeMinerToggleAction->setIcon(QIcon(":/icons/staking_on"));
+        stakeMinerToggleAction->setText(tr("&Enable PoS mining"));
+    } else {
+        if(!fInitial) fStaking = true;
+        stakeMinerToggleAction->setIcon(QIcon(":/icons/staking_off"));
+        stakeMinerToggleAction->setText(tr("&Disable PoS mining"));
+    }
+
+    if(!fInitial)
+      updateMintingIcon();
+}
 
 void BitcoinGUI::showNormalIfMinimized(bool fToggleHidden)
 {
