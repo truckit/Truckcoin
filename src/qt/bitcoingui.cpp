@@ -1233,7 +1233,12 @@ void BitcoinGUI::toggleHidden()
 
 void BitcoinGUI::updateMintingIcon()
 {
-    if (pwalletMain && pwalletMain->IsLocked())
+    if  (!fStaking)
+    {
+        labelMintingIcon->setToolTip(tr("Not minting because staking is disabled."));
+        labelMintingIcon->setEnabled(false);
+    }
+    else if (pwalletMain && pwalletMain->IsLocked())
     {
         labelMintingIcon->setToolTip(tr("Not minting because wallet is locked."));
         labelMintingIcon->setEnabled(false);
@@ -1250,11 +1255,6 @@ void BitcoinGUI::updateMintingIcon()
         labelMintingIcon->setEnabled(false);
     }
 	
-    	else if (!GetBoolArg("-staking", true))
-    {
-        labelMintingIcon->setToolTip(tr("Not minting because staking is disabled."));
-        labelMintingIcon->setEnabled(false);
-    }
     else if (IsInitialBlockDownload() || clientModel->getNumBlocks() < clientModel->getNumBlocksOfPeers())
     {
         labelMintingIcon->setToolTip(tr("Not minting because wallet is syncing."));

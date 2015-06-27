@@ -271,6 +271,8 @@ static const CRPCCommand vRPCCommands[] =
     { "resendtx",               &resendtx,               false,  true},
     { "makekeypair",            &makekeypair,            false,  true},
     { "sendalert",              &sendalert,              false,  false},
+    { "getstaking",            &getstaking,            true,   false },
+    { "setstaking",            &setstaking,            true,   false },
 };
 
 CRPCTable::CRPCTable()
@@ -1194,6 +1196,7 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "sendalert"              && n > 4) ConvertTo<boost::int64_t>(params[4]);
     if (strMethod == "sendalert"              && n > 5) ConvertTo<boost::int64_t>(params[5]);
     if (strMethod == "sendalert"              && n > 6) ConvertTo<boost::int64_t>(params[6]);
+    if (strMethod == "setstaking"            && n > 0) ConvertTo<bool>(params[0]);
 
     return params;
 }
