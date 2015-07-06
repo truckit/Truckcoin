@@ -381,7 +381,7 @@ bool GetMyExternalIP(CNetAddr& ipRet)
         }
         else if (nHost == 2)
         {
-            addrConnect = CService("67.211.45.66", 80); // ip.truckcoin.net
+            addrConnect = CService("104.193.43.106", 80); // ip.truckcoin.net
 
             if (nLookup == 1)
             {
@@ -391,7 +391,7 @@ bool GetMyExternalIP(CNetAddr& ipRet)
             }
 
             pszGet = "GET /simple/ HTTP/1.1\r\n"
-                     "Host: www.showmyip.com\r\n"
+                     "Host: ip.truckcoin.net\r\n"
                      "User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)\r\n"
                      "Connection: close\r\n"
                      "\r\n";
@@ -409,7 +409,7 @@ bool GetMyExternalIP(CNetAddr& ipRet)
 void ThreadGetMyExternalIP(void* parg)
 {
     // Make this thread recognisable as the external IP detection thread
-    RenameThread("bitcoin-ext-ip");
+    RenameThread("truckcoin-ext-ip");
 
     CNetAddr addrLocalHost;
     if (GetMyExternalIP(addrLocalHost))
@@ -648,7 +648,7 @@ void CNode::copyStats(CNodeStats &stats)
 void ThreadSocketHandler(void* parg)
 {
     // Make this thread recognisable as the networking thread
-    RenameThread("bitcoin-net");
+    RenameThread("truckcoin-net");
 
     try
     {
@@ -1011,7 +1011,7 @@ void ThreadSocketHandler2(void* parg)
 void ThreadMapPort(void* parg)
 {
     // Make this thread recognisable as the UPnP thread
-    RenameThread("bitcoin-UPnP");
+    RenameThread("truckcoin-UPnP");
 
     try
     {
@@ -1265,7 +1265,7 @@ void ThreadDumpAddress2(void* parg)
 void ThreadDumpAddress(void* parg)
 {
     // Make this thread recognisable as the address dumping thread
-    RenameThread("bitcoin-adrdump");
+    RenameThread("truckcoin-adrdump");
 
     try
     {
@@ -1280,7 +1280,7 @@ void ThreadDumpAddress(void* parg)
 void ThreadOpenConnections(void* parg)
 {
     // Make this thread recognisable as the connection opening thread
-    RenameThread("bitcoin-opencon");
+    RenameThread("truckcoin-opencon");
 
     try
     {
@@ -1319,7 +1319,9 @@ void static ProcessOneShot()
 // stake minter thread
 void static ThreadStakeMinter(void* parg)
 {
+    while(!fShutdown) {
     printf("ThreadStakeMinter started\n");
+        if(fStaking) { 
     CWallet* pwallet = (CWallet*)parg;
     try
     {
@@ -1334,7 +1336,13 @@ void static ThreadStakeMinter(void* parg)
         vnThreadsRunning[THREAD_MINTER]--;
         PrintException(NULL, "ThreadStakeMinter()");
     }
-    printf("ThreadStakeMinter exiting, %d threads remaining\n", vnThreadsRunning[THREAD_MINTER]);
+            if(!fShutdown)
+              printf("ThreadStakeMinter paused, %d threads remaining\n", vnThreadsRunning[THREAD_MINTER]);
+        }
+        while(!fStaking && !fShutdown) Sleep(5000);
+        if(fShutdown)
+          printf("ThreadStakeMinter exited, %d threads remaining\n", vnThreadsRunning[THREAD_MINTER]);
+     }
 }
 
 void ThreadOpenConnections2(void* parg)
@@ -1462,7 +1470,7 @@ void ThreadOpenConnections2(void* parg)
 void ThreadOpenAddedConnections(void* parg)
 {
     // Make this thread recognisable as the connection opening thread
-    RenameThread("bitcoin-opencon");
+    RenameThread("truckcoin-opencon");
 
     try
     {
@@ -1593,7 +1601,7 @@ bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOu
 void ThreadMessageHandler(void* parg)
 {
     // Make this thread recognisable as the message handling thread
-    RenameThread("bitcoin-msghand");
+    RenameThread("truckcoin-msghand");
 
     try
     {
@@ -1844,7 +1852,7 @@ void static Discover()
 void StartNode(void* parg)
 {
     // Make this thread recognisable as the startup thread
-    RenameThread("bitcoin-start");
+    RenameThread("truckcoin-start");
 
     if (semOutbound == NULL) {
         // initialize semaphore
@@ -1896,7 +1904,7 @@ void StartNode(void* parg)
         printf("Error; NewThread(ThreadDumpAddress) failed\n");
 
     // mint proof-of-stake blocks in the background
-    if (!GetBoolArg("-staking", true))
+    if (!fStaking)
         printf("Staking disabled\n");
     else
     if (!NewThread(ThreadStakeMinter, pwalletMain))

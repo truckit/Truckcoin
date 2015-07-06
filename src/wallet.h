@@ -85,6 +85,7 @@ public:
     bool fFileBacked;
     std::string strWalletFile;
 	bool fWalletUnlockMintOnly;
+	bool fSplitBlock;
 
     std::set<int64> setKeyPool;
 	std::map<CKeyID, CKeyMetadata> mapKeyMetadata;
@@ -103,6 +104,7 @@ public:
         pwalletdbEncryption = NULL;
         nOrderPosNext = 0;
 		fWalletUnlockMintOnly = false;
+		fSplitBlock = false;
     }
     CWallet(std::string strWalletFileIn)
     {
@@ -114,6 +116,7 @@ public:
         pwalletdbEncryption = NULL;
         nOrderPosNext = 0;
 		fWalletUnlockMintOnly = false;
+		fSplitBlock = false;
     }
 
     std::map<uint256, CWalletTx> mapWallet;
@@ -183,7 +186,7 @@ public:
     int64 GetImmatureBalance() const;
     int64 GetStake() const;
     int64 GetNewMint() const;
-    bool CreateTransaction(const std::vector<std::pair<CScript, int64> >& vecSend, CWalletTx& wtxNew, CReserveKey& reservekey, int64& nFeeRet, const CCoinControl *coinControl=NULL);
+    bool CreateTransaction(const std::vector<std::pair<CScript, int64> >& vecSend, CWalletTx& wtxNew, CReserveKey& reservekey, int64& nFeeRet, int nSplitBlock, const CCoinControl *coinControl=NULL);
     bool CreateTransaction(CScript scriptPubKey, int64 nValue, CWalletTx& wtxNew, CReserveKey& reservekey, int64& nFeeRet, const CCoinControl *coinControl=NULL);
     bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey);
     bool GetStakeWeight(const CKeyStore& keystore, uint64& nMinWeight, uint64& nMaxWeight, uint64& nWeight);

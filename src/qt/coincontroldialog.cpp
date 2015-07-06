@@ -7,7 +7,6 @@
 #include "addresstablemodel.h"
 #include "optionsmodel.h"
 #include "coincontrol.h"
-#include "qcomboboxfiltercoins.h"
 
 #include <QApplication>
 #include <QCheckBox>
@@ -613,6 +612,11 @@ void CoinControlDialog::updateLabels(WalletModel *model, QDialog* dialog)
         int64 nMinFee = txDummy.GetMinFee(1, false, GMF_SEND, nBytes);
         
         nPayFee = max(nFee, nMinFee);
+		
+		if(pwalletMain->fSplitBlock) 
+		{ 
+			nPayFee = COIN / 1000; // make the fee more expensive if using splitblock, this avoids having to calc fee based on multiple vouts 
+		}
         
         if (nPayAmount > 0)
         {

@@ -271,6 +271,8 @@ static const CRPCCommand vRPCCommands[] =
     { "resendtx",               &resendtx,               false,  true},
     { "makekeypair",            &makekeypair,            false,  true},
     { "sendalert",              &sendalert,              false,  false},
+    { "getstaking",            &getstaking,            true,   false },
+    { "setstaking",            &setstaking,            true,   false },
 };
 
 CRPCTable::CRPCTable()
@@ -635,7 +637,7 @@ private:
 void ThreadRPCServer(void* parg)
 {
     // Make this thread recognisable as the RPC listener
-    RenameThread("bitcoin-rpclist");
+    RenameThread("truckcoin-rpclist");
 
     try
     {
@@ -935,7 +937,7 @@ static CCriticalSection cs_THREAD_RPCHANDLER;
 void ThreadRPCServer3(void* parg)
 {
     // Make this thread recognisable as the RPC handler
-    RenameThread("bitcoin-rpchand");
+    RenameThread("truckcoin-rpchand");
 
     {
         LOCK(cs_THREAD_RPCHANDLER);
@@ -1194,6 +1196,7 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "sendalert"              && n > 4) ConvertTo<boost::int64_t>(params[4]);
     if (strMethod == "sendalert"              && n > 5) ConvertTo<boost::int64_t>(params[5]);
     if (strMethod == "sendalert"              && n > 6) ConvertTo<boost::int64_t>(params[6]);
+    if (strMethod == "setstaking"            && n > 0) ConvertTo<bool>(params[0]);
 
     return params;
 }
