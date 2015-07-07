@@ -2259,12 +2259,8 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
         uint256 hashProofOfStake = 0;
         if (!CheckProofOfStake(pblock->vtx[1], pblock->nBits, hashProofOfStake))
         {
-          // Ignore CheckProofOfStake() failure for hashHighBlock in order to speed up initial 
-	      // blockchain download. 
-	      if (pblock->GetHash() != hashHighBlock) { 
-		  printf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", hash.ToString().c_str()); 
-		  return false; // do not error here as we expect this during initial block download 
-	      }
+          printf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", hash.ToString().c_str());
+          return false;
         }
         if (!mapProofOfStake.count(hash)) // add to mapProofOfStake
             mapProofOfStake.insert(make_pair(hash, hashProofOfStake));
@@ -3195,15 +3191,9 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                     // Trigger them to send a getblocks request for the next batch of inventory
                     if (inv.hash == pfrom->hashContinue)
                     {
-                        // Default behavior of PoS coins is to send last PoW block here which client receives as an orphan. 
-                        // To increase download speed, further block (index HIGH_BLOCK_INDEX) is sent.
-                        // If server does not have it yet, then proceeds with default behavior.
                         vector<CInv> vInv;
-        			if (nBestHeight > HIGH_BLOCK_INDEX) { 
-		        	    vInv.push_back(CInv(MSG_BLOCK, hashHighBlock)); 
-			         } else { 
-                        vInv.push_back(CInv(MSG_BLOCK, GetLastBlockIndex(pindexBest, false)->GetBlockHash())); 
-			         } 
+                        vInv.push_back(CInv(MSG_BLOCK, hashBestChain));
+					
                         pfrom->PushMessage("inv", vInv);
                         pfrom->hashContinue = 0;
                     }
@@ -3257,10 +3247,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             if (pindex->GetBlockHash() == hashStop)
             {
                 printf("  getblocks stopping at %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
-                // tell downloading node about the latest block if it's
-                // without risk being rejected due to stake connection check
-                if (hashStop != hashBestChain && pindex->GetBlockTime() + nStakeMinAge > pindexBest->GetBlockTime())
-                    pfrom->PushInventory(CInv(MSG_BLOCK, hashBestChain));
                 break;
             }
             pfrom->PushInventory(CInv(MSG_BLOCK, pindex->GetBlockHash()));
