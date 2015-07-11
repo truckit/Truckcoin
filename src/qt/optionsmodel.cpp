@@ -6,6 +6,9 @@
 #include "walletdb.h"
 #include "guiutil.h"
 
+// shared UI settings in guiutil.h
+bool fUseTruckcoinTheme;
+
 OptionsModel::OptionsModel(QObject *parent) :
     QAbstractListModel(parent)
 {
@@ -46,6 +49,7 @@ void OptionsModel::Init()
     fMinimizeToTray = settings.value("fMinimizeToTray", false).toBool();
     fMinimizeOnClose = settings.value("fMinimizeOnClose", false).toBool();
     fCoinControlFeatures = settings.value("fCoinControlFeatures", false).toBool();
+    fUseTruckcoinTheme = settings.value("fUseTruckcoinTheme", true).toBool();
     bShowIrcButton = settings.value("bShowIrcButton", true).toBool();
     nTransactionFee = settings.value("nTransactionFee").toLongLong();
     language = settings.value("language", "").toString();
@@ -180,6 +184,8 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const
             return settings.value("language", "");
         case CoinControlFeatures:
             return QVariant(fCoinControlFeatures);
+        case UseTruckcoinTheme:
+            return QVariant(fUseTruckcoinTheme);
         case ShowIrcButton:
             return QVariant(bShowIrcButton);
         default:
@@ -281,6 +287,10 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
             settings.setValue("fCoinControlFeatures", fCoinControlFeatures);
             emit coinControlFeaturesChanged(fCoinControlFeatures);
             }
+          case UseTruckcoinTheme:
+            fUseTruckcoinTheme = value.toBool();
+            settings.setValue("fUseTruckcoinTheme", fUseTruckcoinTheme);
+            break;
 	case ShowIrcButton: {
             bShowIrcButton = value.toBool();
             settings.setValue("bShowIrcButton", bShowIrcButton);
