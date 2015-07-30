@@ -400,6 +400,13 @@
         </layout>
        </item>
        <item>
+        <widget class="QCheckBox" name="useTruckcoinTheme">
+         <property name="text">
+          <string>Use Truckcoin visual theme (requires restart)</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QCheckBox" name="displayAddresses">
          <property name="toolTip">
           <string>Whether to show Truckcoin addresses in the transaction list or not.</string>

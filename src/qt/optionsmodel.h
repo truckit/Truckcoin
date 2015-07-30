@@ -32,8 +32,9 @@ public:
         DisplayAddresses,  // bool
         DetachDatabases,   // bool
         Language,          // QString
-	CoinControlFeatures, // bool
-	ShowIrcButton,     // bool
+        CoinControlFeatures, // bool
+        UseTruckcoinTheme,  // bool	
+        ShowIrcButton,     // bool
         OptionIDRowCount,
     };
 

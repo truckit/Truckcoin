@@ -131,6 +131,9 @@ private:
     void createTrayIcon();
     /** Create system tray menu (or setup the dock menu) */ 
     void createTrayIconMenu(); 
+	
+    void updateStyle();
+    void writeDefaultStyleSheet(const QString &qssPath);
 
 public slots:
     /** Set number of connections shown in the UI */
@@ -232,6 +235,8 @@ private slots:
     void updateMintingIcon();
     /** Update minting weight info */
     void updateMintingWeights();
+	
+    void updateStyleSlot();
 };
 
 #endif

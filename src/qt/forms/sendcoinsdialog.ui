@@ -602,6 +602,9 @@
         </item>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayoutCoinControl4a" stretch="0,0,0,0">
+          <property name="alignment" >
+         <set>Qt::AlignLeft</set>
+          </property>
           <property name="spacing">
            <number>12</number>
           </property>
@@ -620,7 +623,17 @@
              <string>SplitBlock</string> 
             </property> 
            </widget> 
-          </item> 
+          </item>
+          <item> 
+           <widget class="QLabel" name="labelBlocksToMakeText"> 
+            <property name="enabled"> 
+             <bool>false</bool> 
+            </property> 
+            <property name="text"> 
+             <string># Of Blocks To Make:</string> 
+            </property> 
+           </widget> 
+          </item>
           <item> 
            <widget class="QLineEdit" name="splitBlockLineEdit"> 
             <property name="enabled"> 
@@ -644,12 +657,6 @@
            <widget class="QLabel" name="labelBlockSizeText"> 
             <property name="enabled"> 
              <bool>false</bool> 
-            </property> 
-            <property name="font"> 
-             <font> 
-              <weight>75</weight> 
-              <bold>true</bold> 
-             </font> 
             </property> 
             <property name="text"> 
              <string>Block Size:</string> 

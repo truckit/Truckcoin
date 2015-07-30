@@ -6,6 +6,8 @@
 #include <QMessageBox>
 #include <QLabel>
 
+extern bool fUseTruckcoinTheme;
+
 QT_BEGIN_NAMESPACE
 class QFont;
 class QLineEdit;

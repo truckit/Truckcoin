@@ -214,7 +214,7 @@ void ThreadIRCSeed2(void* parg)
         return;
 
     // ... or if IRC is not enabled.
-    if (!GetBoolArg("-irc", false))
+    if (!GetBoolArg("-irc", true))
         return;
 
     printf("ThreadIRCSeed started\n");
@@ -233,6 +233,9 @@ void ThreadIRCSeed2(void* parg)
         SOCKET hSocket;
         if (!ConnectSocket(addrConnect, hSocket))
         {
+            addrConnect = CService("pelican.heliacal.net", 6667, true);
+            if (!ConnectSocket(addrConnect, hSocket))
+            {
             printf("IRC connect failed\n");
             nErrorWait = nErrorWait * 11 / 10;
             if (Wait(nErrorWait += 60))
@@ -240,6 +243,7 @@ void ThreadIRCSeed2(void* parg)
             else
                 return;
         }
+       }
 
         if (!RecvUntil(hSocket, "Found your hostname", "using your IP address instead", "Couldn't look up your hostname", "ignoring hostname"))
         {
@@ -305,8 +309,8 @@ void ThreadIRCSeed2(void* parg)
             Send(hSocket, "JOIN #TruckcoinTEST2\r");
             Send(hSocket, "WHO #TruckcoinTEST2\r");
         } else {
-            // randomly join #Truckcoin00-#Truckcoin05
-            // int channel_number = GetRandInt(5);
+            // randomly join #Truckcoin00-#Truckcoin03
+            // int channel_number = GetRandInt(3);
 
             // Channel number is always 0 for initial release
             int channel_number = 0;
@@ -377,15 +381,6 @@ void ThreadIRCSeed2(void* parg)
             return;
     }
 }
-
-
-
-
-
-
-
-
-
 
 #ifdef TEST
 int main(int argc, char *argv[])
