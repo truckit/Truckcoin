@@ -50,6 +50,7 @@ SendCoinsDialog::SendCoinsDialog(QWidget *parent) :
      connect(ui->lineEditCoinControlChange, SIGNAL(textEdited(const QString &)), this, SLOT(coinControlChangeEdited(const QString &)));
 	 connect(ui->splitBlockCheckBox, SIGNAL(stateChanged(int)), this, SLOT(coinControlSplitBlockChecked(int)));
 	 connect(ui->splitBlockLineEdit, SIGNAL(textChanged(const QString &)), this, SLOT(splitBlockLineEditChanged(const QString &)));
+	 connect(ui->returnChangeCheckBox, SIGNAL(stateChanged(int)), this, SLOT(coinControlReturnChangeChecked(int)));
  
 		// Coin Control: clipboard actions
      QAction *clipboardQuantityAction = new QAction(tr("Copy quantity"), this);
@@ -517,10 +518,41 @@ void SendCoinsDialog::splitBlockLineEditChanged(const QString & text)
 		nSize = nAfterFee / text.toDouble();
 	ui->labelBlockSize->setText(QString::number(nSize));
 }
+
+// Coin Control: return change
+// presstab HyperStake
+ void SendCoinsDialog::coinControlReturnChangeChecked(int state)
+ {
+     if(state == Qt::Checked && ui->checkBoxCoinControlChange->checkState() == Qt::Checked)
+	 {
+		ui->returnChangeCheckBox->setCheckState(Qt::Unchecked);
+		QMessageBox::warning(this, tr("Send Coins"),
+			tr("Cannot use custom change address and return change at the same time. Try again."),
+			QMessageBox::Ok, QMessageBox::Ok);
+		return;
+	 }
+	 
+	 if (model)
+     {
+         if (state == Qt::Checked)
+             CoinControlDialog::coinControl->fReturnChange = true;
+         else
+             CoinControlDialog::coinControl->fReturnChange = false;
+     }  
+ }
  
  // Coin Control: checkbox custom change address
  void SendCoinsDialog::coinControlChangeChecked(int state)
  {
+    if(state == Qt::Checked && ui->returnChangeCheckBox->checkState() == Qt::Checked)
+	{
+		ui->checkBoxCoinControlChange->setCheckState(Qt::Unchecked);
+		QMessageBox::warning(this, tr("Send Coins"),
+			tr("Cannot use custom change address and return change at the same time. Try again."),
+			QMessageBox::Ok, QMessageBox::Ok);
+		return;
+	}
+
      if (model)
      {
          if (state == Qt::Checked)
