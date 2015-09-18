@@ -581,7 +581,7 @@ This product includes software developed by the OpenSSL Project for use in the O
     </message>
     <message>
         <location line="+59"/>
-        <source>This transaction is over the size limit.  You can still send it for a fee of %1, which goes to the nodes that process your transaction and helps to support the network.  Do you want to pay the fee?</source>
+        <source>This transaction is over the size limit.  You can still send it for a fee of %1. This fee will be destroyed, which will help keep the inflation rate low.  Do you want to pay the fee?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
