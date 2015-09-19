@@ -25,8 +25,6 @@ class CNode;
 class CBlockIndex;
 extern int nBestHeight;
 
-
-
 inline unsigned int ReceiveFloodSize() { return 1000*GetArg("-maxreceivebuffer", 5*1000); }
 inline unsigned int SendBufferSize() { return 1000*GetArg("-maxsendbuffer", 1*1000); }
 
@@ -69,7 +67,6 @@ bool IsReachable(const CNetAddr &addr);
 void SetReachable(enum Network net, bool fFlag = true);
 CAddress GetLocalAddress(const CNetAddr *paddrPeer = NULL);
 
-
 enum
 {
     MSG_TX = 1,
@@ -93,7 +90,6 @@ public:
         return fn == NULL;
     }
 };
-
 
 /** Thread types */
 enum threadId
@@ -128,9 +124,6 @@ extern std::map<CInv, CDataStream> mapRelay;
 extern std::deque<std::pair<int64, CInv> > vRelayExpiration;
 extern CCriticalSection cs_mapRelay;
 extern std::map<CInv, int64> mapAlreadyAskedFor;
-
-
-
 
 class CNodeStats
 {
@@ -354,8 +347,6 @@ public:
         nRefCount--;
     }
 
-
-
     void AddAddressKnown(const CAddress& addr)
     {
         setAddrKnown.insert(addr);
@@ -369,7 +360,6 @@ public:
         if (addr.IsValid() && !setAddrKnown.count(addr))
             vAddrToSend.push_back(addr);
     }
-
 
     void AddInventoryKnown(const CInv& inv)
     {
@@ -407,8 +397,6 @@ public:
         nRequestTime = std::max(nRequestTime + 2 * 60 * 1000000, nNow);
         mapAskFor.insert(std::make_pair(nRequestTime, inv));
     }
-
-
 
     void BeginMessage(const char* pszCommand)
     {
@@ -627,7 +615,6 @@ public:
         }
     }
 
-
     void PushRequest(const char* pszCommand,
                      void (*fn)(void*, CDataStream&), void* param1)
     {
@@ -672,15 +659,12 @@ public:
         PushMessage(pszCommand, hashReply, a1, a2);
     }
 
-
-
     void PushGetBlocks(CBlockIndex* pindexBegin, uint256 hashEnd);
     bool IsSubscribed(unsigned int nChannel);
     void Subscribe(unsigned int nChannel, unsigned int nHops=0);
     void CancelSubscribe(unsigned int nChannel);
     void CloseSocketDisconnect();
     void Cleanup();
-
 
     // Denial-of-service detection/prevention
     // The idea is to detect peers that are behaving
@@ -708,15 +692,6 @@ public:
     static uint64 GetTotalBytesRecv(); 
     static uint64 GetTotalBytesSent(); 
 };
-
-
-
-
-
-
-
-
-
 
 inline void RelayInventory(const CInv& inv)
 {
@@ -757,5 +732,8 @@ inline void RelayMessage<>(const CInv& inv, const CDataStream& ss)
     RelayInventory(inv);
 }
 
+class CTransaction;
+void RelayTransaction(const CTransaction& tx, const uint256& hash);
+void RelayTransaction(const CTransaction& tx, const uint256& hash, const CDataStream& ss);
 
 #endif
