@@ -453,7 +453,7 @@
      </property>
     </widget>
 
-    <widget class="QFrame" name="frame">
+    <widget class="QFrame" name="frame_4">
      <property name="geometry">
       <rect>
        <x>0</x>
