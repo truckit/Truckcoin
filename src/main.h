@@ -143,8 +143,7 @@ std::string GetWarnings(std::string strFor);
 bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock);
 uint256 WantedByOrphan(const CBlock* pblockOrphan);
 const CBlockIndex* GetLastBlockIndex(const CBlockIndex* pindex, bool fProofOfStake);
-void BitcoinMiner(CWallet *pwallet);
-void StakeMiner(CWallet *pwallet);
+void BitcoinMiner(CWallet *pwallet, bool fProofOfStake);
 void ResendWalletTransactions();
 
 bool GetWalletFile(CWallet* pwallet, std::string &strWalletFileOut);
@@ -1076,7 +1075,6 @@ public:
     bool AcceptBlock();
     bool GetCoinAge(uint64& nCoinAge) const; // calculate total coin age spent in block
     bool SignBlock(const CKeyStore& keystore);
-    bool SignPoSBlock(CWallet& wallet);
     bool CheckBlockSignature(bool fProofOfStake) const;
 
 private:

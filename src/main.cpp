@@ -2350,66 +2350,43 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
 }
 
 // sign block
-bool CBlock::SignPoSBlock(CWallet& wallet)
-{
-    // if we are trying to sign
-    // something except proof-of-stake block template
-    if (!vtx[0].vout[0].IsEmpty())
-        return false;
-
-    // if we are trying to sign
-    // a complete proof-of-stake block
-    if (IsProofOfStake())
-        return true;
-
-    static int64 nLastCoinStakeSearchTime = GetAdjustedTime(); // startup timestamp
-
-    CKey key;
-    CTransaction txCoinStake;
-    int64 nSearchTime = txCoinStake.nTime; // search to current time
-
-    if (nSearchTime > nLastCoinStakeSearchTime)
-    {
-        if (wallet.CreateCoinStake(wallet, nBits, nSearchTime-nLastCoinStakeSearchTime, txCoinStake, key))
-        {
-            if (txCoinStake.nTime >= max(pindexBest->GetMedianTimePast()+1, PastDrift(pindexBest->GetBlockTime())))
-            {
-                // make sure coinstake would meet timestamp protocol
-                // as it would be the same as the block timestamp
-                vtx[0].nTime = nTime = txCoinStake.nTime;
-                nTime = max(pindexBest->GetMedianTimePast()+1, GetMaxTransactionTime());
-                nTime = max(GetBlockTime(), PastDrift(pindexBest->GetBlockTime()));
-
-                // we have to make sure that we have no future timestamps in
-                // our transactions set
-                for (vector<CTransaction>::iterator it = vtx.begin(); it != vtx.end();)
-                    if (it->nTime > nTime) { it = vtx.erase(it); } else { ++it; }
-
-                vtx.insert(vtx.begin() + 1, txCoinStake);
-                hashMerkleRoot = BuildMerkleTree();
-
-                // append a signature to our block
-                return key.Sign(GetHash(), vchBlockSig);
-            }
-        }
-        nLastCoinStakeSearchInterval = nSearchTime - nLastCoinStakeSearchTime;
-        nLastCoinStakeSearchTime = nSearchTime;
-    }
-
-    return false;
-}
-
 bool CBlock::SignBlock(const CKeyStore& keystore)
 {
     vector<valtype> vSolutions;
     txnouttype whichType;
 
-    for(unsigned int i = 0; i < vtx[0].vout.size(); i++)
+    if(!IsProofOfStake())
     {
-        const CTxOut& txout = vtx[0].vout[i];
+        for(unsigned int i = 0; i < vtx[0].vout.size(); i++)
+        {
+            const CTxOut& txout = vtx[0].vout[i];
+
+            if (!Solver(txout.scriptPubKey, whichType, vSolutions))
+                continue;
+
+            if (whichType == TX_PUBKEY)
+            {
+                // Sign
+                valtype& vchPubKey = vSolutions[0];
+                CKey key;
+
+                if (!keystore.GetKey(Hash160(vchPubKey), key))
+                    continue;
+                if (key.GetPubKey() != vchPubKey)
+                    continue;
+                if(!key.Sign(GetHash(), vchBlockSig))
+                    continue;
+
+                return true;
+            }
+        }
+    }
+    else
+    {
+        const CTxOut& txout = vtx[1].vout[1];
 
         if (!Solver(txout.scriptPubKey, whichType, vSolutions))
-            continue;
+            return false;
 
         if (whichType == TX_PUBKEY)
         {
@@ -2418,15 +2395,11 @@ bool CBlock::SignBlock(const CKeyStore& keystore)
             CKey key;
 
             if (!keystore.GetKey(Hash160(vchPubKey), key))
-                continue;
-				
+                return false;
             if (key.GetPubKey() != vchPubKey)
-                continue;
+                return false;
 
-            if(!key.Sign(GetHash(), vchBlockSig))
-                continue;
-
-            return true;
+            return key.Sign(GetHash(), vchBlockSig);
         }
     }
 
