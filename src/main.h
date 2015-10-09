@@ -49,9 +49,9 @@ static const int64 MAX_MONEY2 = 60000000 * COIN;			// 60 mil
 /** Base Rate for Proof of Stake Reward */
 static const int64 MAX_MINT_PROOF_OF_STAKE = 2.00 * COIN;	// 200% annual interest
 /** Split Threshold Default */ 
-static const int64 DEF_SPLIT_AMOUNT = 30 * COIN; 
+static const int64 DEF_SPLIT_AMOUNT = 80 * COIN; 
 /** Split Threshold Max */
-static const int64 MAX_SPLIT_AMOUNT = 300 * COIN; 
+static const int64 MAX_SPLIT_AMOUNT = 800 * COIN; 
 static const unsigned int FORK_TIME = 1418934203; // Thursday, 18 Dec 2014 20:23:23 GMT
 static const unsigned int FORK_TIME2 = 1420748603; // Thursday, 08 Jan 2015 20:23:23 GMT
 
