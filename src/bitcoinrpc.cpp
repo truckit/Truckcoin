@@ -274,6 +274,7 @@ static const CRPCCommand vRPCCommands[] =
     { "sendalert",              &sendalert,              false,  false},
     { "getstaking",            &getstaking,            true,   false },
     { "setstaking",            &setstaking,            true,   false },
+    { "getstakereport",         &getstakereport,         false,  false},
 };
 
 CRPCTable::CRPCTable()
