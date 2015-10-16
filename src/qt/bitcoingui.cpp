@@ -207,7 +207,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     connect(transactionView, SIGNAL(doubleClicked(QModelIndex)), transactionView, SLOT(showDetails()));
 
     rpcConsole = new RPCConsole(this);
-    connect(openRPCConsoleAction, SIGNAL(triggered()), rpcConsole, SLOT(show()));
+    connect(openRPCConsoleAction, SIGNAL(triggered()), rpcConsole, SLOT(showTab_Debug()));
 	
 	blockBrowser = new BlockBrowser(this);
     connect(blockAction, SIGNAL(triggered()), blockBrowser, SLOT(show()));
