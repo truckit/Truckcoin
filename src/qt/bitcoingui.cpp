@@ -207,6 +207,8 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     connect(transactionView, SIGNAL(doubleClicked(QModelIndex)), transactionView, SLOT(showDetails()));
 
     rpcConsole = new RPCConsole(this);
+    connect(openInfoAction, SIGNAL(triggered()), rpcConsole, SLOT(showTab_Info()));
+    connect(openTrafficAction, SIGNAL(triggered()), rpcConsole, SLOT(showTab_Traffic()));
     connect(openRPCConsoleAction, SIGNAL(triggered()), rpcConsole, SLOT(showTab_Debug()));
 	
 	blockBrowser = new BlockBrowser(this);
@@ -327,8 +329,16 @@ void BitcoinGUI::createActions()
 
     exportAction = new QAction(QIcon(":/icons/export"), tr("&Export..."), this);
     exportAction->setToolTip(tr("Export the data in the current tab to a file"));
+
     openRPCConsoleAction = new QAction(QIcon(":/icons/debugwindow"), tr("&Debug window"), this);
     openRPCConsoleAction->setToolTip(tr("Open debugging and diagnostic console"));
+ 
+    openTrafficAction = new QAction(QIcon(":/icons/graph"), tr("Network Traffic Graph"), this);
+    openTrafficAction->setToolTip(tr("Open Network Traffic Graph"));
+	
+    openInfoAction = new QAction(QIcon(":/icons/info"), tr("General Info"), this);
+    openInfoAction->setToolTip(tr("Open General Info Window"));
+	
 	blockAction = new QAction(QIcon(":/icons/blexp"), tr("&Block Explorer"), this);
     blockAction->setToolTip(tr("Explore the BlockChain"));
 
@@ -391,7 +401,11 @@ void BitcoinGUI::createMenuBar()
 	wallet->addSeparator();
 	wallet->addAction(signMessageAction);
     wallet->addAction(verifyMessageAction);
-
+	
+	QMenu *information = appMenuBar->addMenu(tr("Information"));
+    information->addAction(openInfoAction);
+    information->addAction(openTrafficAction);
+	
     QMenu *help = appMenuBar->addMenu(tr("&Help"));
     help->addAction(openRPCConsoleAction);
     help->addSeparator();

@@ -107,6 +107,8 @@ private:
     QAction *changePassphraseAction;
     QAction *aboutQtAction;
     QAction *openRPCConsoleAction;
+    QAction *openInfoAction;
+    QAction *openTrafficAction;
     QAction *blockAction;
     QAction *chatAction;
     QSystemTrayIcon *trayIcon;
