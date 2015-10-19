@@ -30,6 +30,7 @@
 #include "ui_interface.h"
 #include "blockbrowser.h"
 #include "chatwindow.h"
+#include "stakereportdialog.h"
 
 #ifdef Q_OS_MAC
 #include "macdockiconhandler.h"
@@ -327,6 +328,9 @@ void BitcoinGUI::createActions()
     signMessageAction = new QAction(QIcon(":/icons/edit"), tr("Sign &message..."), this);
     verifyMessageAction = new QAction(QIcon(":/icons/verify"), tr("&Verify message..."), this);
 
+    stakeReportAction = new QAction(QIcon(":/icons/minting"), tr("Show stake report"), this);
+    stakeReportAction->setToolTip(tr("Open the Stake Report Box"));
+
     exportAction = new QAction(QIcon(":/icons/export"), tr("&Export..."), this);
     exportAction->setToolTip(tr("Export the data in the current tab to a file"));
 
@@ -361,6 +365,7 @@ void BitcoinGUI::createActions()
 	connect(unlockWalletAction, SIGNAL(triggered()), this, SLOT(unlockWallet()));
 	connect(lockWalletAction, SIGNAL(triggered()), this, SLOT(lockWallet()));
 	connect(blockAction, SIGNAL(triggered()), this, SLOT(gotoBlockBrowser()));
+    connect(stakeReportAction, SIGNAL(triggered()), this, SLOT(stakeReportClicked()));
 }
 
 void BitcoinGUI::createMenuBar()
@@ -402,9 +407,10 @@ void BitcoinGUI::createMenuBar()
 	wallet->addAction(signMessageAction);
     wallet->addAction(verifyMessageAction);
 	
-	QMenu *information = appMenuBar->addMenu(tr("Information"));
+    QMenu *information = appMenuBar->addMenu(tr("Information"));
     information->addAction(openInfoAction);
     information->addAction(openTrafficAction);
+    information->addAction(stakeReportAction);
 	
     QMenu *help = appMenuBar->addMenu(tr("&Help"));
     help->addAction(openRPCConsoleAction);
@@ -590,6 +596,14 @@ void BitcoinGUI::lockIconClicked()
     if(walletModel->getEncryptionStatus() == WalletModel::Locked) 
         unlockWalletForMint(); 
 } 
+
+// Stake report dialog
+void BitcoinGUI::stakeReportClicked()
+{
+    static StakeReportDialog dlg;
+    dlg.setModel(walletModel);
+    dlg.show();
+}
 
 void BitcoinGUI::setNumConnections(int count)
 {

@@ -228,7 +228,8 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/blockbrowser.h \
     src/qt/trafficgraphwidget.h \
     src/qt/winshutdownmonitor.h \
-    src/qt/splitthresholdfield.h
+    src/qt/splitthresholdfield.h \
+    src/qt/stakereportdialog.h
     
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/transactiontablemodel.cpp \
@@ -298,6 +299,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/trafficgraphwidget.cpp \
     src/qt/winshutdownmonitor.cpp \
     src/qt/splitthresholdfield.cpp \
+    src/qt/stakereportdialog.cpp \
     src/noui.cpp \
     src/kernel.cpp \
     src/pbkdf2.cpp \
@@ -330,7 +332,8 @@ FORMS += \
     src/qt/forms/rpcconsole.ui \
     src/qt/forms/optionsdialog.ui \
     src/qt/forms/chatwindow.ui \
-    src/qt/forms/blockbrowser.ui
+    src/qt/forms/blockbrowser.ui \
+    src/qt/forms/stakereportdialog.ui
 
 contains(USE_QRCODE, 1) {
 HEADERS += src/qt/qrcodedialog.h
