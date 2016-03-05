@@ -48,6 +48,8 @@
         <file alias="exportw">res/icons/exportw.png</file>
 		<file alias="inspect">res/icons/inspect.png</file>
 		<file alias="repair">res/icons/repair.png</file>
+		<file alias="info">res/icons/info.png</file>
+		<file alias="graph">res/icons/graph.png</file>
 	<file alias="blexp">res/icons/blexp.png</file>
 	<file alias="irc">res/icons/irc.png</file>
 	<file alias="reddit">res/icons/reddit.png</file>

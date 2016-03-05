@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2013-2015 The Truckcoin developers
+// Copyright (c) 2013-2016 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -32,6 +32,9 @@ namespace Checkpoints
 	( 44007, uint256("0x343842864ed219dbadfa263581c21ac6e4a29a4d20bd2eca10b01522dc081dfa"))
 	( 68521, uint256("0xdc9caf0c710a56075eea1f40c5ed8cdc5e3f0989334495cc5e01caca82efa7dd"))
 	( 147422, uint256("0x6ad97a9200475191701a7bf1c96c8a4ad190523311bbccce432761252bf69a03"))
+	( 444444, uint256("0x53c8cb49ae3f51dcac3c24a9a590c46e6013b5e4759baf797b00d0f11ed7cf22"))
+	( 587986, uint256("0x660ab7bd56793ce88dd8cd8a1c80468ae65b116e719e702cfc55517c74b47ce2"))
+	( 588340, uint256("0x1ef0215c46ddb8ed12045ae763d3a583189f6cd0b8909de5d24f0e0bf43c6bec"))
 	;
 
     static MapCheckpoints mapCheckpointsTestnet =
@@ -366,7 +369,7 @@ namespace Checkpoints
 }
 
 // sync-checkpoint master key
-const std::string CSyncCheckpoint::strMasterPubKey = "044b78330b041fdced10aa34ca4451dd6caa0f30f24760e81b0fcc6f4ea9978ce987106fedee056ab955aad9bf8abc50425bf88aef6cc5da2994f2b6e144c2b014";
+const std::string CSyncCheckpoint::strMasterPubKey = "048c9c6ba1370ab16eff70814f1a8783108bf1a031b2028561bb11d83fcf95f82878932428b4ccafb95a35c0a704a534222de05afdf1e839127822789136ffd709";
 
 std::string CSyncCheckpoint::strMasterPrivKey = "";
 

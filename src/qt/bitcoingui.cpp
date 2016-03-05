@@ -30,6 +30,7 @@
 #include "ui_interface.h"
 #include "blockbrowser.h"
 #include "chatwindow.h"
+#include "stakereportdialog.h"
 
 #ifdef Q_OS_MAC
 #include "macdockiconhandler.h"
@@ -207,7 +208,9 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     connect(transactionView, SIGNAL(doubleClicked(QModelIndex)), transactionView, SLOT(showDetails()));
 
     rpcConsole = new RPCConsole(this);
-    connect(openRPCConsoleAction, SIGNAL(triggered()), rpcConsole, SLOT(show()));
+    connect(openInfoAction, SIGNAL(triggered()), rpcConsole, SLOT(showTab_Info()));
+    connect(openTrafficAction, SIGNAL(triggered()), rpcConsole, SLOT(showTab_Traffic()));
+    connect(openRPCConsoleAction, SIGNAL(triggered()), rpcConsole, SLOT(showTab_Debug()));
 	
 	blockBrowser = new BlockBrowser(this);
     connect(blockAction, SIGNAL(triggered()), blockBrowser, SLOT(show()));
@@ -325,10 +328,21 @@ void BitcoinGUI::createActions()
     signMessageAction = new QAction(QIcon(":/icons/edit"), tr("Sign &message..."), this);
     verifyMessageAction = new QAction(QIcon(":/icons/verify"), tr("&Verify message..."), this);
 
+    stakeReportAction = new QAction(QIcon(":/icons/minting"), tr("Show stake report"), this);
+    stakeReportAction->setToolTip(tr("Open the Stake Report Box"));
+
     exportAction = new QAction(QIcon(":/icons/export"), tr("&Export..."), this);
     exportAction->setToolTip(tr("Export the data in the current tab to a file"));
+
     openRPCConsoleAction = new QAction(QIcon(":/icons/debugwindow"), tr("&Debug window"), this);
     openRPCConsoleAction->setToolTip(tr("Open debugging and diagnostic console"));
+ 
+    openTrafficAction = new QAction(QIcon(":/icons/graph"), tr("Network Traffic Graph"), this);
+    openTrafficAction->setToolTip(tr("Open Network Traffic Graph"));
+	
+    openInfoAction = new QAction(QIcon(":/icons/info"), tr("General Info"), this);
+    openInfoAction->setToolTip(tr("Open General Info Window"));
+	
 	blockAction = new QAction(QIcon(":/icons/blexp"), tr("&Block Explorer"), this);
     blockAction->setToolTip(tr("Explore the BlockChain"));
 
@@ -351,6 +365,7 @@ void BitcoinGUI::createActions()
 	connect(unlockWalletAction, SIGNAL(triggered()), this, SLOT(unlockWallet()));
 	connect(lockWalletAction, SIGNAL(triggered()), this, SLOT(lockWallet()));
 	connect(blockAction, SIGNAL(triggered()), this, SLOT(gotoBlockBrowser()));
+    connect(stakeReportAction, SIGNAL(triggered()), this, SLOT(stakeReportClicked()));
 }
 
 void BitcoinGUI::createMenuBar()
@@ -391,7 +406,12 @@ void BitcoinGUI::createMenuBar()
 	wallet->addSeparator();
 	wallet->addAction(signMessageAction);
     wallet->addAction(verifyMessageAction);
-
+	
+    QMenu *information = appMenuBar->addMenu(tr("Information"));
+    information->addAction(openInfoAction);
+    information->addAction(openTrafficAction);
+    information->addAction(stakeReportAction);
+	
     QMenu *help = appMenuBar->addMenu(tr("&Help"));
     help->addAction(openRPCConsoleAction);
     help->addSeparator();
@@ -576,6 +596,14 @@ void BitcoinGUI::lockIconClicked()
     if(walletModel->getEncryptionStatus() == WalletModel::Locked) 
         unlockWalletForMint(); 
 } 
+
+// Stake report dialog
+void BitcoinGUI::stakeReportClicked()
+{
+    static StakeReportDialog dlg;
+    dlg.setModel(walletModel);
+    dlg.show();
+}
 
 void BitcoinGUI::setNumConnections(int count)
 {

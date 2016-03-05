@@ -107,8 +107,11 @@ private:
     QAction *changePassphraseAction;
     QAction *aboutQtAction;
     QAction *openRPCConsoleAction;
+    QAction *openInfoAction;
+    QAction *openTrafficAction;
     QAction *blockAction;
     QAction *chatAction;
+    QAction *stakeReportAction;
     QSystemTrayIcon *trayIcon;
     Notificator *notificator;
     TransactionView *transactionView;
@@ -225,6 +228,9 @@ private slots:
 	
     /** Enable/disable stake mining */
     void stakeMinerToggle(bool fInitial = false);
+
+    /** Open stake report dialog */
+    void stakeReportClicked();
 
     /** Show window if hidden, unminimize when minimized, rise when obscured or show if hidden and fToggleHidden is true */
     void showNormalIfMinimized(bool fToggleHidden = false);

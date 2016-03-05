@@ -1,5 +1,5 @@
 // Copyright (c) 2012-2013 The PPCoin developers
-// Copyright (c) 2013-2015 The Truckcoin developers
+// Copyright (c) 2013-2016 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -30,6 +30,7 @@ bool IsProtocolModifierIntervalChange(unsigned int nBlockHeight)
 
 
 // Hard checkpoints of stake modifiers to ensure they are deterministic
+// modifierchecksum
 static std::map<int, unsigned int> mapStakeModifierCheckpoints =
     boost::assign::map_list_of
     ( 0, 0xfd11f4e7u )
@@ -38,7 +39,10 @@ static std::map<int, unsigned int> mapStakeModifierCheckpoints =
     ( 21001, 0xc31f6e81u )
     ( 44007, 0x6356af10u )
     ( 68521, 0xb1b8326cu )
-    ( 147422, 0xd5508b92u )  // modifierchecksum
+    ( 147422, 0xd5508b92u )
+    ( 444444, 0xde0c6081u )
+    ( 587986, 0x18d26dcbu )
+    ( 588340, 0x9ea1af82u )
 ;
 // Get time weight
 int64 GetWeight(int64 nIntervalBeginning, int64 nIntervalEnd)

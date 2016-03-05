@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = truckcoin-qt
-VERSION = 0.7.2
+VERSION = 0.9.9.0
 INCLUDEPATH += src src/json src/qt
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE BOOST_THREAD_PROVIDES_GENERIC_SHARED_MUTEX_ON_WIN __NO_SYSTEM_INCLUDES
 CONFIG += no_include_pwd
@@ -228,7 +228,8 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/blockbrowser.h \
     src/qt/trafficgraphwidget.h \
     src/qt/winshutdownmonitor.h \
-    src/qt/splitthresholdfield.h
+    src/qt/splitthresholdfield.h \
+    src/qt/stakereportdialog.h
     
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/transactiontablemodel.cpp \
@@ -298,6 +299,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/trafficgraphwidget.cpp \
     src/qt/winshutdownmonitor.cpp \
     src/qt/splitthresholdfield.cpp \
+    src/qt/stakereportdialog.cpp \
     src/noui.cpp \
     src/kernel.cpp \
     src/pbkdf2.cpp \
@@ -330,7 +332,8 @@ FORMS += \
     src/qt/forms/rpcconsole.ui \
     src/qt/forms/optionsdialog.ui \
     src/qt/forms/chatwindow.ui \
-    src/qt/forms/blockbrowser.ui
+    src/qt/forms/blockbrowser.ui \
+    src/qt/forms/stakereportdialog.ui
 
 contains(USE_QRCODE, 1) {
 HEADERS += src/qt/qrcodedialog.h

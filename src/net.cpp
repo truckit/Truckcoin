@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2013-2015 The Truckcoin developers
+// Copyright (c) 2013-2016 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -1327,7 +1327,7 @@ void ThreadDNSAddressSeed2(void* parg)
 
 unsigned int pnSeed[] =
 {
-	0x43D32D42, 0x6C3D125B, 0x45C5A17A,
+	0x68FF4383, 0x6C3D125B, 0x45C5A17A,
 };
 
 void DumpAddresses()
@@ -1418,7 +1418,7 @@ void static ThreadStakeMinter(void* parg)
     try
     {
         vnThreadsRunning[THREAD_MINTER]++;
-        StakeMiner(pwallet);
+        BitcoinMiner(pwallet, true);
         vnThreadsRunning[THREAD_MINTER]--;
     }
     catch (std::exception& e) {
