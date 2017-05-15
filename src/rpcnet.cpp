@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2012 Bitcoin Developers
-// Copyright (c) 2013-2016 The Truckcoin developers
+// Copyright (c) 2013-2017 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
