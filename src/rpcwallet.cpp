@@ -1906,7 +1906,7 @@ localtime_r (const time_t *timer, struct tm *result)
    if (local_result == NULL || result == NULL)
      return NULL;
 
-   memcpy (result, local_result, sizeof (result));
+   memcpy (result, local_result, sizeof *(result));
    return result;
 }
 
