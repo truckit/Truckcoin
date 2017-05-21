@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2013-2016 The Truckcoin developers
+// Copyright (c) 2013-2017 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -35,6 +35,7 @@ namespace Checkpoints
 	( 444444, uint256("0x53c8cb49ae3f51dcac3c24a9a590c46e6013b5e4759baf797b00d0f11ed7cf22"))
 	( 587986, uint256("0x660ab7bd56793ce88dd8cd8a1c80468ae65b116e719e702cfc55517c74b47ce2"))
 	( 588340, uint256("0x1ef0215c46ddb8ed12045ae763d3a583189f6cd0b8909de5d24f0e0bf43c6bec"))
+	( 1008090, uint256("0xd2643e836e5337634591014c486a23d770416cae5916189638158e60a41fc755"))
 	;
 
     static MapCheckpoints mapCheckpointsTestnet =
