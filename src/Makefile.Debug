@@ -64,7 +64,6 @@ SOURCES       = src\qt\bitcoin.cpp \
 		src\main.cpp \
 		src\init.cpp \
 		src\net.cpp \
-		src\irc.cpp \
 		src\checkpoints.cpp \
 		src\addrman.cpp \
 		src\db.cpp \
@@ -140,7 +139,6 @@ OBJECTS       = build/bitcoin.o \
         build/miner.o \
 		build/init.o \
 		build/net.o \
-		build/irc.o \
 		build/checkpoints.o \
 		build/addrman.o \
 		build/db.o \
@@ -233,7 +231,7 @@ dist:
 	$(ZIP) truckcoin-qt.zip $(SOURCES) $(DIST) Truckcoin.pro ..\..\Qt\4.8.6\mkspecs\features\device_config.prf ..\..\Qt\4.8.6\mkspecs\qconfig.pri ..\..\Qt\4.8.6\mkspecs\modules\qt_webkit_version.pri ..\..\Qt\4.8.6\mkspecs\features\qt_functions.prf ..\..\Qt\4.8.6\mkspecs\features\qt_config.prf ..\..\Qt\4.8.6\mkspecs\win32-g++\qmake.conf ..\..\Qt\4.8.6\mkspecs\features\exclusive_builds.prf ..\..\Qt\4.8.6\mkspecs\features\default_pre.prf ..\..\Qt\4.8.6\mkspecs\features\win32\default_pre.prf ..\..\Qt\4.8.6\mkspecs\features\debug.prf ..\..\Qt\4.8.6\mkspecs\features\debug_and_release.prf ..\..\Qt\4.8.6\mkspecs\features\default_post.prf ..\..\Qt\4.8.6\mkspecs\features\win32\default_post.prf ..\..\Qt\4.8.6\mkspecs\features\build_pass.prf ..\..\Qt\4.8.6\mkspecs\features\win32\rtti.prf ..\..\Qt\4.8.6\mkspecs\features\win32\exceptions.prf ..\..\Qt\4.8.6\mkspecs\features\win32\stl.prf ..\..\Qt\4.8.6\mkspecs\features\shared.prf ..\..\Qt\4.8.6\mkspecs\features\warn_on.prf ..\..\Qt\4.8.6\mkspecs\features\qt.prf ..\..\Qt\4.8.6\mkspecs\features\win32\thread.prf ..\..\Qt\4.8.6\mkspecs\features\moc.prf ..\..\Qt\4.8.6\mkspecs\features\win32\windows.prf ..\..\Qt\4.8.6\mkspecs\features\resources.prf ..\..\Qt\4.8.6\mkspecs\features\uic.prf ..\..\Qt\4.8.6\mkspecs\features\yacc.prf ..\..\Qt\4.8.6\mkspecs\features\lex.prf c:\Qt\4.8.6\lib\qtmaind.prl  TRANSLATIONS HEADERS RESOURCES IMAGES SOURCES OBJECTIVE_SOURCES FORMS YACCSOURCES YACCSOURCES LEXSOURCES 
 
 clean: compiler_clean 
-	-$(DEL_FILE) build\bitcoin.o build\bitcoingui.o build\transactiontablemodel.o build\addresstablemodel.o build\optionsdialog.o build\sendcoinsdialog.o build\coincontroldialog.o build\coincontroltreewidget.o build\addressbookpage.o build\signverifymessagedialog.o build\aboutdialog.o build\editaddressdialog.o build\bitcoinaddressvalidator.o build\alert.o build\version.o build\sync.o build\util.o build\netbase.o build\key.o build\script.o build\main.o build\miner.o build\init.o build\net.o build\irc.o build\checkpoints.o build\addrman.o build\db.o build\walletdb.o build\clientmodel.o build\guiutil.o build\transactionrecord.o build\optionsmodel.o build\monitoreddatamapper.o build\transactiondesc.o build\transactiondescdialog.o build\bitcoinstrings.o build\bitcoinamountfield.o build\wallet.o build\keystore.o build\transactionfilterproxy.o build\transactionview.o build\walletmodel.o build\bitcoinrpc.o build\rpcdump.o build\rpcnet.o build\rpcmining.o build\rpcwallet.o build\rpcblockchain.o build\rpcrawtransaction.o build\overviewpage.o build\csvmodelwriter.o build\crypter.o build\sendcoinsentry.o build\qvalidatedlineedit.o build\bitcoinunits.o build\qvaluecombobox.o build\askpassphrasedialog.o build\protocol.o build\notificator.o build\qtipcserver.o build\rpcconsole.o build\noui.o build\kernel.o build\pbkdf2.o build\blake.o build\bmw.o build\groestl.o build\jh.o build\keccak.o build\skein.o build\luffa.o build\cubehash.o build\shavite.o build\echo.o build\simd.o build\qrc_bitcoin.o
+	-$(DEL_FILE) build\bitcoin.o build\bitcoingui.o build\transactiontablemodel.o build\addresstablemodel.o build\optionsdialog.o build\sendcoinsdialog.o build\coincontroldialog.o build\coincontroltreewidget.o build\addressbookpage.o build\signverifymessagedialog.o build\aboutdialog.o build\editaddressdialog.o build\bitcoinaddressvalidator.o build\alert.o build\version.o build\sync.o build\util.o build\netbase.o build\key.o build\script.o build\main.o build\miner.o build\init.o build\net.o build\checkpoints.o build\addrman.o build\db.o build\walletdb.o build\clientmodel.o build\guiutil.o build\transactionrecord.o build\optionsmodel.o build\monitoreddatamapper.o build\transactiondesc.o build\transactiondescdialog.o build\bitcoinstrings.o build\bitcoinamountfield.o build\wallet.o build\keystore.o build\transactionfilterproxy.o build\transactionview.o build\walletmodel.o build\bitcoinrpc.o build\rpcdump.o build\rpcnet.o build\rpcmining.o build\rpcwallet.o build\rpcblockchain.o build\rpcrawtransaction.o build\overviewpage.o build\csvmodelwriter.o build\crypter.o build\sendcoinsentry.o build\qvalidatedlineedit.o build\bitcoinunits.o build\qvaluecombobox.o build\askpassphrasedialog.o build\protocol.o build\notificator.o build\qtipcserver.o build\rpcconsole.o build\noui.o build\kernel.o build\pbkdf2.o build\blake.o build\bmw.o build\groestl.o build\jh.o build\keccak.o build\skein.o build\luffa.o build\cubehash.o build\shavite.o build\echo.o build\simd.o build\qrc_bitcoin.o
 	-$(DEL_FILE) build\bitcoin-qt_res.o
 
 distclean: clean
@@ -383,9 +381,6 @@ build/init.o: src/init.cpp
 
 build/net.o: src/net.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o build\net.o src\net.cpp
-
-build/irc.o: src/irc.cpp 
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o build\irc.o src\irc.cpp
 
 build/checkpoints.o: src/checkpoints.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o build\checkpoints.o src\checkpoints.cpp
