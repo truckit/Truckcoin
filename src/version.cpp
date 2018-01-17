@@ -12,7 +12,7 @@
 const std::string CLIENT_NAME("Truckcoin");
 
 // Client version number
-#define CLIENT_VERSION_SUFFIX   " beta"
+//#define CLIENT_VERSION_SUFFIX   " beta"
 
 
 // The following part of the code determines the CLIENT_BUILD variable.
@@ -63,5 +63,6 @@ const std::string CLIENT_NAME("Truckcoin");
 #    endif
 #endif
 
-const std::string CLIENT_BUILD(BUILD_DESC CLIENT_VERSION_SUFFIX);
+//const std::string CLIENT_BUILD(BUILD_DESC CLIENT_VERSION_SUFFIX);
+const std::string CLIENT_BUILD(BUILD_DESC);
 const std::string CLIENT_DATE(BUILD_DATE);
