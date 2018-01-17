@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2013-2017 The Truckcoin developers
+// Copyright (c) 2013-2018 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -1334,7 +1334,7 @@ void AddTimeData(const CNetAddr& ip, int64 nTime)
 
     // Ignore duplicates
     static set<CNetAddr> setKnown;
-    if (!setKnown.insert(ip).second)
+    if ((!setKnown.insert(ip).second) || (abs64(nOffsetSample) > 7 * 60))
         return;
 
     // Add data
@@ -1345,7 +1345,7 @@ void AddTimeData(const CNetAddr& ip, int64 nTime)
         int64 nMedian = vTimeOffsets.median();
         std::vector<int64> vSorted = vTimeOffsets.sorted();
         // Only let other nodes change our time by so much
-        if (abs64(nMedian) < 70 * 60)
+        if (abs64(nMedian) < 7 * 60)
         {
             nTimeOffset = nMedian;
         }

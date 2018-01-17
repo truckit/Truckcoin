@@ -7,8 +7,8 @@
 
 // These need to be macros, as version.cpp's and truckcoin-qt.rc's voodoo requires it
 #define CLIENT_VERSION_MAJOR       1
-#define CLIENT_VERSION_MINOR       0
-#define CLIENT_VERSION_REVISION    1
+#define CLIENT_VERSION_MINOR       1
+#define CLIENT_VERSION_REVISION    0
 #define CLIENT_VERSION_BUILD       0
 
 // Converts the parameter X to a string after macro replacement on X has been performed.
@@ -17,6 +17,6 @@
 #define DO_STRINGIZE(X) #X
 
 // Copyright year
-#define COPYRIGHT_YEAR  2017
+#define COPYRIGHT_YEAR  2018
 
 #endif // CLIENTVERSION_H

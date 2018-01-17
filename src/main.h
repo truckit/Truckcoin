@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2013-2017 The Truckcoin developers
+// Copyright (c) 2013-2018 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #ifndef BITCOIN_MAIN_H
@@ -54,6 +54,7 @@ static const int64 DEF_SPLIT_AMOUNT = 300 * COIN;
 static const int64 MAX_SPLIT_AMOUNT = 10000 * COIN; 
 static const unsigned int FORK_TIME = 1418934203; // Thursday, 18 Dec 2014 20:23:23 GMT
 static const unsigned int FORK_TIME2 = 1420748603; // Thursday, 08 Jan 2015 20:23:23 GMT
+static const unsigned int DRIFT_SWITCH_TIME = 1519884366; // Thursday, 1 March 2018 06:06:06 GMT
 
 static const int MAX_TIME_SINCE_BEST_BLOCK = 10; // how many seconds to wait before sending next PushGetBlocks()
 
@@ -72,8 +73,21 @@ static const int fHaveUPnP = false;
 static const uint256 hashGenesisBlockOfficial("0x000005fe04e512585c3611369c7ce23f130958038c18a462577d002680dab4fc");
 static const uint256 hashGenesisBlockTestNet ("0x0000076130e1a816bab8f26310839ab601305b2315dc3b8b1a250faa0cb1f9a8");
 
-inline int64 PastDrift(int64 nTime)   { return nTime - 15 * 60; } // up to fifteen minutes from the past
-inline int64 FutureDrift(int64 nTime) { return nTime + 15 * 60; } // up to fifteen minutes from the future
+inline int64 PastDrift(int64 nTime)   
+{
+    if (nTime > DRIFT_SWITCH_TIME)
+        return nTime - 60; // up to 1 minute from the past
+    else
+        return nTime - 15 * 60; // up to 15 minutes from the past
+}
+
+inline int64 FutureDrift(int64 nTime) 
+{
+    if (nTime > DRIFT_SWITCH_TIME)
+        return nTime + 60; // up to 1 minute from the future
+    else
+        return nTime + 15 * 60; // up to 15 minutes from the future
+}
 
 extern CScript COINBASE_FLAGS;
 
@@ -118,6 +132,7 @@ void RegisterWallet(CWallet* pwalletIn);
 void UnregisterWallet(CWallet* pwalletIn);
 void SyncWithWallets(const CTransaction& tx, const CBlock* pblock = NULL, bool fUpdate = false, bool fConnect = true);
 bool ProcessBlock(CNode* pfrom, CBlock* pblock);
+bool ProcessBlock(CNode* pfrom, CBlock* pblock, std::string& strErr);
 bool CheckDiskSpace(uint64 nAdditionalBytes=0);
 FILE* OpenBlockFile(unsigned int nFile, unsigned int nBlockPos, const char* pszMode="rb");
 FILE* AppendBlockFile(unsigned int& nFileRet);

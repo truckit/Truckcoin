@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2013-2017 The Truckcoin developers
+// Copyright (c) 2013-2018 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -2229,6 +2229,12 @@ bool CBlockIndex::IsSuperMajority(int minVersion, const CBlockIndex* pstart, uns
 
 bool ProcessBlock(CNode* pfrom, CBlock* pblock)
 {
+	std::string strErr = "";
+	return ProcessBlock(pfrom, pblock, strErr);
+}
+
+bool ProcessBlock(CNode* pfrom, CBlock* pblock, std::string& strErr)
+{
     // Check for duplicate
     uint256 hash = pblock->GetHash();
     if (mapBlockIndex.count(hash))
@@ -2240,7 +2246,22 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
     // Limited duplicity on stake: prevents block flood attack
     // Duplicate stake allowed only when there is orphan child block
     if (pblock->IsProofOfStake() && setStakeSeen.count(pblock->GetProofOfStake()) && !mapOrphanBlocksByPrev.count(hash) && !Checkpoints::WantedByPendingSyncCheckpoint(hash))
-        return error("ProcessBlock() : duplicate proof-of-stake (%s, %d) for block %s", pblock->GetProofOfStake().first.ToString().c_str(), pblock->GetProofOfStake().second, hash.ToString().c_str());
+	{
+		if(mapBlockIndex.count(pblock->hashPrevBlock))
+		{
+			// presstab - HyperStake
+			// when bootstrapping, it is common for orphans to be in the bootstrap that will trigger the stakeseen requirement above. 
+			// if the previous block that should be orphaned is not removed from setStakeSeen then a reorg will not happen as it should
+			setStakeSeen.erase(pblock->GetProofOfStake());
+			
+			//send a reorg signal that is handled in LoadExternalBlockFile()
+			strErr = "reorg";
+			
+			return false;
+		}
+		
+		return error("ProcessBlock() : duplicate proof-of-stake (%s, %d) for block %s", pblock->GetProofOfStake().first.ToString().c_str(), pblock->GetProofOfStake().second, hash.ToString().c_str());
+	}
 
     // Preliminary checks
     if (!pblock->CheckBlock())
@@ -2716,6 +2737,7 @@ bool LoadExternalBlockFile(FILE* fileIn)
     int64 nStart = GetTimeMillis();
 
     int nLoaded = 0;
+	int nStartHeight = nBestHeight;
     {
         LOCK(cs_main);
         try {
@@ -2724,7 +2746,8 @@ bool LoadExternalBlockFile(FILE* fileIn)
             while (nPos != (unsigned int)-1 && blkdat.good() && !fRequestShutdown)
             {
                 unsigned char pchData[65536];
-                do {
+                do 
+				{
                     fseek(blkdat, nPos, SEEK_SET);
                     int nRead = fread(pchData, 1, sizeof(pchData), blkdat);
                     if (nRead <= 8)
@@ -2754,11 +2777,32 @@ bool LoadExternalBlockFile(FILE* fileIn)
                 {
                     CBlock block;
                     blkdat >> block;
-                    if (ProcessBlock(NULL,&block))
-                    {
-                        nLoaded++;
-                        nPos += 4 + nSize;
-                    }
+					
+					// no reason to partially scan every block we have just to print to log that we have it
+					if(nLoaded < nStartHeight)
+					{
+						nLoaded++;
+						nPos += 4 + nSize;
+					}
+					else
+					{
+						std::string strErr = "";
+						bool fProcessed = ProcessBlock(NULL,&block, strErr);
+						if (fProcessed)
+						{
+							nLoaded++;
+							nPos += 4 + nSize;
+						}
+						else if (strErr == "reorg")
+						{
+							fProcessed = ProcessBlock(NULL,&block, strErr);
+							if (fProcessed)
+							{
+								nLoaded++;
+								nPos += 4 + nSize;
+							}
+						}
+					}
                 }
             }
         }
