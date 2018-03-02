@@ -11,6 +11,8 @@
 
 using namespace std;
 
+map<unsigned int, unsigned int> mapHashedBlocks;
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // TruckcoinMiner
@@ -575,6 +577,15 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
                 return;
         }
 		
+        if(mapHashedBlocks.count(nBestHeight)) //search our map of hashed blocks, see if bestblock has been hashed yet
+        {
+            if(GetTime() - mapHashedBlocks[nBestHeight] < min((int)(pwallet->nHashDrift  * 0.5), 180)) // wait half of the nHashDrift with max wait of 3 minutes
+            {
+				Sleep(2500); // 2.5 second sleep
+                continue;
+            }
+        }		
+		
         //
         // Create new block
         //
@@ -603,7 +614,6 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
                 CheckStake(pblock.get(), *pwallet);
                 SetThreadPriority(THREAD_PRIORITY_LOWEST);
             }
-            Sleep(500);
             continue;
         }
 
