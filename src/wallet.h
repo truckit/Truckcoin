@@ -95,6 +95,8 @@ public:
     typedef std::map<unsigned int, CMasterKey> MasterKeyMap;
     MasterKeyMap mapMasterKeys;
     unsigned int nMasterKeyMaxID;
+	
+	unsigned int nHashDrift;
 
     CWallet()
     {
@@ -106,6 +108,7 @@ public:
         nOrderPosNext = 0;
 		fWalletUnlockMintOnly = false;
 		fSplitBlock = false;
+		nHashDrift = 60;
     }
     CWallet(std::string strWalletFileIn)
     {
@@ -118,6 +121,7 @@ public:
         nOrderPosNext = 0;
 		fWalletUnlockMintOnly = false;
 		fSplitBlock = false;
+		nHashDrift = 60;		
     }
 
     std::map<uint256, CWalletTx> mapWallet;
