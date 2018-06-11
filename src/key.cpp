@@ -411,11 +411,11 @@ bool CKey::Verify(uint256 hash, const std::vector<unsigned char>& vchSigParam)
     // Prevent the problem described here: https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2015-July/009697.html
     // by removing the extra length bytes
     std::vector<unsigned char> vchSig(vchSigParam.begin(), vchSigParam.end());
-    if (vchSig.size() > 1 && vchSig[1] & 0x80)
+    if (int(vchSig.size()) > 1 && vchSig[1] & 0x80)
     {
         unsigned char nLengthBytes = vchSig[1] & 0x7f;
 		
-        if (vchSig.size() < 2 + nLengthBytes)
+        if (int(vchSig.size()) < 2 + nLengthBytes)
             return false;
 		
         if (nLengthBytes > 4)
