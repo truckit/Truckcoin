@@ -512,20 +512,18 @@ static const long hextable[] =
 	-1, -1, -1, -1, -1, -1
 };
 
-
 long hex2long(const char* hexString)
 {
 	long ret = 0; 
 
 	while (*hexString && ret >= 0) 
 	{
-		ret = (ret << 4) | hextable[*hexString++];
+      int index = *hexString++;
+      ret = (ret << 4) | hextable[index];
 	}
 
 	return ret; 
 }
-
-
 
 bool IsHex(const string& str)
 {

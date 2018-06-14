@@ -901,7 +901,6 @@ int generateMTRandom(unsigned int s, int range)
     return dist(gen);
 }
 
-static const int CUTOFF_HEIGHT = POW_CUTOFF_HEIGHT;	
 // miner's coin base reward based on nBits
 int64 GetProofOfWorkReward(int nHeight, int64 nFees, uint256 prevHash)
 {
