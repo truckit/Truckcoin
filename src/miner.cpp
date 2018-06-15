@@ -377,7 +377,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
         nLastBlockSize = nBlockSize;
 
         if (fDebug && GetBoolArg("-printpriority"))
-            printf("CreateNewBlock(): total size %"PRI64u"\n", nBlockSize);
+            printf("CreateNewBlock(): total size %llu\n", nBlockSize);
 
         if (pblock->IsProofOfWork())
             pblock->vtx[0].vout[0].nValue = GetProofOfWorkReward(pindexPrev->nHeight+1, nFees, pindexPrev->GetBlockHash());
@@ -617,7 +617,7 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
             continue;
         }
 
-        printf("Running BitcoinMiner with %"PRIszu" transactions in block (%u bytes)\n", pblock->vtx.size(),
+        printf("Running BitcoinMiner with %lu transactions in block (%u bytes)\n", pblock->vtx.size(),
                ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
 
         //
