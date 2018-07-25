@@ -391,7 +391,7 @@
       <enum>QFrame::Raised</enum>
      </property>
      <property name="text">
-      <string>&lt;a href=&quot;https://bitcointalk.org/index.php?topic=716182&quot;&gt;&lt;div style=&quot; text-decoration: none; color:#c65353;&quot;&gt;&lt;img src=&quot;:/icons/bitcointalk&quot;/&gt;&lt;br /&gt;Btctalk&lt;/div&gt;&lt;/a&gt;</string>
+      <string>&lt;a href=&quot;https://bitcointalk.org/index.php?topic=2291875&quot;&gt;&lt;div style=&quot; text-decoration: none; color:#c65353;&quot;&gt;&lt;img src=&quot;:/icons/bitcointalk&quot;/&gt;&lt;br /&gt;Btctalk&lt;/div&gt;&lt;/a&gt;</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
