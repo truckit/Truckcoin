@@ -34,7 +34,6 @@ public:
         Language,          // QString
         CoinControlFeatures, // bool
         UseTruckcoinTheme,  // bool	
-        ShowIrcButton,     // bool
         OptionIDRowCount,
     };
 
@@ -55,7 +54,6 @@ public:
     int getSplitThreshold();
     bool getDisplayAddresses();
     bool getCoinControlFeatures();
-    bool getShowIrcButton();
     QString getLanguage() { return language; }
 
 private:
@@ -65,7 +63,6 @@ private:
     bool fMinimizeToTray;
     bool fMinimizeOnClose;
     bool fCoinControlFeatures;
-    bool bShowIrcButton;
     QString language;
 
 signals:

@@ -18,7 +18,6 @@ class SignVerifyMessageDialog;
 class Notificator;
 class RPCConsole;
 class BlockBrowser;
-class ChatWindow;
 
 QT_BEGIN_NAMESPACE
 class QLabel;
@@ -65,7 +64,6 @@ private:
     ClientModel *clientModel;
     WalletModel *walletModel;
     QStackedWidget *centralWidget;
-    ChatWindow *chatWindow;
 
     OverviewPage *overviewPage;
     QWidget *transactionsPage;
@@ -110,7 +108,6 @@ private:
     QAction *openInfoAction;
     QAction *openTrafficAction;
     QAction *blockAction;
-    QAction *chatAction;
     QAction *stakeReportAction;
     QSystemTrayIcon *trayIcon;
     Notificator *notificator;
@@ -179,8 +176,6 @@ private slots:
     void gotoReceiveCoinsPage();
     /** Switch to send coins page */
     void gotoSendCoinsPage();
-    /** Switch to IRC page */
-    void gotoChatPage();
 	
 	/** Show block explorer page */
 	void gotoBlockBrowser(QString transactionId = "");

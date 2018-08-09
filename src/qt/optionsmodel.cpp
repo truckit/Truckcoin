@@ -50,7 +50,6 @@ void OptionsModel::Init()
     fMinimizeOnClose = settings.value("fMinimizeOnClose", false).toBool();
     fCoinControlFeatures = settings.value("fCoinControlFeatures", false).toBool();
     fUseTruckcoinTheme = settings.value("fUseTruckcoinTheme", true).toBool();
-    bShowIrcButton = settings.value("bShowIrcButton", true).toBool();
     nTransactionFee = settings.value("nTransactionFee").toLongLong();
     language = settings.value("language", "").toString();
 
@@ -186,8 +185,6 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const
             return QVariant(fCoinControlFeatures);
         case UseTruckcoinTheme:
             return QVariant(fUseTruckcoinTheme);
-        case ShowIrcButton:
-            return QVariant(bShowIrcButton);
         default:
             return QVariant();
         }
@@ -287,14 +284,10 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
             settings.setValue("fCoinControlFeatures", fCoinControlFeatures);
             emit coinControlFeaturesChanged(fCoinControlFeatures);
             }
-          case UseTruckcoinTheme:
+            break;
+        case UseTruckcoinTheme:
             fUseTruckcoinTheme = value.toBool();
             settings.setValue("fUseTruckcoinTheme", fUseTruckcoinTheme);
-            break;
-	case ShowIrcButton: {
-            bShowIrcButton = value.toBool();
-            settings.setValue("bShowIrcButton", bShowIrcButton);
-            }
             break;
         default:
             break;
@@ -318,11 +311,6 @@ qint64 OptionsModel::getTransactionFee()
 bool OptionsModel::getCoinControlFeatures()
 {
      return fCoinControlFeatures;
-}
- 
- bool OptionsModel::getShowIrcButton()
-{
-     return bShowIrcButton;
 }
  
 bool OptionsModel::getMinimizeToTray()

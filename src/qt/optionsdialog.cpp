@@ -151,7 +151,6 @@ void OptionsDialog::setMapper()
     mapper->addMapping(ui->displayAddresses, OptionsModel::DisplayAddresses);
     mapper->addMapping(ui->useTruckcoinTheme, OptionsModel::UseTruckcoinTheme);
     mapper->addMapping(ui->coinControlFeatures, OptionsModel::CoinControlFeatures);
-    mapper->addMapping(ui->showIrcButton, OptionsModel::ShowIrcButton);
 }
 
 void OptionsDialog::enableApplyButton()

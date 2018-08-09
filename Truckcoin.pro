@@ -1,11 +1,11 @@
 TEMPLATE = app
 TARGET = truckcoin-qt
-VERSION = 0.9.9.0
+VERSION = 1.2.1.0
 INCLUDEPATH += src src/json src/qt
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE BOOST_THREAD_PROVIDES_GENERIC_SHARED_MUTEX_ON_WIN __NO_SYSTEM_INCLUDES
 CONFIG += no_include_pwd
 
-QT += core gui xml network
+QT += core gui xml
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 # UNCOMMENT THIS SECTION TO BUILD ON WINDOWS
@@ -141,7 +141,6 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/aboutdialog.h \
     src/qt/editaddressdialog.h \
     src/qt/bitcoinaddressvalidator.h \
-    src/qt/serveur.h \
     src/alert.h \
     src/addrman.h \
     src/base58.h \
@@ -186,7 +185,6 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/bitcoinamountfield.h \
     src/wallet.h \
     src/keystore.h \
-    src/qt/chatwindow.h \
     src/qt/transactionfilterproxy.h \
     src/qt/transactionview.h \
     src/qt/walletmodel.h \
@@ -242,7 +240,6 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/aboutdialog.cpp \
     src/qt/editaddressdialog.cpp \
     src/qt/bitcoinaddressvalidator.cpp \
-    src/qt/chatwindow.cpp \
     src/alert.cpp \
     src/version.cpp \
     src/sync.cpp \
@@ -268,7 +265,6 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/bitcoinstrings.cpp \
     src/qt/bitcoinamountfield.cpp \
     src/wallet.cpp \
-    src/qt/serveur.cpp \
     src/keystore.cpp \
     src/qt/transactionfilterproxy.cpp \
     src/qt/transactionview.cpp \
@@ -329,7 +325,6 @@ FORMS += \
     src/qt/forms/askpassphrasedialog.ui \
     src/qt/forms/rpcconsole.ui \
     src/qt/forms/optionsdialog.ui \
-    src/qt/forms/chatwindow.ui \
     src/qt/forms/blockbrowser.ui \
     src/qt/forms/stakereportdialog.ui
 
