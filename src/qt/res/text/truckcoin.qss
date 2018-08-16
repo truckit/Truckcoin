@@ -16,7 +16,7 @@ QLabel:disabled
 
 QMenuBar::item
 {
-    background: #000000;
+    background: transparent;
 }
 
 QMenuBar::item:selected
@@ -58,6 +58,13 @@ QMenu::separator
     background-color: #918882;
     margin-top: 1px;
     margin-bottom: 1px;
+}
+
+QToolBar
+{
+    border-top: 1px solid #313131;
+    border-bottom: 1px solid #313131;
+    background: #000000;
 }
 
 QToolButton
@@ -223,4 +230,62 @@ QTableView
 {
     alternate-background-color: #D4D4D4;
     color: #484848;
+}
+
+QTabBar::tab {
+    color: #918882;
+    border: 1px solid #313131;
+    border-bottom-style: none;
+    background-color: #000000;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 3px;
+    padding-bottom: 2px;
+    margin-right: -1px;
+}
+
+QTabWidget::pane {
+    border: 1px solid #313131;
+    top: 1px;
+}
+
+QTabBar::tab:last
+{
+    margin-right: 0; /* the last selected tab has nothing to overlap with on the right */
+    border-top-right-radius: 3px;
+}
+
+QTabBar::tab:first:!selected
+{
+ margin-left: 0px; /* the last selected tab has nothing to overlap with on the right */
+    border-top-left-radius: 3px;
+}
+
+QTabBar::tab:!selected
+{
+    color: #b1b1b1;
+    border-bottom-style: solid;
+    margin-top: 3px;
+    background-color: #000000;
+}
+
+QTabBar::tab:selected
+{
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    margin-bottom: 0px;
+    background-color: #313131;
+    color: #E2E2E2;
+}
+
+QTabBar::tab:!selected:hover
+{
+    border: 1px solid #313131;
+    padding-bottom: 3px;
+    background-color: #313131;
+    color: #E2E2E2;
+}
+
+QFrame {
+    border: none;
 }
