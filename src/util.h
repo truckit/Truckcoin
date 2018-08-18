@@ -151,7 +151,6 @@ extern bool fServer;
 extern bool fCommandLine;
 extern std::string strMiscWarning;
 extern bool fTestNet;
-extern bool fNoListen;
 extern bool fLogTimestamps;
 extern bool fReopenDebugLog;
 extern bool fStaking;
@@ -235,14 +234,6 @@ std::string FormatFullVersion();
 std::string FormatSubVersion(const std::string& name, int nClientVersion, const std::vector<std::string>& comments);
 void AddTimeData(const CNetAddr& ip, int64 nTime);
 void runCommand(std::string strCommand);
-
-
-
-
-
-
-
-
 
 inline std::string i64tostr(int64 n)
 {
@@ -423,14 +414,6 @@ bool SoftSetArg(const std::string& strArg, const std::string& strValue);
  */
 bool SoftSetBoolArg(const std::string& strArg, bool fValue);
 
-
-
-
-
-
-
-
-
 template<typename T1>
 inline uint256 Hash(const T1 pbegin, const T1 pend)
 {
@@ -480,7 +463,6 @@ public:
         return (*this);
     }
 };
-
 
 template<typename T1, typename T2>
 inline uint256 Hash(const T1 p1begin, const T1 p1end,
