@@ -427,16 +427,6 @@
         </widget>
        </item>
 	   <item>
-        <widget class="QCheckBox" name="showIrcButton">
-	  <property name="toolTip">
-          <string>Whether to show IRC button or not.</string>
-         </property>
-         <property name="text">
-          <string>Display IRC / Web button (wallet restart required)</string>
-         </property>
-        </widget>
-       </item>
-	   <item>
         <spacer name="verticalSpacer_Display">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
