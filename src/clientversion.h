@@ -17,6 +17,6 @@
 #define DO_STRINGIZE(X) #X
 
 // Copyright year
-#define COPYRIGHT_YEAR  2018
+#define COPYRIGHT_YEAR  2019
 
 #endif // CLIENTVERSION_H
