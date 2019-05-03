@@ -1898,19 +1898,6 @@ int GetsStakeSubTotal(vStakePeriodRange_T& aRange)
     return nElement;
 }
 
-    struct tm *
-localtime_r (const time_t *timer, struct tm *result)
-{
-   struct tm *local_result;
-   local_result = localtime (timer);
-
-   if (local_result == NULL || result == NULL)
-     return NULL;
-
-   memcpy (result, local_result, sizeof *(result));
-   return result;
-}
-
     // prepare range for stake report
 vStakePeriodRange_T PrepareRangeForStakeReport()
 {
