@@ -501,8 +501,9 @@ bool AppInit2()
     if (GetBoolArg("-shrinkdebugfile", !fDebug))
         ShrinkDebugFile();
     printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    printf("Truckcoin version %s (%s)\n", FormatFullVersion().c_str(), CLIENT_DATE.c_str());
-    printf("Using OpenSSL version %s\n", SSLeay_version(SSLEAY_VERSION));
+    printf("Truckcoin %s (%s)\n", FormatFullVersion().c_str(), CLIENT_DATE.c_str());
+    printf("%s\n", SSLeay_version(SSLEAY_VERSION)); // OpenSSL version
+    printf("%s\n", DbEnv::version(0, 0, 0)); // BerkeleyDB version
     if (!fLogTimestamps)
         printf("Startup time: %s\n", DateTimeStrFormat("%x %H:%M:%S", GetTime()).c_str());
     printf("Default data directory %s\n", GetDefaultDataDir().string().c_str());

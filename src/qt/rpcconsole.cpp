@@ -4,6 +4,7 @@
 #include "clientmodel.h"
 #include "bitcoinrpc.h"
 #include "guiutil.h"
+#include "db.h"
 
 #include <QTime>
 #include <QTimer>
@@ -211,6 +212,8 @@ this->setStyleSheet("QTextEdit, QLineEdit { color: #e2e2e2; background-color: #0
 
     // set OpenSSL version label
     ui->openSSLVersion->setText(SSLeay_version(SSLEAY_VERSION));
+    // set BerkeleyDB version label
+    ui->BerkeleyDBVersion->setText(DbEnv::version(0, 0, 0));
 
     startExecutor();
 	
