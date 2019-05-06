@@ -24,7 +24,6 @@ LIBS= \
  -l boost_filesystem-mt-s-x32 \
  -l boost_program_options-mt-s-x32 \
  -l boost_thread-mt-s-x32 \
- -l boost_chrono-mt-s-x32 \
  -l db_cxx \
  -l ssl \
  -l crypto \
