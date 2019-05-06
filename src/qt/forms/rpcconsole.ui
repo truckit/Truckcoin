@@ -117,7 +117,7 @@
         </widget>
        </item>
        <item row="4" column="1">
-        <widget class="QLabel" name="BerkeleyDBVersion">
+        <widget class="QLabel" name="dbVersion">
          <property name="cursor">
           <cursorShape>IBeamCursor</cursorShape>
          </property>

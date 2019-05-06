@@ -5,6 +5,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "util.h"
+#include "db.h"
 #include "sync.h"
 #include "strlcpy.h"
 #include "version.h"
@@ -1378,12 +1379,10 @@ void AddTimeData(const CNetAddr& ip, int64 nTime)
     }
 }
 
-
-
-
-
-
-
+string BerkeleyDBVersion()
+{
+        return strprintf("%s", DbEnv::version(0, 0, 0));
+}
 
 string FormatVersion(int nVersion)
 {
