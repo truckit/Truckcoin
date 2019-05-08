@@ -433,10 +433,9 @@ bool SetStartOnSystemStartup(bool fAutoStart) { return false; }
 HelpMessageBox::HelpMessageBox(QWidget *parent) :
     QMessageBox(parent)
 {
-    header = tr("Truckcoin-Qt") + " " + tr("version") + " " +
-        QString::fromStdString(FormatFullVersion()) + "\n\n" +
+    header = tr("Truckcoin") + " " + QString::fromStdString(FormatFullVersion()) + " " + tr("command-line options:") + "\n\n" +
         tr("Usage:") + "\n" +
-        "  Truckcoin-qt [" + tr("command-line options") + "]                     " + "\n";
+        "  truckcoin-qt [" + tr("command-line options") + "]" + "\n";
 
     coreOptions = QString::fromStdString(HelpMessage());
 
@@ -446,11 +445,10 @@ HelpMessageBox::HelpMessageBox(QWidget *parent) :
         "  -splash                " + tr("Show splash screen on startup (default: 1)") + "\n";
         "  -disablereportupdate   " + tr("Disable auto update of stake report window (default: 0)") + "\n";
 
-    setWindowTitle(tr("Truckcoin-Qt"));
+    setWindowTitle(tr("Truckcoin - Command-line options"));
     setTextFormat(Qt::PlainText);
     // setMinimumWidth is ignored for QMessageBox so put in non-breaking spaces to make it wider.
-    setText(header + QString(QChar(0x2003)).repeated(50));
-    setDetailedText(coreOptions + "\n" + uiOptions);
+    setText(header + QString(QChar(0x2003)).repeated(50) + "\n" + coreOptions + "\n" + uiOptions);
 }
 
 void HelpMessageBox::printToConsole()
