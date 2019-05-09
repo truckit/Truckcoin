@@ -1,7 +1,7 @@
 ---
 name: "truckcoin"
 suites:
-- "trusty"
+- "precise"
 architectures:
 - "amd64"
 packages:
@@ -11,12 +11,12 @@ packages:
 - "unzip"
 - "nsis"
 - "faketime"
-reference_datetime: "2017-01-30 00:00:00"
+reference_datetime: "2011-01-30 00:00:00"
 remotes: []
 files:
-- "qt-win-4.8.7-ssl1.1.1b-trusty.zip"
-- "boost-1.69.0-trusty.zip"
-- "deps-win-ssl1.1.1b-db18.1.32-trusty.zip"
+- "qt-win-4.8.6-gitian-r11.zip"
+- "boost-win32-1.55.0-gitian-r6.zip"
+- "deps-win-gitian-r15.zip"
 - "truckcoin.zip"
 script: |
   #
@@ -25,28 +25,29 @@ script: |
   #
   mkdir -p $STAGING
   cd $STAGING
-  unzip ../build/qt-win-4.8.7-ssl1.1.1b-trusty.zip
-  unzip ../build/boost-1.69.0-trusty.zip
-  unzip ../build/deps-win-ssl1.1.1b-db18.1.32-trusty.zip
+  unzip ../build/qt-win-4.8.6-gitian-r11.zip
+  unzip ../build/boost-win32-1.55.0-gitian-r6.zip
+  unzip ../build/deps-win-gitian-r15.zip
   unzip ../build/truckcoin.zip -d $HOME/build/
   cd $HOME/build/
   #
+
   cd truckcoin
   export PATH=$STAGING/host/bin:$PATH
   mkdir -p $OUTDIR/src
   git archive HEAD | tar -x -C $OUTDIR/src
   cp $OUTDIR/src/doc/README_windows.txt $OUTDIR/readme.txt
-  export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/faketime/libfaketime.so.1
+  export LD_PRELOAD=/usr/lib/faketime/libfaketime.so.1
   export FAKETIME=$REFERENCE_DATETIME
   export TZ=UTC
   ln -s $STAGING $HOME/qt
-  $HOME/staging/host/bin/qmake -spec unsupported/win32-g++-cross MINIUPNPC_LIB_PATH=$STAGING MINIUPNPC_INCLUDE_PATH=$STAGING BDB_LIB_PATH=$STAGING BDB_INCLUDE_PATH=$STAGING BOOST_LIB_PATH=$STAGING BOOST_INCLUDE_PATH=$STAGING BOOST_LIB_SUFFIX=-mt-s-x32 OPENSSL_LIB_PATH=$STAGING OPENSSL_INCLUDE_PATH=$STAGING QRENCODE_LIB_PATH=$STAGING QRENCODE_INCLUDE_PATH=$STAGING USE_QRCODE=1 INCLUDEPATH=$STAGING DEFINES=BOOST_THREAD_USE_LIB BITCOIN_NEED_QT_PLUGINS=1 QMAKE_LRELEASE=lrelease QMAKE_CXXFLAGS=-frandom-seed=truckcoin USE_BUILD_INFO=1 USE_SSE2=1
+  $HOME/staging/host/bin/qmake -spec unsupported/win32-g++-cross MINIUPNPC_LIB_PATH=$STAGING MINIUPNPC_INCLUDE_PATH=$STAGING BDB_LIB_PATH=$STAGING BDB_INCLUDE_PATH=$STAGING BOOST_LIB_PATH=$STAGING BOOST_INCLUDE_PATH=$STAGING BOOST_LIB_SUFFIX=-mt-s BOOST_THREAD_LIB_SUFFIX=_win32-mt-s OPENSSL_LIB_PATH=$STAGING OPENSSL_INCLUDE_PATH=$STAGING QRENCODE_LIB_PATH=$STAGING QRENCODE_INCLUDE_PATH=$STAGING USE_QRCODE=1 INCLUDEPATH=$STAGING DEFINES=BOOST_THREAD_USE_LIB BITCOIN_NEED_QT_PLUGINS=1 QMAKE_LRELEASE=lrelease QMAKE_CXXFLAGS=-frandom-seed=truckcoin USE_BUILD_INFO=1 USE_SSE2=1
   make $MAKEOPTS
   $HOST-strip release/truckcoin-qt.exe
   cp release/truckcoin-qt.exe $OUTDIR/
   #
   cd src
-  export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/faketime/libfaketime.so.1
+  export LD_PRELOAD=/usr/lib/faketime/libfaketime.so.1
   export FAKETIME=$REFERENCE_DATETIME
   export TZ=UTC
   make -f makefile.linux-mingw $MAKEOPTS DEPSDIR=$STAGING truckcoind.exe USE_UPNP=0 DEBUGFLAGS="-frandom-seed=truckcoin" USE_SSE2=1
