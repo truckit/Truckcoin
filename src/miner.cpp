@@ -1,11 +1,12 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2013-2018 The Truckcoin developers
+// Copyright (c) 2013-2019 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "db.h"
 #include "miner.h"
+#include "util.h"
 #include "kernel.h"
 #include <boost/algorithm/string/replace.hpp>
 
@@ -560,7 +561,7 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
         while (pwallet->IsLocked())
         {
             nLastCoinStakeSearchInterval = 0;
-            Sleep(1000);
+            MilliSleep(1000);
             if (fShutdown)
                 return;
             if (!fGenerateBitcoins && !fProofOfStake)
@@ -570,7 +571,7 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
         while (vNodes.empty() || IsInitialBlockDownload() || vNodes.size() < 2 || nBestHeight < GetNumBlocksOfPeers())
         {
             nLastCoinStakeSearchInterval = 0;
-            Sleep(1000);
+            MilliSleep(1000);
             if (fShutdown)
                 return;
             if (!fGenerateBitcoins && !fProofOfStake)
@@ -581,7 +582,7 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
         {
             if(GetTime() - mapHashedBlocks[nBestHeight] < min((int)(pwallet->nHashDrift  * 0.5), 180)) // wait half of the nHashDrift with max wait of 3 minutes
             {
-				Sleep(2500); // 2.5 second sleep
+				MilliSleep(2500); // 2.5 second sleep
                 continue;
             }
         }		
@@ -762,7 +763,7 @@ void GenerateBitcoins(bool fGenerate, CWallet* pwallet)
         {
             if (!NewThread(ThreadBitcoinMiner, pwallet))
                 printf("Error: NewThread(ThreadBitcoinMiner) failed\n");
-            Sleep(10);
+            MilliSleep(10);
         }
     }
 }

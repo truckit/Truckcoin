@@ -1,7 +1,7 @@
 ---
 name: "qt"
 suites:
-- "precise"
+- "trusty"
 architectures:
 - "amd64"
 packages: 
@@ -10,32 +10,33 @@ packages:
 - "zip"
 - "unzip"
 - "faketime"
-reference_datetime: "2011-01-30 00:00:00"
+reference_datetime: "2017-01-30 00:00:00"
 remotes: []
 files:
-- "qt-everywhere-opensource-src-4.8.6.tar.gz"
-- "truckcoin-deps-win32-gitian-r12.zip"
-- "qt-4.8.6-fix-out-of-tree-compilation.patch"
+- "qt-everywhere-opensource-src-4.8.7.tar.gz"
+- "qt4-openssl-1.1.patch"
+- "qt4-disable-sslv3.patch"
+- "deps-win-ssl1.1.1b-db18.1.32-trusty.zip"
 script: |
   #
   HOST=i686-w64-mingw32
   INSTDIR="$HOME/qt/"
-  # Integrity Check
-  echo "8b14dd91b52862e09b8e6a963507b74bc2580787d171feda197badfa7034032c  qt-everywhere-opensource-src-4.8.6.tar.gz"  | sha256sum -c
   #
   mkdir $INSTDIR
   mkdir -p $INSTDIR/host/bin
   #
   # Need mingw-compiled openssl from truckcoin-deps:
-  unzip truckcoin-deps-win32-gitian-r12.zip
+  unzip deps-win-ssl1.1.1b-db18.1.32-trusty.zip
   DEPSDIR=`pwd`
   #
-  tar xzf qt-everywhere-opensource-src-4.8.6.tar.gz
+  tar xzf qt-everywhere-opensource-src-4.8.7.tar.gz
   
-  patch -p0 < qt-4.8.6-fix-out-of-tree-compilation.patch
-
-  cd qt-everywhere-opensource-src-4.8.6
-  sed 's/$TODAY/2011-01-30/' -i configure
+  patch -p0 < qt4-openssl-1.1.patch
+  patch -p0 < qt4-disable-sslv3.patch
+  
+  cd qt-everywhere-opensource-src-4.8.7
+ 
+  sed 's/$TODAY/2017-01-30/' -i configure
   sed "s/i686-pc-mingw32-/$HOST-/" -i mkspecs/unsupported/win32-g++-cross/qmake.conf
   sed --posix "s|QMAKE_CFLAGS\t\t= -pipe|QMAKE_CFLAGS\t\t= -pipe -isystem /usr/$HOST/include/ -frandom-seed=qtbuild|" -i mkspecs/unsupported/win32-g++-cross/qmake.conf
   sed 's/QMAKE_CXXFLAGS_EXCEPTIONS_ON = -fexceptions -mthreads/QMAKE_CXXFLAGS_EXCEPTIONS_ON = -fexceptions/' -i mkspecs/unsupported/win32-g++-cross/qmake.conf
@@ -49,10 +50,10 @@ script: |
   # use faketime only for ar, as it confuses make/qmake into hanging sometimes
   sed --posix "s|QMAKE_LIB\t\t= $HOST-ar -ru|QMAKE_LIB\t\t= $HOME/ar -Dr|" -i mkspecs/unsupported/win32-g++-cross/qmake.conf
   echo '#!/bin/bash' > $HOME/ar
-  echo 'export LD_PRELOAD=/usr/lib/faketime/libfaketime.so.1' >> $HOME/ar
+  echo 'export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/faketime/libfaketime.so.1' >> $HOME/ar
   echo "$HOST-ar \"\$@\"" >> $HOME/ar
   chmod +x $HOME/ar
-  #export LD_PRELOAD=/usr/lib/faketime/libfaketime.so.1
+  #export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/faketime/libfaketime.so.1
   export FAKETIME=$REFERENCE_DATETIME
   export TZ=UTC
   # Compile static libraries, and use statically linked openssl (-openssl-linked):
@@ -64,5 +65,5 @@ script: |
   find . -name *.prl | xargs -l sed 's|/$||' -i
 
   # as zip stores file timestamps, use faketime to intercept stat calls to set dates for all files to reference date
-  export LD_PRELOAD=/usr/lib/faketime/libfaketime.so.1
-  zip -r $OUTDIR/qt-win32-4.8.6-gitian-r7.zip *
+  export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/faketime/libfaketime.so.1
+  zip -r $OUTDIR/qt-win-4.8.7-ssl1.1.1b-trusty.zip *

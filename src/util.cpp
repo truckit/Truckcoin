@@ -1,10 +1,11 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2013-2018 The Truckcoin developers
+// Copyright (c) 2013-2019 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "util.h"
+#include "db.h"
 #include "sync.h"
 #include "strlcpy.h"
 #include "version.h"
@@ -152,17 +153,8 @@ public:
 }
 instance_of_cinit;
 
-
-
-
-
-
-
-
-void RandAddSeed()
-{
-    // Seed with CPU performance counter
-    int64 nCounter = GetPerformanceCounter();
+void RandAddSeed() {
+    int64 nCounter = GetTimeMicros();
     RAND_add(&nCounter, sizeof(nCounter), 1.5);
     memset(&nCounter, 0, sizeof(nCounter));
 }
@@ -322,11 +314,7 @@ string vstrprintf(const char *format, va_list ap)
     {
         va_list arg_ptr;
         va_copy(arg_ptr, ap);
-#ifdef WIN32
-        ret = _vsnprintf(p, limit, format, arg_ptr);
-#else
         ret = vsnprintf(p, limit, format, arg_ptr);
-#endif
         va_end(arg_ptr);
         if (ret >= 0 && ret < limit)
             break;
@@ -1290,12 +1278,31 @@ void ShrinkDebugFile()
     }
 }
 
+/* Pauses a thread's execution for a number of milliseconds */
+void MilliSleep(int64 nMilliSecs) {
 
+#ifdef WIN32
+    /* Not using the WinAPI Sleep() because of a poor resolution */ 
 
+    HANDLE timer;
+    LARGE_INTEGER ft;
 
+    /* 100ns intervals, negative means relative time */
+    ft.QuadPart = -(10 * 1000 * nMilliSecs);
 
+    timer = CreateWaitableTimer(NULL, TRUE, NULL);
+    SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0);
+    WaitForSingleObject(timer, INFINITE);
+    CloseHandle(timer);
+#else
+    /* usleep() is obsolete by POSIX.1-2001 and out of specification by POSIX.1-2008 */
 
-
+    timespec time;
+    time.tv_sec = nMilliSecs / 1000;
+    time.tv_nsec = (nMilliSecs % 1000) * 1000000;
+    nanosleep(&time, 0);
+#endif
+}
 
 //
 // "Never go to sea with two chronometers; take one or three."
@@ -1378,12 +1385,10 @@ void AddTimeData(const CNetAddr& ip, int64 nTime)
     }
 }
 
-
-
-
-
-
-
+string BerkeleyDBVersion()
+{
+        return strprintf("%s", DbEnv::version(0, 0, 0));
+}
 
 string FormatVersion(int nVersion)
 {

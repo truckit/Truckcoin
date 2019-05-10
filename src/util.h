@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2013-2018 The Truckcoin developers
+// Copyright (c) 2013-2019 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #ifndef BITCOIN_UTIL_H
@@ -72,26 +72,17 @@ static const int64 CENT = 10000;
 void LogStackTrace();
 #endif
 
-
-/* Format characters for (s)size_t and ptrdiff_t */
-#if defined(_MSC_VER) || defined(__MSVCRT__)
-  /* (s)size_t and ptrdiff_t have the same size specifier in MSVC:
-     http://msdn.microsoft.com/en-us/library/tcxf1dw6%28v=vs.100%29.aspx
-   */
-  #define PRIszx    "Ix"
-  #define PRIszu    "Iu"
-  #define PRIszd    "Id"
-  #define PRIpdx    "Ix"
-  #define PRIpdu    "Iu"
-  #define PRIpdd    "Id"
-#else /* C99 standard */
-  #define PRIszx    "zx"
-  #define PRIszu    "zu"
-  #define PRIszd    "zd"
-  #define PRIpdx    "tx"
-  #define PRIpdu    "tu"
-  #define PRIpdd    "td"
+#ifndef INT64_MAX
+#define INT64_MAX 9223372036854775807LL
 #endif
+
+/* Format characters for (s)size_t and ptrdiff_t (C99 standard) */
+#define PRIszx    "zx"
+#define PRIszu    "zu"
+#define PRIszd    "zd"
+#define PRIpdx    "tx"
+#define PRIpdu    "tu"
+#define PRIpdd    "td"
 
 // This is needed because the foreach macro can't get over the comma in pair<t1, t2>
 #define PAIRTYPE(t1, t2)    std::pair<t1, t2>
@@ -120,12 +111,6 @@ T* alignup(T* p)
 #endif
 #else
 #define MAX_PATH            1024
-inline void Sleep(int64 n)
-{
-    /*Boost has a year 2038 problem— if the request sleep time is past epoch+2^31 seconds the sleep returns instantly.
-      So we clamp our sleeps here to 10 years and hope that boost is fixed by 2028.*/
-    boost::thread::sleep(boost::get_system_time() + boost::posix_time::milliseconds(n>315576000000LL?315576000000LL:n));
-}
 #endif
 
 /* This GNU C extension enables the compiler to check the format string against the parameters provided.
@@ -133,7 +118,7 @@ inline void Sleep(int64 n)
  * Parameters count from 1.
  */
 #ifdef __GNUC__
-#define ATTR_WARN_PRINTF(X,Y) __attribute__((format(printf,X,Y)))
+#define ATTR_WARN_PRINTF(X,Y) __attribute__((format(gnu_printf,X,Y)))
 #else
 #define ATTR_WARN_PRINTF(X,Y)
 #endif
@@ -154,6 +139,8 @@ extern bool fTestNet;
 extern bool fLogTimestamps;
 extern bool fReopenDebugLog;
 extern bool fStaking;
+
+void MilliSleep(int64 nMilliSecs);
 
 void RandAddSeed();
 void RandAddSeedPerfmon();
@@ -230,6 +217,7 @@ int64 GetTime();
 void SetMockTime(int64 nMockTimeIn);
 int64 GetAdjustedTime();
 long hex2long(const char* hexString);
+std::string BerkeleyDBVersion();
 std::string FormatFullVersion();
 std::string FormatSubVersion(const std::string& name, int nClientVersion, const std::vector<std::string>& comments);
 void AddTimeData(const CNetAddr& ip, int64 nTime);
@@ -318,23 +306,31 @@ inline void PrintHex(const std::vector<unsigned char>& vch, const char* pszForma
     printf(pszFormat, HexStr(vch, fSpaces).c_str());
 }
 
-inline int64 GetPerformanceCounter()
-{
-    int64 nCounter = 0;
+/* Returns system time in microseconds since the Epoch */
+inline int64 GetTimeMicros() {
+    uint64 nTime = 0;
 #ifdef WIN32
-    QueryPerformanceCounter((LARGE_INTEGER*)&nCounter);
+    /* Number of 100ns intervals from 12:00 01-Jan-1601 to 00:00 01-Jan-1970 */
+    const uint64 EPOCH = 116444736000000000ULL;
+
+    FILETIME nFileTime;
+
+    GetSystemTimeAsFileTime(&nFileTime);
+    nTime |= (uint64)nFileTime.dwHighDateTime;
+    nTime <<= 32;
+    nTime |= (uint64)nFileTime.dwLowDateTime;
+    nTime -= EPOCH;
+    nTime /= 10;
 #else
     timeval t;
     gettimeofday(&t, NULL);
-    nCounter = (int64) t.tv_sec * 1000000 + t.tv_usec;
+    nTime = (((uint64)t.tv_sec) * 1000000) + (uint64)t.tv_usec;
 #endif
-    return nCounter;
+    return((int64)nTime);
 }
 
-inline int64 GetTimeMillis()
-{
-    return (boost::posix_time::ptime(boost::posix_time::microsec_clock::universal_time()) -
-            boost::posix_time::ptime(boost::gregorian::date(1970,1,1))).total_milliseconds();
+inline int64 GetTimeMillis() {
+    return(GetTimeMicros() / 1000);
 }
 
 inline std::string DateTimeStrFormat(const char* pszFormat, int64 nTime)
@@ -649,4 +645,3 @@ inline uint32_t ByteReverse(uint32_t value)
 }
 
 #endif
-

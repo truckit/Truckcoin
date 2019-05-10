@@ -1,5 +1,5 @@
 // Copyright (c) 2012-2013 The PPCoin developers
-// Copyright (c) 2013-2018 The Truckcoin developers
+// Copyright (c) 2013-2019 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -36,6 +36,7 @@ static std::map<int, unsigned int> mapStakeModifierCheckpoints =
     ( 1292791, 0x09cdfaa5u )
     ( 1391163, 0x48400e61u )
     ( 1523355, 0xd252eaccu )
+    ( 1693797, 0xca3f12f5u )
 ;
 // Get time weight
 int64 GetWeight(int64 nIntervalBeginning, int64 nIntervalEnd)
