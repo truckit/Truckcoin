@@ -7,7 +7,7 @@
 
 #include <QObject>
 
-/** Macintosh-specific notification handler (supports UserNotificationCenter and Growl).
+/** Macintosh-specific notification handler (supports UserNotificationCenter).
  */
 class MacNotificationHandler : public QObject
 {
@@ -17,9 +17,6 @@ public:
     /** shows a 10.8+ UserNotification in the UserNotificationCenter
      */
     void showNotification(const QString &title, const QString &text);
-
-    /** executes AppleScript */
-    void sendAppleScript(const QString &script);
 
     /** check if OS can handle UserNotifications */
     bool hasUserNotificationCenterSupport(void);
