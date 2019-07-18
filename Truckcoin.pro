@@ -80,6 +80,15 @@ contains(USE_UPNP, -) {
     count(USE_UPNP, 0) {
         USE_UPNP=1
     }
+	
+    isEmpty(MINIUPNPC_LIB_PATH) {
+        macx:MINIUPNPC_LIB_PATH = /opt/lib
+}
+
+    isEmpty(MINIUPNPC_INCLUDE_PATH) {
+        macx:MINIUPNPC_INCLUDE_PATH = /opt/local/include
+}
+	
     DEFINES += USE_UPNP=$$USE_UPNP STATICLIB
     INCLUDEPATH += $$MINIUPNPC_INCLUDE_PATH
     LIBS += $$join(MINIUPNPC_LIB_PATH,,-L,) -lminiupnpc
