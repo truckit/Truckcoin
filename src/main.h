@@ -56,6 +56,7 @@ static const int64 MAX_SPLIT_AMOUNT = 10000 * COIN;
 static const unsigned int FORK_TIME = 1418934203; // Thursday, 18 Dec 2014 20:23:23 GMT
 static const unsigned int FORK_TIME2 = 1420748603; // Thursday, 08 Jan 2015 20:23:23 GMT
 static const unsigned int DRIFT_SWITCH_TIME = 1519884366; // Thursday, 1 March 2018 06:06:06 GMT
+static const unsigned int FIXED_REWARD_SWITCH_TIME = 1609459200; // Friday, 1 January 2021 00:00:00 GMT
 
 static const int MAX_TIME_SINCE_BEST_BLOCK = 10; // how many seconds to wait before sending next PushGetBlocks()
 

@@ -75,19 +75,19 @@ Value getmininginfo(const Array& params, bool fHelp)
     obj.push_back(Pair("currentblocksize",(uint64_t)nLastBlockSize));
     obj.push_back(Pair("currentblocktx",(uint64_t)nLastBlockTx));
 //    obj.push_back(Pair("PoW difficulty",    (double)GetDifficulty()));
-	obj.push_back(Pair("difficulty", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
+    obj.push_back(Pair("difficulty", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
     obj.push_back(Pair("errors",        GetWarnings("statusbar")));
     obj.push_back(Pair("generate",      GetBoolArg("-gen")));
     obj.push_back(Pair("genproclimit",  (int)GetArg("-genproclimit", -1)));
 //    obj.push_back(Pair("hashespersec",  gethashespersec(params, false)));
 //    obj.push_back(Pair("networkhashps", getnetworkhashps(params, false)));
     obj.push_back(Pair("pooledtx",      (uint64_t)mempool.size()));
-	obj.push_back(Pair("stakeinterest", (uint64_t)GetProofOfStakeReward(0, GetLastBlockIndex(pindexBest, true)->nBits, GetTime(), pindexBest->nHeight, true)));
+    obj.push_back(Pair("stakereward", (uint64_t)GetProofOfStakeReward(0, GetLastBlockIndex(pindexBest, true)->nBits, GetTime(), pindexBest->nHeight, true)));
     obj.push_back(Pair("testnet",       fTestNet));
     return obj;
 }
 
-// Litecoin: Return average network hashes per second based on last number of blocks.
+// Return average network hashes per second based on last number of blocks.
 Value GetNetworkHashPS(int lookup) {
     if (pindexBest == NULL)
         return 0;
