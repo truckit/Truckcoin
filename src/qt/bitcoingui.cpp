@@ -230,6 +230,7 @@ BitcoinGUI::~BitcoinGUI()
         trayIcon->hide();
 #ifdef Q_OS_MAC
     delete appMenuBar;
+    MacDockIconHandler::cleanup();
 #endif
 }
 

@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = truckcoin-qt
-VERSION = 1.2.3.0
+VERSION = 2.0.0.0
 INCLUDEPATH += src src/json src/qt
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE BOOST_THREAD_PROVIDES_GENERIC_SHARED_MUTEX_ON_WIN __NO_SYSTEM_INCLUDES
 CONFIG += no_include_pwd
@@ -80,6 +80,15 @@ contains(USE_UPNP, -) {
     count(USE_UPNP, 0) {
         USE_UPNP=1
     }
+	
+    isEmpty(MINIUPNPC_LIB_PATH) {
+        macx:MINIUPNPC_LIB_PATH = /opt/lib
+}
+
+    isEmpty(MINIUPNPC_INCLUDE_PATH) {
+        macx:MINIUPNPC_INCLUDE_PATH = /opt/local/include
+}
+	
     DEFINES += USE_UPNP=$$USE_UPNP STATICLIB
     INCLUDEPATH += $$MINIUPNPC_INCLUDE_PATH
     LIBS += $$join(MINIUPNPC_LIB_PATH,,-L,) -lminiupnpc

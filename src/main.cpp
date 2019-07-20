@@ -918,8 +918,15 @@ int64 GetProofOfWorkReward(int nHeight, int64 nFees, uint256 prevHash)
 int64 GetProofOfStakeReward(int64 nCoinAge, unsigned int nBits, unsigned int nTime, int nHeight, bool bCoinYearOnly)
 {
 	int64 nSubsidy = 0;
-	
-	if ( nTime > FORK_TIME2 )
+
+	if ( nTime > FIXED_REWARD_SWITCH_TIME )
+	{
+		nSubsidy = 20 * COIN;
+
+		if(bCoinYearOnly)
+		return nSubsidy / 1000000;		
+	}
+	else if ( nTime > FORK_TIME2 )
 		nSubsidy = GetProofOfStakeRewardV3(nCoinAge, nBits, nTime, nHeight, bCoinYearOnly);
 	else if ( nTime > FORK_TIME )
 		nSubsidy = GetProofOfStakeRewardV2(nCoinAge, nBits, nTime, nHeight, bCoinYearOnly);
@@ -999,7 +1006,16 @@ int64 GetProofOfStakeRewardV2(int64 nCoinAge, unsigned int nBits, unsigned int n
 int64 GetProofOfStakeRewardV3(int64 nCoinAge, unsigned int nBits, unsigned int nTime, int nHeight, bool bCoinYearOnly)
 {
     int64 nRewardCoinYear;
-	int64 nSubsidyLimit = 200 * COIN;
+	int64 nSubsidyLimit = 0;
+	
+	if ( nTime > 1596240000 ) // Saturday, 1 August 2020 00:00:00 GMT
+		nSubsidyLimit = 50 * COIN;
+	else if ( nTime > 1585699200 ) // Wednesday, 1 April 2020 00:00:00 GMT
+		nSubsidyLimit = 100 * COIN;
+	else if ( nTime > 1577836800 ) // Wednesday, 1 January 2020 00:00:00 GMT
+		nSubsidyLimit = 150 * COIN;
+	else
+		nSubsidyLimit = 200 * COIN;
 
 	nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE;
 
@@ -1009,7 +1025,7 @@ int64 GetProofOfStakeRewardV3(int64 nCoinAge, unsigned int nBits, unsigned int n
     int64 nSubsidy = (nCoinAge * 33 * nRewardCoinYear) / (365 * 33 + 8);
 	
     if(bCoinYearOnly)
-    return nRewardCoinYear / CENT;
+    return nSubsidyLimit / 1000000;
 
 	if (fDebug && GetBoolArg("-printcreation"))
         printf("GetProofOfStakeReward(): create=%s nCoinAge=%lld nBits=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge, nBits);
