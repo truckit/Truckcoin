@@ -272,6 +272,12 @@ public:
     CScript(const unsigned char* pbegin, const unsigned char* pend) : std::vector<unsigned char>(pbegin, pend) { }
 #endif
 
+    CScript &operator=(const CScript &b) {
+        clear();
+        insert(begin(), b.begin(), b.end());
+        return(*this);
+    }
+
     CScript& operator+=(const CScript& b)
     {
         insert(end(), b.begin(), b.end());
@@ -429,7 +435,7 @@ public:
         // Immediate operand
         if (opcode <= OP_PUSHDATA4)
         {
-            unsigned int nSize;
+            unsigned int nSize = 0;
             if (opcode < OP_PUSHDATA1)
             {
                 nSize = opcode;
@@ -444,7 +450,6 @@ public:
             {
                 if (end() - pc < 2)
                     return false;
-                nSize = 0;
                 memcpy(&nSize, &pc[0], 2);
                 pc += 2;
             }

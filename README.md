@@ -1,21 +1,5 @@
-********************************************************************************************
-IMPORTANT! THIS REPO MIGHT BE OUTDATED, PLEASE USE THE NEW OFFICIAL TRUCKCOIN REPOSITORY AT https://github.com/noise23/Truckcoin
-********************************************************************************************
-
-Copyright (c) 2013-2014 TruckCoin Developers
-
-
 TruckCoin
-
-Copyright (c) 2013-2014 TruckCoin Developers
-Copyright (c) 2013 NovaCoin Developers
-Copyright (c) 2011-2012 Bitcoin Developers
-Distributed under the MIT/X11 software license, see the accompanying
-file license.txt or http://www.opensource.org/licenses/mit-license.php.
-This product includes software developed by the OpenSSL Project for use in
-the OpenSSL Toolkit (http://www.openssl.org/).  This product includes
-cryptographic software written by Eric Young (eay@cryptsoft.com).
-
+---------
 
 Intro
 -----
@@ -47,6 +31,17 @@ Then shutdown truckcoind by
 truckcoind stop
 Start up the new truckcoind.
 
+Links
+-----
+Visit the TruckCoin website: http://truckcoin.net/ for help and more information.
+Block explorers: http://truckcoin.net/ , http://truckcoin.ovh/
 
-See the TruckCoin site: http://truckcoin.net/ for help and more information.
+Copyright (c) 2013-2020 TruckCoin Developers
+Copyright (c) 2013 NovaCoin Developers
+Copyright (c) 2011-2012 Bitcoin Developers
+Distributed under the MIT/X11 software license, see the accompanying
+file license.txt or http://www.opensource.org/licenses/mit-license.php.
+This product includes software developed by the OpenSSL Project for use in
+the OpenSSL Toolkit (http://www.openssl.org/).  This product includes
+cryptographic software written by Eric Young (eay@cryptsoft.com).
 

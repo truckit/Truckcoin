@@ -38,6 +38,7 @@ static std::map<int, unsigned int> mapStakeModifierCheckpoints =
     ( 1523355, 0xd252eaccu )
     ( 1693797, 0xca3f12f5u )
     ( 1776009, 0x2d92b8f0u )
+    ( 1937023, 0x34adf336u )
 ;
 // Get time weight
 int64 GetWeight(int64 nIntervalBeginning, int64 nIntervalEnd)
@@ -432,8 +433,8 @@ bool CheckProofOfStake(const CTransaction& tx, unsigned int nBits, uint256& hash
     if (!block.ReadFromDisk(txindex.pos.nFile, txindex.pos.nBlockPos, false))
         return fDebug? error("CheckProofOfStake() : read block failed") : false; // unable to read block of previous transaction
 
-	unsigned int nInterval = 0;
-	unsigned int nTxTime = tx.nTime;
+    unsigned int nInterval = 0;
+    unsigned int nTxTime = tx.nTime;
     if (!CheckStakeKernelHash(nBits, block, txindex.pos.nTxPos - txindex.pos.nBlockPos, txPrev, txin.prevout, nTxTime, nInterval, true, hashProofOfStake, fDebug))
         return tx.DoS(1, error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str())); // may occur during initial download or if behind on block chain sync
 
