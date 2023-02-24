@@ -22,8 +22,6 @@
 
 
 # truckcoin stuff
-Makefile
-Makefile.*
 object_script.*
 .DS_Store
 truckcoin-qt
