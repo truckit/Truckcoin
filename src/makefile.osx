@@ -93,6 +93,7 @@ OBJS= \
     obj/walletdb.o \
     obj/sha256.o \
     obj/hmac_sha256.o \
+    obj/ripemd160.o \
     obj/hash.o \
     obj/noui.o \
     obj/pbkdf2.o \
