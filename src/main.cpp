@@ -14,11 +14,9 @@
 #include "checkqueue.h"
 #include "kernel.h"
 #include "scrypt_mine.h"
-#include <boost/algorithm/string/replace.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-#include <boost/random/mersenne_twister.hpp>
-#include <boost/random/uniform_int_distribution.hpp>
+#include <regex>
 
 using namespace std;
 using namespace boost;
@@ -1014,13 +1012,6 @@ uint256 WantedByOrphan(const CBlock* pblockOrphan)
     return pblockOrphan->hashPrevBlock;
 }
 
-int generateMTRandom(unsigned int s, int range)
-{
-	random::mt19937 gen(s);
-    random::uniform_int_distribution<> dist(0, range);
-    return dist(gen);
-}
-
 // miner's coin base reward based on nBits
 int64 GetProofOfWorkReward(int nHeight, int64 nFees, uint256 prevHash)
 {
@@ -1616,7 +1607,9 @@ bool CTransaction::ClientCheckInputs() const
 
 bool CBlock::DisconnectBlock(CBlockIndex *pindex, CCoinsViewCache &view, bool *pfClean)
 {
-    assert(pindex == view.GetBestBlock());
+    if(pindex != view.GetBestBlock())
+      return(error("DisconnectBlock() : block %s initial synchronisation failed",
+        pindex->GetBlockHash().ToString().substr(0,20).c_str()));
     
     if (pfClean)
         *pfClean = false;
@@ -1728,7 +1721,7 @@ static CCheckQueue<CScriptCheck> scriptcheckqueue(128);
 
 void ThreadScriptCheck(void*) {
     vnThreadsRunning[THREAD_SCRIPTCHECK]++;
-    RenameThread("bitcoin-scriptch");
+    RenameThread("truckcoin-scriptch");
     scriptcheckqueue.Thread();
     vnThreadsRunning[THREAD_SCRIPTCHECK]--;
 }
@@ -2058,10 +2051,8 @@ bool SetBestChain(CBlockIndex* pindexNew)
     std::string strCmd = GetArg("-blocknotify", "");
 
     if (!fIsInitialDownload && !strCmd.empty())
-    {
-        boost::replace_all(strCmd, "%s", hashBestChain.GetHex());
-        boost::thread t(runCommand, strCmd); // thread runs free
-    }
+        // thread runs free
+        boost::thread t(runCommand, regex_replace(strCmd, static_cast<std::regex>("%s"), hashBestChain.GetHex()));
 
     return true;
 }
@@ -3665,7 +3656,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         if (pindex)
             pindex = pindex->pnext;
         int nLimit = 1250;
-        printf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
+        printf("getblocks %d to %s, limit %d\n", (pindex ? pindex->nHeight : -1), hashStop==uint256(0) ? "end" : hashStop.ToString().substr(0,20).c_str(), nLimit);
         for (; pindex; pindex = pindex->pnext)
         {
             if (pindex->GetBlockHash() == hashStop)
