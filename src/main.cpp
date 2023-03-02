@@ -1017,51 +1017,51 @@ int64 GetProofOfWorkReward(int nHeight, int64 nFees, uint256 prevHash)
 {
     int64 nSubsidy = 500 * COIN;
 
-	if(nHeight == 1)
-	{
-		nSubsidy = 120000 * COIN;
-		return nSubsidy + nFees;
-	}
+    if(nHeight == 1)
+    {
+        nSubsidy = 120000 * COIN;
+        return nSubsidy + nFees;
+    }
 
     return nSubsidy + nFees;
 }
 
 int64 GetProofOfStakeReward(int64 nCoinAge, unsigned int nBits, unsigned int nTime, int nHeight, bool bCoinYearOnly)
 {
-	int64 nSubsidy = 0;
+    int64 nSubsidy = 0;
 
-	if ( nTime > FIXED_REWARD_SWITCH_TIME )
-	{
-		nSubsidy = 20 * COIN;
+    if ( nTime > FIXED_REWARD_SWITCH_TIME )
+    {
+        nSubsidy = 20 * COIN;
 
-		if(bCoinYearOnly)
-		return nSubsidy / 1000000;		
-	}
-	else if ( nTime > FORK_TIME2 )
-		nSubsidy = GetProofOfStakeRewardV3(nCoinAge, nBits, nTime, nHeight, bCoinYearOnly);
-	else if ( nTime > FORK_TIME )
-		nSubsidy = GetProofOfStakeRewardV2(nCoinAge, nBits, nTime, nHeight, bCoinYearOnly);
-	else
-		nSubsidy = GetProofOfStakeRewardV1(nCoinAge, nBits, nTime, nHeight, bCoinYearOnly);
-		
-	return nSubsidy;
-}	
+        if(bCoinYearOnly)
+        return nSubsidy / 1000000;		
+    }
+    else if ( nTime > FORK_TIME2 )
+        nSubsidy = GetProofOfStakeRewardV3(nCoinAge, nBits, nTime, nHeight, bCoinYearOnly);
+    else if ( nTime > FORK_TIME )
+        nSubsidy = GetProofOfStakeRewardV2(nCoinAge, nBits, nTime, nHeight, bCoinYearOnly);
+    else
+        nSubsidy = GetProofOfStakeRewardV1(nCoinAge, nBits, nTime, nHeight, bCoinYearOnly);
+
+    return nSubsidy;
+}
 
 int64 GetProofOfStakeRewardV1(int64 nCoinAge, unsigned int nBits, unsigned int nTime, int nHeight, bool bCoinYearOnly)
 {
     int64 nRewardCoinYear;
 
-	nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE;
+    nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE;
 
 // miner's coin stake reward based on nBits and coin age spent (coin-days)
 // simple algorithm, not depend on the diff
-	
+
     int64 nSubsidy = nCoinAge * nRewardCoinYear / 365;
-	
+
     if(bCoinYearOnly)
     return nRewardCoinYear / CENT;
 
-	if (fDebug && GetBoolArg("-printcreation"))
+    if (fDebug && GetBoolArg("-printcreation"))
         printf("GetProofOfStakeReward(): create=%s nCoinAge=%lld nBits=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge, nBits);
     return nSubsidy;
 }
@@ -1117,32 +1117,32 @@ int64 GetProofOfStakeRewardV2(int64 nCoinAge, unsigned int nBits, unsigned int n
 int64 GetProofOfStakeRewardV3(int64 nCoinAge, unsigned int nBits, unsigned int nTime, int nHeight, bool bCoinYearOnly)
 {
     int64 nRewardCoinYear;
-	int64 nSubsidyLimit = 0;
-	
-	if ( nTime > 1596240000 ) // Saturday, 1 August 2020 00:00:00 GMT
-		nSubsidyLimit = 50 * COIN;
-	else if ( nTime > 1585699200 ) // Wednesday, 1 April 2020 00:00:00 GMT
-		nSubsidyLimit = 100 * COIN;
-	else if ( nTime > 1577836800 ) // Wednesday, 1 January 2020 00:00:00 GMT
-		nSubsidyLimit = 150 * COIN;
-	else
-		nSubsidyLimit = 200 * COIN;
+    int64 nSubsidyLimit = 0;
 
-	nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE;
+    if ( nTime > 1596240000 ) // Saturday, 1 August 2020 00:00:00 GMT
+        nSubsidyLimit = 50 * COIN;
+    else if ( nTime > 1585699200 ) // Wednesday, 1 April 2020 00:00:00 GMT
+        nSubsidyLimit = 100 * COIN;
+    else if ( nTime > 1577836800 ) // Wednesday, 1 January 2020 00:00:00 GMT
+        nSubsidyLimit = 150 * COIN;
+    else
+        nSubsidyLimit = 200 * COIN;
+
+    nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE;
 
 // miner's coin stake reward based on nBits and coin age spent (coin-days)
 // simple algorithm, not depend on the diff
-	
+
     int64 nSubsidy = (nCoinAge * 33 * nRewardCoinYear) / (365 * 33 + 8);
-	
+
     if(bCoinYearOnly)
     return nSubsidyLimit / 1000000;
 
-	if (fDebug && GetBoolArg("-printcreation"))
+    if (fDebug && GetBoolArg("-printcreation"))
         printf("GetProofOfStakeReward(): create=%s nCoinAge=%lld nBits=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge, nBits);
-		
+
     nSubsidy = min(nSubsidy, nSubsidyLimit);
-		
+
     return nSubsidy;
 }
 
@@ -1151,7 +1151,6 @@ static const int64 nTargetSpacingWorkMax = 2 * nStakeTargetSpacing;
 
 //
 // maximum nBits value could possible be required nTime after
-// minimum proof-of-work required was nBase
 //
 unsigned int ComputeMaxBits(CBigNum bnTargetLimit, unsigned int nBase, int64 nTime)
 {
@@ -1167,15 +1166,6 @@ unsigned int ComputeMaxBits(CBigNum bnTargetLimit, unsigned int nBase, int64 nTi
     if (bnResult > bnTargetLimit)
         bnResult = bnTargetLimit;
     return bnResult.GetCompact();
-}
-
-//
-// minimum amount of work that could possibly be required nTime after
-// minimum proof-of-work required was nBase
-//
-unsigned int ComputeMinWork(unsigned int nBase, int64 nTime)
-{
-    return ComputeMaxBits(bnProofOfWorkLimit, nBase, nTime);
 }
 
 //
@@ -1195,6 +1185,15 @@ const CBlockIndex* GetLastBlockIndex(const CBlockIndex* pindex, bool fProofOfSta
     return pindex;
 }
 
+//
+// minimum amount of work that could possibly be required nTime after
+// minimum proof-of-work required was nBase
+//
+
+unsigned int ComputeMinWork(unsigned int nBase, int64 nTime)
+{
+    return ComputeMaxBits(bnProofOfWorkLimit, nBase, nTime);
+}
 unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfStake) 
 {
     CBigNum bnTargetLimit = bnProofOfWorkLimit;
@@ -1753,19 +1752,16 @@ bool CBlock::ConnectBlock(CBlockIndex* pindex, CCoinsViewCache &view, bool fJust
     // Now that the whole chain is irreversibly beyond that time it is applied to all blocks except the
     // two in the chain that violate it. This prevents exploiting the issue against nodes in their
     // initial block download.
-    bool fEnforceBIP30 = true;
 
-    if (fEnforceBIP30) {
         for (unsigned int i=0; i<vtx.size(); i++) {
             uint256 hash = GetTxHash(i);
             if (view.HaveCoins(hash) && !view.GetCoins(hash).IsPruned())
                 return error("ConnectBlock() : tried to overwrite transaction");
         }
-    }
 
     // BIP16 always active
     bool fStrictPayToScriptHash = true;
-    
+   
     CBlockUndo blockundo;
     
     CCheckQueueControl<CScriptCheck> control(fScriptChecks && nScriptCheckThreads ? &scriptcheckqueue : NULL);
@@ -1786,18 +1782,15 @@ bool CBlock::ConnectBlock(CBlockIndex* pindex, CCoinsViewCache &view, bool fJust
             nValueOut += tx.GetValueOut();
         else
         {
-            if (!tx.HaveInputs(view))
-                return DoS(100, error("ConnectBlock() : inputs missing/spent"));
+        if (!tx.HaveInputs(view))
+            return DoS(100, error("ConnectBlock() : inputs missing/spent"));
 
-            if (fStrictPayToScriptHash)
-            {
                 // Add in sigops done by pay-to-script-hash inputs;
                 // this is to prevent a "rogue miner" from creating
                 // an incredibly-expensive-to-validate block.
                 nSigOps += tx.GetP2SHSigOpCount(view);
                 if (nSigOps > MAX_BLOCK_SIGOPS)
                     return DoS(100, error("ConnectBlock() : too many sigops"));
-            }
 
             int64 nTxValueIn  = tx.GetValueIn(view);
             int64 nTxValueOut = tx.GetValueOut();
@@ -2056,6 +2049,7 @@ bool SetBestChain(CBlockIndex* pindexNew)
 
     return true;
 }
+
 
 // Total coin age spent in transaction, in the unit of coin-days.
 // Only those coins meeting minimum age requirement counts. As those
@@ -2317,10 +2311,10 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
     if (IsProofOfStake() && !CheckCoinStakeTimestamp(GetBlockTime(), (int64)vtx[1].nTime))
         return DoS(50, error("CheckBlock() : coinstake timestamp violation nTimeBlock=%lld nTimeTx=%u", GetBlockTime(), vtx[1].nTime));
 
-	// Check proof-of-stake block signature 
+    // Check proof-of-stake block signature 
     if (IsProofOfStake() && fCheckSig && !CheckBlockSignature(true)) 
     return DoS(100, error("CheckBlock() : bad proof-of-stake block signature")); 
-		
+
     // Check transactions
     BOOST_FOREACH(const CTransaction& tx, vtx)
     {
@@ -3024,7 +3018,7 @@ bool LoadBlockIndex()
         printf("block.nNonce = %u \n", block.nNonce);
 
         assert(block.hashMerkleRoot == uint256("37ad323037e6e55553fadebbe60690a1bff2752f947b7af8cb6b54929f5fee3d"));
-		assert(hash == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet));
+        assert(hash == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet));
 
         // Start new block file
         unsigned int nBlockSize = ::GetSerializeSize(block, SER_DISK, CLIENT_VERSION);
@@ -3398,13 +3392,12 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             }
         }
 
-        // Ask the first connected node for block updates
+        /* Ask for new blocks */
         static int nAskedForBlocks = 0;
-            if (!pfrom->fClient && !pfrom->fOneShot && !fImporting && !fReindex &&
-            (pfrom->nStartingHeight > (nBestHeight - 144)) &&
-            (pfrom->nVersion < NOBLKS_VERSION_START ||
-             pfrom->nVersion >= NOBLKS_VERSION_END) &&
-             (nAskedForBlocks < 1 || vNodes.size() <= 1))
+        if (!pfrom->fClient && !pfrom->fOneShot && !fImporting && !fReindex &&
+          (pfrom->nStartingHeight > (nBestHeight)) &&
+          (pfrom->nVersion < NOBLKS_VERSION_START || pfrom->nVersion >= NOBLKS_VERSION_END) &&
+          (nAskedForBlocks < 1 || vNodes.size() <= 1))
         {
             nAskedForBlocks++;
             pfrom->PushGetBlocks(pindexBest, uint256(0));
@@ -3430,17 +3423,15 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 
         cPeerBlockCounts.input(pfrom->nStartingHeight);
 		
-	 // Be more aggressive with blockchain download. Send new getblocks() message after connection 
-	 // to new node if waited longer than MAX_TIME_SINCE_BEST_BLOCK. 
-	 int64 TimeSinceBestBlock = GetTime() - nTimeBestReceived; 
-	 if (TimeSinceBestBlock > MAX_TIME_SINCE_BEST_BLOCK) { 
-	  	printf("INFO: Waiting %lld sec which is too long. Sending GetBlocks(0)\n", TimeSinceBestBlock); 
-		pfrom->PushGetBlocks(pindexBest, uint256(0)); 
-  	 } 
-
-        // ask for pending sync-checkpoint if any
-        if (!IsInitialBlockDownload())
+        if(IsInitialBlockDownload()) {
+            /* Aggressive synchronisation:
+             * ask this peer for inventory if nothing received in period longer than MAX_TIME_SINCE_BEST_BLOCK */
+            if((pfrom->nStartingHeight > nBestHeight) && ((GetTime() - nTimeBestReceived) > MAX_TIME_SINCE_BEST_BLOCK))
+              pfrom->PushGetBlocks(pindexBest, uint256(0));
+        } else {
+            // ask for pending sync-checkpoint if any
             Checkpoints::AskForPendingSyncCheckpoint(pfrom);
+        }
     }
 
 
@@ -3596,7 +3587,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             {
                 // Send block from disk
                 map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(inv.hash);
-				pfrom->nBlocksRequested++;
                 if (mi != mapBlockIndex.end())
                 {
                     CBlock block;
@@ -3608,7 +3598,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                     {
                         vector<CInv> vInv;
                         vInv.push_back(CInv(MSG_BLOCK, hashBestChain));
-					
+
                         pfrom->PushMessage("inv", vInv);
                         pfrom->hashContinue = 0;
                     }
@@ -3662,6 +3652,11 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             if (pindex->GetBlockHash() == hashStop)
             {
                 printf("  getblocks stopping at %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
+                // ppcoin: tell downloading node about the latest block if it's
+                // without risk being rejected due to stake connection check
+                if((hashStop != hashBestChain) &&
+                  ((pindex->GetBlockTime() + nStakeMinAge) > pindexBest->GetBlockTime()))
+                  pfrom->PushInventory(CInv(MSG_BLOCK, hashBestChain));
                 break;
             }
             pfrom->PushInventory(CInv(MSG_BLOCK, pindex->GetBlockHash()));
@@ -3993,7 +3988,7 @@ bool ProcessMessages(CNode* pfrom)
         // end, if an incomplete message is found		
         if (!msg.complete())
             break;
-			
+
         // at this point, any failure means we can delete the current message
         it++;
 
