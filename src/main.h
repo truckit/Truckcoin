@@ -1936,7 +1936,7 @@ public:
 
 struct CBlockIndexTrustComparator
 {
-    bool operator()(CBlockIndex *pa, CBlockIndex *pb) {
+    bool operator()(CBlockIndex *pa, CBlockIndex *pb) const {
         if (pa->bnChainTrust > pb->bnChainTrust) return false;
         if (pa->bnChainTrust < pb->bnChainTrust) return true;
 
