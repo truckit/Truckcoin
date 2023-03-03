@@ -96,18 +96,18 @@ public:
     bool changePassphrase(const SecureString &oldPass, const SecureString &newPass);
     // Wallet backup
     bool backupWallet(const QString &filename);
-	// Wallet Check/Repair 
-    void checkWallet(int& nMismatchSpent, qint64& nBalanceInQuestion, int& nOrphansFound); 
-    void repairWallet(int& nMismatchSpent, qint64& nBalanceInQuestion, int& nOrphansFound); 
+    // Wallet Check/Repair 
+    void checkWallet(int& nMismatchSpent, int64_t& nBalanceInQuestion, int& nOrphansFound); 
+    void repairWallet(int& nMismatchSpent, int64_t& nBalanceInQuestion, int& nOrphansFound); 
     // Wallet Import/Export
     bool dumpWallet(const QString &filename);
     bool importWallet(const QString &filename);
-	// Stake Weight for coin control dialog 
-	void getStakeWeightFromValue(const qint64& nTime, const qint64& nValue, quint64& nWeight); 
-	
-	void setSplitBlock(bool fSplitBlock); 
-	bool getSplitBlock();
-	
+    // Stake Weight for coin control dialog 
+    void getStakeWeightFromValue(const int64_t& nTime, const int64_t& nValue, uint64_t& nWeight);
+
+    void setSplitBlock(bool fSplitBlock); 
+    bool getSplitBlock();
+
     // RAI object for unlocking wallet, returned by requestUnlock()
     class UnlockContext
     {

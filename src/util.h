@@ -6,6 +6,7 @@
 #ifndef BITCOIN_UTIL_H
 #define BITCOIN_UTIL_H
 
+#include <inttypes.h>
 #include "uint256.h"
 
 #ifndef WIN32
@@ -30,11 +31,8 @@ typedef int pid_t; /* define for Windows compatibility */
 // to obtain PRId64 on some old systems 
 #define __STDC_FORMAT_MACROS 1
 
-typedef long long  int64;
-typedef unsigned long long  uint64;
-
-static const int64 COIN = 1000000;
-static const int64 CENT = 10000;
+static const int64_t COIN = 1000000;
+static const int64_t CENT = 10000;
 
 // #define loop                for (;;)
 #define BEGIN(a)            ((char*)&(a))
@@ -47,18 +45,6 @@ static const int64 CENT = 10000;
 #define CVOIDBEGIN(a)        ((const void*)&(a))
 #define UINTBEGIN(a)        ((uint32_t*)&(a))
 #define CUINTBEGIN(a)        ((const uint32_t*)&(a))
-
-#ifndef PRI64d
-#if defined(_MSC_VER) || defined(__MSVCRT__)
-#define PRI64d  "I64d"
-#define PRI64u  "I64u"
-#define PRI64x  "I64x"
-#else
-#define PRI64d  "lld"
-#define PRI64u  "llu"
-#define PRI64x  "llx"
-#endif
-#endif
 
 #ifndef THROW_WITH_STACKTRACE
 #define THROW_WITH_STACKTRACE(exception)  \
@@ -137,7 +123,7 @@ extern bool fLogTimestamps;
 extern bool fReopenDebugLog;
 extern bool fStaking;
 
-void MilliSleep(int64 nMilliSecs);
+void MilliSleep(int64_t nMilliSecs);
 
 void RandAddSeed();
 void RandAddSeedPerfmon();
@@ -173,9 +159,9 @@ void LogException(std::exception* pex, const char* pszThread);
 void PrintException(std::exception* pex, const char* pszThread);
 void PrintExceptionContinue(std::exception* pex, const char* pszThread);
 void ParseString(const std::string& str, char c, std::vector<std::string>& v);
-std::string FormatMoney(int64 n, bool fPlus=false);
-bool ParseMoney(const std::string& str, int64& nRet);
-bool ParseMoney(const char* pszIn, int64& nRet);
+std::string FormatMoney(int64_t n, bool fPlus=false);
+bool ParseMoney(const std::string& str, int64_t& nRet);
+bool ParseMoney(const char* pszIn, int64_t& nRet);
 std::vector<unsigned char> ParseHex(const char* psz);
 std::vector<unsigned char> ParseHex(const std::string& str);
 bool IsHex(const std::string& str);
@@ -187,8 +173,8 @@ std::vector<unsigned char> DecodeBase32(const char* p, bool* pfInvalid = NULL);
 std::string DecodeBase32(const std::string& str);
 std::string EncodeBase32(const unsigned char* pch, size_t len);
 std::string EncodeBase32(const std::string& str);
-std::string EncodeDumpTime(int64 nTime);
-int64 DecodeDumpTime(const std::string& s);
+std::string EncodeDumpTime(int64_t nTime);
+int64_t DecodeDumpTime(const std::string& s);
 std::string EncodeDumpString(const std::string &str);
 std::string DecodeDumpString(const std::string &str);
 void ParseParameters(int argc, const char*const argv[]);
@@ -209,21 +195,21 @@ boost::filesystem::path GetSpecialFolderPath(int nFolder, bool fCreate = true);
 #endif
 void ShrinkDebugFile();
 int GetRandInt(int nMax);
-uint64 GetRand(uint64 nMax);
+uint64_t GetRand(uint64_t nMax);
 uint256 GetRandHash();
-int64 GetTime();
-void SetMockTime(int64 nMockTimeIn);
-int64 GetAdjustedTime();
+int64_t GetTime();
+void SetMockTime(int64_t nMockTimeIn);
+int64_t GetAdjustedTime();
 long hex2long(const char* hexString);
 std::string BerkeleyDBVersion();
 std::string FormatFullVersion();
 std::string FormatSubVersion(const std::string& name, int nClientVersion, const std::vector<std::string>& comments);
-void AddTimeData(const CNetAddr& ip, int64 nTime);
+void AddTimeData(const CNetAddr& ip, int64_t nTime);
 void runCommand(std::string strCommand);
 
-inline std::string i64tostr(int64 n)
+inline std::string i64tostr(int64_t n)
 {
-    return strprintf("%lld", n);
+    return strprintf("%" PRId64, n);
 }
 
 inline std::string itostr(int n)
@@ -231,7 +217,7 @@ inline std::string itostr(int n)
     return strprintf("%d", n);
 }
 
-inline int64 atoi64(const char* psz)
+inline int64_t atoi64(const char* psz)
 {
 #ifdef _MSC_VER
     return _atoi64(psz);
@@ -240,7 +226,7 @@ inline int64 atoi64(const char* psz)
 #endif
 }
 
-inline int64 atoi64(const std::string& str)
+inline int64_t atoi64(const std::string& str)
 {
 #ifdef _MSC_VER
     return _atoi64(str.c_str());
@@ -259,12 +245,12 @@ inline int roundint(double d)
     return (int)(d > 0 ? d + 0.5 : d - 0.5);
 }
 
-inline int64 roundint64(double d)
+inline int64_t roundint64(double d)
 {
-    return (int64)(d > 0 ? d + 0.5 : d - 0.5);
+    return (int64_t)(d > 0 ? d + 0.5 : d - 0.5);
 }
 
-inline int64 abs64(int64 n)
+inline int64_t abs64(int64_t n)
 {
     return (n >= 0 ? n : -n);
 }
@@ -306,33 +292,33 @@ inline void PrintHex(const std::vector<unsigned char>& vch, const char* pszForma
 }
 
 /* Returns system time in microseconds since the Epoch */
-inline int64 GetTimeMicros() {
-    uint64 nTime = 0;
+inline int64_t GetTimeMicros() {
+    uint64_t nTime = 0;
 #ifdef WIN32
     /* Number of 100ns intervals from 12:00 01-Jan-1601 to 00:00 01-Jan-1970 */
-    const uint64 EPOCH = 116444736000000000ULL;
+    const uint64_t EPOCH = 116444736000000000ULL;
 
     FILETIME nFileTime;
 
     GetSystemTimeAsFileTime(&nFileTime);
-    nTime |= (uint64)nFileTime.dwHighDateTime;
+    nTime |= (uint64_t)nFileTime.dwHighDateTime;
     nTime <<= 32;
-    nTime |= (uint64)nFileTime.dwLowDateTime;
+    nTime |= (uint64_t)nFileTime.dwLowDateTime;
     nTime -= EPOCH;
     nTime /= 10;
 #else
     timeval t;
     gettimeofday(&t, NULL);
-    nTime = (((uint64)t.tv_sec) * 1000000) + (uint64)t.tv_usec;
+    nTime = (((uint64_t)t.tv_sec) * 1000000) + (uint64_t)t.tv_usec;
 #endif
-    return((int64)nTime);
+    return((int64_t)nTime);
 }
 
-inline int64 GetTimeMillis() {
+inline int64_t GetTimeMillis() {
     return(GetTimeMicros() / 1000);
 }
 
-inline std::string DateTimeStrFormat(const char* pszFormat, int64 nTime)
+inline std::string DateTimeStrFormat(const char* pszFormat, int64_t nTime)
 {
     time_t n = nTime;
     struct tm* ptmTime = gmtime(&n);
@@ -342,7 +328,7 @@ inline std::string DateTimeStrFormat(const char* pszFormat, int64 nTime)
 }
 
 static const std::string strTimestampFormat = "%Y-%m-%d %H:%M:%S UTC";
-inline std::string DateTimeStrFormat(int64 nTime)
+inline std::string DateTimeStrFormat(int64_t nTime)
 {
     return DateTimeStrFormat(strTimestampFormat.c_str(), nTime);
 }
@@ -380,7 +366,7 @@ std::string GetArg(const std::string& strArg, const std::string& strDefault);
  * @param default (e.g. 1)
  * @return command-line argument (0 if invalid number) or default value
  */
-int64 GetArg(const std::string& strArg, int64 nDefault);
+int64_t GetArg(const std::string& strArg, int64_t nDefault);
 
 /**
  * Return boolean argument or default value

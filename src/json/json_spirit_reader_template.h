@@ -33,8 +33,8 @@
 
 namespace json_spirit
 {
-    const spirit_namespace::int_parser < boost::int64_t >  int64_p  = spirit_namespace::int_parser < boost::int64_t  >();
-    const spirit_namespace::uint_parser< boost::uint64_t > uint64_p = spirit_namespace::uint_parser< boost::uint64_t >();
+    const spirit_namespace::int_parser < int64_t >  int64_p  = spirit_namespace::int_parser < int64_t  >();
+    const spirit_namespace::uint_parser< uint64_t > uint64_p = spirit_namespace::uint_parser< uint64_t >();
 
     template< class Iter_type >
     bool is_eq( Iter_type first, Iter_type last, const char* c_str )
@@ -270,12 +270,12 @@ namespace json_spirit
             add_to_current( Value_type() );
         }
 
-        void new_int( boost::int64_t i )
+        void new_int( int64_t i )
         {
             add_to_current( i );
         }
 
-        void new_uint64( boost::uint64_t ui )
+        void new_uint64( uint64_t ui )
         {
             add_to_current( ui );
         }

@@ -161,7 +161,7 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         return DuplicateAddress;
     }
 
-    int64 nBalance = 0;
+    int64_t nBalance = 0;
     std::vector<COutput> vCoins;
     wallet->AvailableCoins(vCoins, true, coinControl);
 
@@ -181,7 +181,7 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         LOCK2(cs_main, wallet->cs_wallet);
 
         // Sendmany
-        std::vector<std::pair<CScript, int64> > vecSend;
+        std::vector<std::pair<CScript, int64_t> > vecSend;
         foreach(const SendCoinsRecipient &rcp, recipients)
         {
             CScript scriptPubKey;
@@ -191,7 +191,7 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
 
         CWalletTx wtx;
         CReserveKey keyChange(wallet);
-        int64 nFeeRequired = 0;
+        int64_t nFeeRequired = 0;
         bool fCreated = wallet->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, nSplitBlock, coinControl);
 
         if(!fCreated)
@@ -326,7 +326,7 @@ bool WalletModel::importWallet(const QString &filename)
   return ImportWallet(wallet, filename.toLocal8Bit().data());
 }
 
-void WalletModel::getStakeWeightFromValue(const int64& nTime, const int64& nValue, uint64& nWeight) 
+void WalletModel::getStakeWeightFromValue(const int64_t& nTime, const int64_t& nValue, uint64_t& nWeight) 
 { 
 	wallet->GetStakeWeightFromValue(nTime, nValue, nWeight); 
 } 
@@ -341,12 +341,12 @@ bool WalletModel::getSplitBlock()
 	return wallet->fSplitBlock; 
  }
 
-void WalletModel::checkWallet(int& nMismatchSpent, int64& nBalanceInQuestion, int& nOrphansFound) 
+void WalletModel::checkWallet(int& nMismatchSpent, int64_t& nBalanceInQuestion, int& nOrphansFound) 
 { 
     wallet->FixSpentCoins(nMismatchSpent, nBalanceInQuestion, nOrphansFound, true); 
 } 
  
-void WalletModel::repairWallet(int& nMismatchSpent, int64& nBalanceInQuestion, int& nOrphansFound) 
+void WalletModel::repairWallet(int& nMismatchSpent, int64_t& nBalanceInQuestion, int& nOrphansFound) 
 { 
     wallet->FixSpentCoins(nMismatchSpent, nBalanceInQuestion, nOrphansFound); 
 } 
