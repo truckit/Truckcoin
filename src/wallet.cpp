@@ -384,7 +384,7 @@ void CWallet::MarkDirty()
 {
     {
         LOCK(cs_wallet);
-        for (const auto& item : mapWallet)
+        for (auto& item : mapWallet)
             item.second.MarkDirty();
     }
 }
@@ -828,7 +828,7 @@ void CWallet::ReacceptWalletTransactions()
         LOCK(cs_wallet);
         fRepeat = false;
         bool fMissing = false;
-        for (const auto& item : mapWallet)
+        for (auto& item : mapWallet)
         {
             CWalletTx& wtx = item.second;
             if ((wtx.IsCoinBase() && wtx.IsSpent(0)) || (wtx.IsCoinStake() && wtx.IsSpent(1)))
@@ -921,7 +921,7 @@ void CWallet::ResendWalletTransactions()
         LOCK(cs_wallet);
         // Sort them in chronological order
         multimap<unsigned int, CWalletTx*> mapSorted;
-        for (const auto& item : mapWallet)
+        for (auto& item : mapWallet)
         {
             CWalletTx& wtx = item.second;
             // Don't rebroadcast until it's had plenty of time that
@@ -1267,7 +1267,7 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, 
                 if (!SelectCoins(nTotalValue, wtxNew.nTime, setCoins, nValueIn, coinControl))
                     return false;
                 CTxDestination utxoAddress;
-                for (const auto pcoin : setCoins)
+                for (auto pcoin : setCoins)
                 {
                     int64_t nCredit = pcoin.first->vout[pcoin.second].nValue;
                     dPriority += (double)nCredit * pcoin.first->GetDepthInMainChain();
@@ -1412,7 +1412,7 @@ bool CWallet::GetStakeWeight(const CKeyStore& keystore, uint64_t& nMinWeight, ui
         return false;
 
     CCoinsViewCache &view = *pcoinsTip;
-    for (const auto pcoin : setCoins)
+    for (auto pcoin : setCoins)
     {
         CCoins coins;
         {
@@ -1469,7 +1469,7 @@ bool CWallet::GetStakeWeight2(const CKeyStore& keystore, uint64_t& nMinWeight, u
         return false;
 
     CCoinsViewCache &view = *pcoinsTip;
-    for (const auto pcoin : setCoins)
+    for (auto pcoin : setCoins)
     {
         CCoins coins;
         {
@@ -1541,7 +1541,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     
     CCoinsViewCache &view = *pcoinsTip;
     
-    for (const auto pcoin : setCoins)
+    for (auto pcoin : setCoins)
     {
         CCoins coins;
         {
@@ -1635,7 +1635,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     if (nCredit == 0 || nCredit > nBalance - nReserveBalance)
         return false;
 
-    for (const auto pcoin : setCoins)
+    for (auto pcoin : setCoins)
     {
         // Attempt to add more inputs
         // Only add coins of the same key/address as kernel
