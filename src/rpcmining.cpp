@@ -207,7 +207,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
     map<uint256, int64_t> setTxIndex;
     int i = 0;
     CCoinsViewCache &view = *pcoinsTip;
-    BOOST_FOREACH (CTransaction& tx, pblock->vtx)
+    for (CTransaction& tx : pblock->vtx)
     {
         uint256 txHash = tx.GetHash();
         setTxIndex[txHash] = i++;
@@ -224,7 +224,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
         entry.push_back(Pair("hash", txHash.GetHex()));
 
         Array deps;
-        BOOST_FOREACH (const CTxIn &in, tx.vin)
+        for (const CTxIn &in : tx.vin)
         {
             if (setTxIndex.count(in.prevout.hash))
                 deps.push_back(setTxIndex[in.prevout.hash]);

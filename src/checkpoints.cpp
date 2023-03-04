@@ -4,7 +4,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <boost/assign/list_of.hpp> // for 'map_list_of()'
-#include <boost/foreach.hpp>
 
 #include "checkpoints.h"
 
@@ -72,10 +71,10 @@ namespace Checkpoints
     {
         MapCheckpoints& checkpoints = (fTestNet ? mapCheckpointsTestnet : mapCheckpoints);
 
-        BOOST_REVERSE_FOREACH(const MapCheckpoints::value_type& i, checkpoints)
+        for(auto it = checkpoints.rbegin(); it != checkpoints.rend(); ++it)
         {
-            const uint256& hash = i.second;
-            std::map<uint256, CBlockIndex*>::const_iterator t = mapBlockIndex.find(hash);
+            const uint256& hash = it->second;
+            auto t = mapBlockIndex.find(hash);
             if (t != mapBlockIndex.end())
                 return t->second;
         }
@@ -193,7 +192,7 @@ namespace Checkpoints
             // relay the checkpoint
             if (!checkpointMessage.IsNull())
             {
-                BOOST_FOREACH(CNode* pnode, vNodes)
+                for (CNode* pnode : vNodes)
                     checkpointMessage.RelayTo(pnode);
             }
             return true;
@@ -277,9 +276,9 @@ namespace Checkpoints
             printf("ResetSyncCheckpoint: pending for sync-checkpoint %s\n", hashPendingCheckpoint.ToString().c_str());
         }
 
-        BOOST_REVERSE_FOREACH(const MapCheckpoints::value_type& i, mapCheckpoints)
+        for(auto it = mapCheckpoints.rbegin(); it != mapCheckpoints.rend(); ++it)
         {
-            const uint256& hash = i.second;
+            const uint256& hash = it->second;
             if (mapBlockIndex.count(hash) && mapBlockIndex[hash]->IsInMainChain())
             {
                 if (!WriteSyncCheckpoint(hash))
@@ -344,7 +343,7 @@ namespace Checkpoints
         // Relay checkpoint
         {
             LOCK(cs_vNodes);
-            BOOST_FOREACH(CNode* pnode, vNodes)
+            for (CNode* pnode : vNodes)
                 checkpoint.RelayTo(pnode);
         }
         return true;

@@ -75,7 +75,7 @@ QString TransactionDesc::toHTML(CWallet *wallet, CWalletTx &wtx)
             if (nNet > 0)
             {
                 // Credit
-                BOOST_FOREACH(const CTxOut& txout, wtx.vout)
+                for (const CTxOut& txout : wtx.vout)
                 {
                     if (wallet->IsMine(txout))
                     {
@@ -123,7 +123,7 @@ QString TransactionDesc::toHTML(CWallet *wallet, CWalletTx &wtx)
             // Coinbase
             //
             int64_t nUnmatured = 0;
-            BOOST_FOREACH(const CTxOut& txout, wtx.vout)
+            for (const CTxOut& txout : wtx.vout)
                 nUnmatured += wallet->GetCredit(txout);
             strHTML += "<b>" + tr("Credit") + ":</b> ";
             if (wtx.IsInMainChain())
@@ -142,11 +142,11 @@ QString TransactionDesc::toHTML(CWallet *wallet, CWalletTx &wtx)
         else
         {
             bool fAllFromMe = true;
-            BOOST_FOREACH(const CTxIn& txin, wtx.vin)
+            for (const CTxIn& txin : wtx.vin)
                 fAllFromMe = fAllFromMe && wallet->IsMine(txin);
 
             bool fAllToMe = true;
-            BOOST_FOREACH(const CTxOut& txout, wtx.vout)
+            for (const CTxOut& txout : wtx.vout)
                 fAllToMe = fAllToMe && wallet->IsMine(txout);
 
             if (fAllFromMe)
@@ -154,7 +154,7 @@ QString TransactionDesc::toHTML(CWallet *wallet, CWalletTx &wtx)
                 //
                 // Debit
                 //
-                BOOST_FOREACH(const CTxOut& txout, wtx.vout)
+                for (const CTxOut& txout : wtx.vout)
                 {
                     if (wallet->IsMine(txout))
                         continue;
@@ -194,29 +194,27 @@ QString TransactionDesc::toHTML(CWallet *wallet, CWalletTx &wtx)
                 //
                 // Mixed debit transaction
                 //
-                BOOST_FOREACH(const CTxIn& txin, wtx.vin)
+                for (const CTxIn& txin : wtx.vin)
                     if (wallet->IsMine(txin))
                         strHTML += "<b>" + tr("Debit") + ":</b> " + BitcoinUnits::formatWithUnit(BitcoinUnits::BTC, -wallet->GetDebit(txin)) + "<br>";
-                BOOST_FOREACH(const CTxOut& txout, wtx.vout)
+                for (const CTxOut& txout : wtx.vout)
                     if (wallet->IsMine(txout))
                         strHTML += "<b>" + tr("Credit") + ":</b> " + BitcoinUnits::formatWithUnit(BitcoinUnits::BTC, wallet->GetCredit(txout)) + "<br>";
             }
         }
 
         strHTML += "<b>" + tr("Net amount") + ":</b> " + BitcoinUnits::formatWithUnit(BitcoinUnits::BTC, nNet, true) + "<br>";
-			
+
         //
         // Message
         //
         if (!wtx.mapValue["message"].empty())
              strHTML += "<br><b>" + tr("Message") + ":</b><br>" + GUIUtil::HtmlEscape(wtx.mapValue["message"], true) + "<br>";
 
-		if (!wtx.mapValue["comment"].empty())
+        if (!wtx.mapValue["comment"].empty())
             strHTML += "<br><b>" + tr("Comment") + ":</b><br>" + GUIUtil::HtmlEscape(wtx.mapValue["comment"], true) + "<br>";
 
         strHTML += "<b>" + tr("Transaction ID") + ":</b> " + wtx.GetHash().ToString().c_str() + "<br>";
-
-		
 
         if (wtx.IsCoinBase() || wtx.IsCoinStake())
             strHTML += "<br>" + tr("Generated coins must mature 180 blocks before they can be spent. When you generated this block, it was broadcast to the network to be added to the block chain. If it fails to get into the chain, its state will change to \"not accepted\" and it won't be spendable. This may occasionally happen if another node generates a block within a few seconds of yours.") + "<br>";
@@ -227,10 +225,10 @@ QString TransactionDesc::toHTML(CWallet *wallet, CWalletTx &wtx)
         if (fDebug)
         {
             strHTML += "<hr><br>" + tr("Debug information") + "<br><br>";
-            BOOST_FOREACH(const CTxIn& txin, wtx.vin)
+            for (const CTxIn& txin : wtx.vin)
                 if(wallet->IsMine(txin))
                     strHTML += "<b>" + tr("Debit") + ":</b> " + BitcoinUnits::formatWithUnit(BitcoinUnits::BTC, -wallet->GetDebit(txin)) + "<br>";
-            BOOST_FOREACH(const CTxOut& txout, wtx.vout)
+           for (const CTxOut& txout : wtx.vout)
                 if(wallet->IsMine(txout))
                     strHTML += "<b>" + tr("Credit") + ":</b> " + BitcoinUnits::formatWithUnit(BitcoinUnits::BTC, wallet->GetCredit(txout)) + "<br>";
 
@@ -242,7 +240,7 @@ QString TransactionDesc::toHTML(CWallet *wallet, CWalletTx &wtx)
 
             {
                 LOCK(wallet->cs_wallet);
-                BOOST_FOREACH(const CTxIn& txin, wtx.vin)
+                for (const CTxIn& txin : wtx.vin)
                 {
                     COutPoint prevout = txin.prevout;
 

@@ -148,7 +148,7 @@ bool CCoinsViewDB::GetStats(CCoinsStats &stats) {
                 ssKey >> txhash;
 
                 stats.nTransactions++;
-                BOOST_FOREACH(const CTxOut &out, coins.vout) {
+                for (const CTxOut &out : coins.vout) {
                     if (!out.IsNull())
                         stats.nTransactionOutputs++;
                 }

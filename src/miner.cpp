@@ -41,7 +41,7 @@ public:
     {
         printf("COrphan(hash=%s, dPriority=%.1f, dFeePerKb=%.1f)\n",
                ptx->GetHash().ToString().substr(0,10).c_str(), dPriority, dFeePerKb);
-        BOOST_FOREACH(uint256 hash, setDependsOn)
+        for (uint256 hash : setDependsOn)
             printf("   setDependsOn %s\n", hash.ToString().substr(0,10).c_str());
     }
 };
@@ -175,7 +175,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
             double dPriority = 0;
             int64_t nTotalIn = 0;
             bool fMissingInputs = false;
-            BOOST_FOREACH(const CTxIn& txin, tx.vin)
+            for (const CTxIn& txin : tx.vin)
             {
                 // Read prev transaction
                 CCoins coins;
@@ -326,7 +326,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
             uint256 hash = tx.GetHash();
             if (mapDependers.count(hash))
             {
-                BOOST_FOREACH(COrphan* porphan, mapDependers[hash])
+                for (COrphan* porphan : mapDependers[hash])
                 {
                     if (!porphan->setDependsOn.empty())
                     {
