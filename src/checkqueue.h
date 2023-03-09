@@ -11,6 +11,8 @@
 #include <vector>
 #include <algorithm>
 
+extern bool fShutdown;
+
 template<typename T> class CCheckQueueControl;
 
 /** Queue for verifications that have to be performed.
@@ -119,7 +121,8 @@ private:
                 if (fOk)
                     fOk = check();
             vChecks.clear();
-        } while(true);
+        } while(true && !fShutdown); // HACK: force queue to shut down
+        return false;
     }
 
 public:
