@@ -86,7 +86,7 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("difficulty", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
     obj.push_back(Pair("splitthreshold",   ValueFromAmount(nSplitThreshold)));
     obj.push_back(Pair("testnet",       fTestNet));
-    obj.push_back(Pair("keypoololdest", (int64_t)pwalletMain->GetOldestKeyPoolTime()));
+    obj.push_back(Pair("keypoololdest", DateTimeStrFormat(pwalletMain->GetOldestKeyPoolTime())));
     obj.push_back(Pair("keypoolsize",   pwalletMain->GetKeyPoolSize()));
     obj.push_back(Pair("paytxfee",      ValueFromAmount(nTransactionFee)));
     obj.push_back(Pair("encrypted",     pwalletMain->IsCrypted()));
