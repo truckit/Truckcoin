@@ -1,6 +1,6 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2013-2019 The Truckcoin developers
+// Copyright (c) 2013-2023 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -83,16 +83,23 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("proxy",         (proxy.first.IsValid() ? proxy.first.ToStringIPPort() : string())));
     obj.push_back(Pair("ip",            addrSeenByPeer.ToStringIP()));
 //    obj.push_back(Pair("PoW difficulty",    (double)GetDifficulty()));
-	obj.push_back(Pair("difficulty", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
-	obj.push_back(Pair("splitthreshold",   ValueFromAmount(nSplitThreshold)));
+    obj.push_back(Pair("difficulty", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
+    obj.push_back(Pair("splitthreshold",   ValueFromAmount(nSplitThreshold)));
     obj.push_back(Pair("testnet",       fTestNet));
     obj.push_back(Pair("keypoololdest", (int64_t)pwalletMain->GetOldestKeyPoolTime()));
     obj.push_back(Pair("keypoolsize",   pwalletMain->GetKeyPoolSize()));
     obj.push_back(Pair("paytxfee",      ValueFromAmount(nTransactionFee)));
-    if (pwalletMain->IsCrypted())
-        obj.push_back(Pair("unlocked_until", (int64_t)nWalletUnlockTime / 1000));
+    obj.push_back(Pair("encrypted",     pwalletMain->IsCrypted()));
+    if (pwalletMain->IsCrypted() && !pwalletMain->IsLocked() )
+    {
+        obj.push_back(Pair("unlocked_until", DateTimeStrFormat(nWalletUnlockTime / 1000)));
+    }
+    else if(pwalletMain->IsCrypted() && pwalletMain->IsLocked() )
+    {
+        obj.push_back(Pair("unlocked_until", "Locked"));
+    }
     obj.push_back(Pair("errors",        GetWarnings("statusbar")));
-	obj.push_back(Pair("updates",    "http://truckcoin.net"));
+    obj.push_back(Pair("updates",    "http://truckcoin.net"));
     return obj;
 }
 
@@ -1498,8 +1505,10 @@ Value walletpassphrase(const Array& params, bool fHelp)
             "Stores the wallet decryption key in memory for <timeout> seconds.");
 
     NewThread(ThreadTopUpKeyPool, NULL);
-    int64_t* pnSleepTime = new int64_t(params[1].get_int64());
-    NewThread(ThreadCleanWalletPassphrase, pnSleepTime);
+
+    // Zero unlock time means forever, well 68 years, forever for crypto.
+    int64_t* nUnlockTime = (params[1].get_int64() == 0) ? new int64_t(std::numeric_limits<int>::max()) : new int64_t(params[1].get_int64());
+    NewThread(ThreadCleanWalletPassphrase, nUnlockTime);
 
     // if user OS account compromised prevent trivial sendmoney commands
     if (params.size() > 2)
