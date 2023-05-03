@@ -1291,6 +1291,8 @@ public:
     unsigned int nBits;
     unsigned int nNonce;
 
+    uint256 hashBlock;
+
     CBlockHeader()
     {
         SetNull();
@@ -1322,10 +1324,8 @@ public:
         return (nBits == 0);
     }
 
-    uint256 GetHash() const
-    {
-            return Hash9(BEGIN(nVersion), END(nNonce));
-    }
+    uint256 GetHash() const;
+    void SetHash(uint256 hash){ this->hashBlock = hash; }
 
     int64_t GetBlockTime() const
     {
