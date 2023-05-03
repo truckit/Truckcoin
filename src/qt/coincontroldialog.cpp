@@ -748,7 +748,7 @@ void CoinControlDialog::updateView()
         double dPrioritySum = 0;
         int nChildren = 0;
         int nInputSum = 0;
-        uint64_t nTxWeight = 0
+        uint64_t nTxWeight = 0;
         uint64_t nDisplayWeight = 0;
         uint64_t nTxWeightSum = 0;
         GetLastBlockIndex(pindexBest, false);

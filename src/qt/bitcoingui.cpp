@@ -1322,11 +1322,11 @@ void BitcoinGUI::updateMintingIcon()
     }
     else if (nLastCoinStakeSearchInterval)
     {
-        uint64 nAccuracyAdjustment = 1; // this is a manual adjustment param if needed to make more accurate
-        uint64 nEstimateTime = nStakeTargetSpacing * nNetworkWeight / nWeight / nAccuracyAdjustment;
+        uint64_t nAccuracyAdjustment = 1; // this is a manual adjustment param if needed to make more accurate
+        uint64_t nEstimateTime = nStakeTargetSpacing * nNetworkWeight / nWeight / nAccuracyAdjustment;
 
-        uint64 nRangeLow = nEstimateTime;
-        uint64 nRangeHigh = nEstimateTime * 1.5;
+        uint64_t nRangeLow = nEstimateTime;
+        uint64_t nRangeHigh = nEstimateTime * 1.5;
         QString text;
         if (nEstimateTime < 60)
         {
