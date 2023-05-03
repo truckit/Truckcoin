@@ -748,18 +748,28 @@ void CoinControlDialog::updateView()
         double dPrioritySum = 0;
         int nChildren = 0;
         int nInputSum = 0;
-        uint64_t nTxWeight = 0, nTxWeightSum = 0;
+        uint64_t nTxWeight = 0
+        uint64_t nDisplayWeight = 0;
+        uint64_t nTxWeightSum = 0;
         GetLastBlockIndex(pindexBest, false);
         int64_t nBestHeight = pindexBest->nHeight;
 
         for (const COutput& out : coins.second)
         {
+            int64_t nHeight = nBestHeight - out.nDepth;
+            CBlockIndex* pindex = FindBlockByHeight(nHeight);
+
             int nInputSize = 148; // 180 if uncompressed public key
             nSum += out.tx->vout[out.i].nValue;
             nChildren++;
 
             model->getStakeWeightFromValue(out.tx->GetTxTime(), out.tx->vout[out.i].nValue, nTxWeight); 
-            nTxWeightSum += nTxWeight; 
+            if ((GetTime() - pindex->nTime) < (60*60*24*8.8))
+            nDisplayWeight = 0;
+            else
+            nDisplayWeight = nTxWeight;
+
+            nTxWeightSum += nDisplayWeight;
             
             QTreeWidgetItem *itemOutput;
             if (treeMode)    itemOutput = new QTreeWidgetItem(itemWalletAddress);
@@ -806,8 +816,6 @@ void CoinControlDialog::updateView()
             itemOutput->setText(COLUMN_AMOUNT_INT64, strPad(QString::number(out.tx->vout[out.i].nValue), 15, " ")); // padding so that sorting works correctly
 
             // date
-            int64_t nHeight = nBestHeight - out.nDepth;
-            CBlockIndex* pindex = FindBlockByHeight(nHeight);
             int64_t nTime = pindex->nTime;
             itemOutput->setText(COLUMN_DATE, QDateTime::fromTime_t(nTime).toString("yy-MM-dd hh:mm"));;
             
@@ -828,7 +836,7 @@ void CoinControlDialog::updateView()
             nInputSum    += nInputSize;
 
             // List Mode Weight 
-            itemOutput->setText(COLUMN_WEIGHT, strPad(QString::number(nTxWeight), 8, " ")); 
+            itemOutput->setText(COLUMN_WEIGHT, strPad(QString::number(nDisplayWeight), 8, " ")); 
 
             // Age 
             int64_t age = COIN * (GetTime() - nTime) / (1440 * 60); 

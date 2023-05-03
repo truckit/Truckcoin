@@ -172,8 +172,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     timerMintingWeights->start(30 * 1000);
     connect(timerMintingWeights, SIGNAL(timeout()), this, SLOT(updateMintingWeights()));
     // Set initial values for user and network weights
-    nWeight = 0;
-    nNetworkWeight = 0;
+    nWeight, nHoursToMaturity, nNetworkWeight = 0;
 
     // Progress bar and label for blocks download
     progressBarLabel = new QLabel();
@@ -1318,29 +1317,32 @@ void BitcoinGUI::updateMintingIcon()
     }
     else if (!nWeight)
     {
-        labelMintingIcon->setToolTip(tr("Not minting because you don't have mature coins."));
+        labelMintingIcon->setToolTip(tr("Not minting because you don't have mature coins.<br>Next block matures in %2 hours<br>Network weight is %1").arg(nNetworkWeight).arg(nHoursToMaturity));
         labelMintingIcon->setEnabled(false);
     }
     else if (nLastCoinStakeSearchInterval)
     {
-        uint64_t nEstimateTime = nStakeTargetSpacing * nNetworkWeight / nWeight;
+        uint64 nAccuracyAdjustment = 1; // this is a manual adjustment param if needed to make more accurate
+        uint64 nEstimateTime = nStakeTargetSpacing * nNetworkWeight / nWeight / nAccuracyAdjustment;
 
+        uint64 nRangeLow = nEstimateTime;
+        uint64 nRangeHigh = nEstimateTime * 1.5;
         QString text;
         if (nEstimateTime < 60)
         {
-            text = tr("%n second(s)", "", nEstimateTime);
+            text = tr("%1 - %2 seconds").arg(nRangeLow).arg(nRangeHigh);
         }
         else if (nEstimateTime < 60*60)
         {
-            text = tr("%n minute(s)", "", nEstimateTime/60);
+            text = tr("%1 - %2 minutes").arg(nRangeLow / 60).arg(nRangeHigh / 60);
         }
         else if (nEstimateTime < 24*60*60)
         {
-            text = tr("%n hour(s)", "", nEstimateTime/(60*60));
+            text = tr("%1 - %2 hours").arg(nRangeLow / (60*60)).arg(nRangeHigh / (60*60));
         }
         else
         {
-            text = tr("%n day(s)", "", nEstimateTime/(60*60*24));
+            text = tr("%1 - %2 days").arg(nRangeLow / (60*60*24)).arg(nRangeHigh / (60*60*24));
         }
 
         labelMintingIcon->setEnabled(true);
@@ -1361,7 +1363,7 @@ void BitcoinGUI::updateMintingWeights()
         nWeight = 0;
 
         if (pwalletMain)
-            pwalletMain->GetStakeWeight2(*pwalletMain, nMinMax, nMinMax, nWeight);
+            pwalletMain->GetStakeWeight2(*pwalletMain, nMinMax, nMinMax, nWeight, nHoursToMaturity);
 
         nNetworkWeight = GetPoSKernelPS();
     }

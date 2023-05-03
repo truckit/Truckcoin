@@ -106,9 +106,9 @@ public:
         nMasterKeyMaxID = 0;
         pwalletdbEncryption = NULL;
         nOrderPosNext = 0;
-		fWalletUnlockMintOnly = false;
-		fSplitBlock = false;
-		nHashDrift = 60;
+        fWalletUnlockMintOnly = false;
+        fSplitBlock = false;
+        nHashDrift = 60;
     }
     CWallet(std::string strWalletFileIn)
     {
@@ -119,9 +119,9 @@ public:
         nMasterKeyMaxID = 0;
         pwalletdbEncryption = NULL;
         nOrderPosNext = 0;
-		fWalletUnlockMintOnly = false;
-		fSplitBlock = false;
-		nHashDrift = 60;		
+        fWalletUnlockMintOnly = false;
+        fSplitBlock = false;
+        nHashDrift = 60;		
     }
 
     std::map<uint256, CWalletTx> mapWallet;
@@ -131,7 +131,7 @@ public:
     std::map<CTxDestination, std::string> mapAddressBook;
 
     CPubKey vchDefaultKey;
-	int64_t nTimeFirstKey;
+    int64_t nTimeFirstKey;
 
     // check whether we are allowed to upgrade (or already support) to the named feature
     bool CanSupportFeature(enum WalletFeature wf) { return nWalletMaxVersion >= wf; }
@@ -160,8 +160,8 @@ public:
     bool Unlock(const SecureString& strWalletPassphrase);
     bool ChangeWalletPassphrase(const SecureString& strOldWalletPassphrase, const SecureString& strNewWalletPassphrase);
     bool EncryptWallet(const SecureString& strWalletPassphrase);
-	
-	void GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const;
+
+    void GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const;
 
     /** Increment the next transaction order id
         @return next transaction order id
@@ -194,9 +194,9 @@ public:
     bool CreateTransaction(CScript scriptPubKey, int64_t nValue, CWalletTx& wtxNew, CReserveKey& reservekey, int64_t& nFeeRet, const CCoinControl *coinControl=NULL);
     bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey);
     bool GetStakeWeight(const CKeyStore& keystore, uint64_t& nMinWeight, uint64_t& nMaxWeight, uint64_t& nWeight);
-	bool GetStakeWeight2(const CKeyStore& keystore, uint64_t& nMinWeight, uint64_t& nMaxWeight, uint64_t& nWeight);
+    bool GetStakeWeight2(const CKeyStore& keystore, uint64_t& nMinWeight, uint64_t& nMaxWeight, uint64_t& nWeight, uint64_t& nHoursToMaturity);
     bool CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int64_t nSearchInterval, CTransaction& txNew);
-	bool GetStakeWeightFromValue(const int64_t& nTime, const int64_t& nValue, uint64_t& nWeight);
+    bool GetStakeWeightFromValue(const int64_t& nTime, const int64_t& nValue, uint64_t& nWeight);
     std::string SendMoney(CScript scriptPubKey, int64_t nValue, CWalletTx& wtxNew, bool fAskFee=false);
     std::string SendMoneyToDestination(const CTxDestination &address, int64_t nValue, CWalletTx& wtxNew, bool fAskFee=false);
 
