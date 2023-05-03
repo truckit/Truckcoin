@@ -82,22 +82,23 @@ private:
     int nWalletMaxVersion;
 
 public:
+    bool MintableCoins();
     mutable CCriticalSection cs_wallet;
 
     bool fFileBacked;
     std::string strWalletFile;
-	bool fWalletUnlockMintOnly;
-	bool fSplitBlock;
+    bool fWalletUnlockMintOnly;
+    bool fSplitBlock;
 
     std::set<int64_t> setKeyPool;
-	std::map<CKeyID, CKeyMetadata> mapKeyMetadata;
+    std::map<CKeyID, CKeyMetadata> mapKeyMetadata;
 
 
     typedef std::map<unsigned int, CMasterKey> MasterKeyMap;
     MasterKeyMap mapMasterKeys;
     unsigned int nMasterKeyMaxID;
-	
-	unsigned int nHashDrift;
+
+    unsigned int nHashDrift;
 
     CWallet()
     {
