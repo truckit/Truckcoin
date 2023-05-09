@@ -1773,6 +1773,9 @@ bool CBlock::ConnectBlock(CBlockIndex* pindex, CCoinsViewCache &view, bool fJust
 
     // BIP16 always active
     bool fStrictPayToScriptHash = true;
+
+    unsigned int flags = SCRIPT_VERIFY_NOCACHE |
+                         (fStrictPayToScriptHash ? SCRIPT_VERIFY_P2SH : SCRIPT_VERIFY_NONE);
    
     CBlockUndo blockundo;
     
@@ -1815,7 +1818,7 @@ bool CBlock::ConnectBlock(CBlockIndex* pindex, CCoinsViewCache &view, bool fJust
                 nFees += nTxValueIn - nTxValueOut;
 
             std::vector<CScriptCheck> vChecks;
-            if (!tx.CheckInputs(view, fScriptChecks, fStrictPayToScriptHash ? SCRIPT_VERIFY_P2SH : SCRIPT_VERIFY_NONE, nScriptCheckThreads ? &vChecks : NULL, this))
+            if (!tx.CheckInputs(view, fScriptChecks, flags, nScriptCheckThreads ? &vChecks : NULL, this))
                 return false;
             control.Add(vChecks);
         }
