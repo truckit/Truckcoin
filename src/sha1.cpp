@@ -4,23 +4,11 @@
 
 #include "sha1.h"
 
+#include "common.h"
 #include <string.h>
 
 // Internal implementation code.
 namespace {
-
-/** Read 4 bytes, and interpret them as a 32-bit unsigned big-endian integer. */
-uint32_t inline ReadBE32(const unsigned char *data) {
-    return ((uint32_t)data[0] << 24 | (uint32_t)data[1] << 16 | (uint32_t)data[2] << 8 | (uint32_t)data[3]);
-}
-
-/** Write a 32-bit unsigned big-endian integer. */
-void inline WriteBE32(unsigned char *data, uint32_t x) {
-    data[0] = x >> 24;
-    data[1] = x >> 16;
-    data[2] = x >> 8;
-    data[3] = x;
-}
 
 /// Internal SHA-1 implementation.
 namespace sha1 {

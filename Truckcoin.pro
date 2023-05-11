@@ -185,6 +185,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/scrypt_mine.h \
     src/pbkdf2.h \
     src/serialize.h \
+    src/common.h \
     src/sha1.h \
     src/sha256.h \
     src/hmac_sha256.h \
