@@ -77,6 +77,9 @@ static const sph_u32 V_INIT[5][8] = {
 	}
 };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-const-variable="
+
 static const sph_u32 RC00[8] = {
 	SPH_C32(0x303994a6), SPH_C32(0xc0e65299),
 	SPH_C32(0x6cc33a12), SPH_C32(0xdc56983e),
@@ -150,6 +153,8 @@ static const sph_u32 RC34[8] = {
 	SPH_C32(0xfe191be2), SPH_C32(0x3cb226e5),
 	SPH_C32(0x5944a28e), SPH_C32(0xa1c4c355)
 };
+
+#pragma GCC diagnostic pop
 
 #if SPH_LUFFA_PARALLEL
 
