@@ -108,7 +108,7 @@ int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const unsigned ch
     if (!BN_bin2bn(msg, msglen, e)) { ret=-1; goto err; }
     if (8*msglen > n) BN_rshift(e, e, 8-(n & 7));
     zero = BN_CTX_get(ctx);
-    if (!BN_zero(zero)) { ret=-1; goto err; }
+    if (!BN_set_word(zero, 0)) { ret=-1; goto err; }
     if (!BN_mod_sub(e, zero, e, order, ctx)) { ret=-1; goto err; }
     rr = BN_CTX_get(ctx);
     if (!BN_mod_inverse(rr, sig_r, order, ctx)) { ret=-1; goto err; }
@@ -132,9 +132,9 @@ err:
     return ret;
 }
 
-void CKey::SetCompressedPubKey()
+void CKey::SetCompressedPubKey(bool fCompressed)
 {
-    EC_KEY_set_conv_form(pkey, POINT_CONVERSION_COMPRESSED);
+    EC_KEY_set_conv_form(pkey, fCompressed ? POINT_CONVERSION_COMPRESSED : POINT_CONVERSION_UNCOMPRESSED);
     fCompressedPubKey = true;
 }
 
@@ -270,11 +270,11 @@ CPrivKey CKey::GetPrivKey() const
 
 bool CKey::SetPubKey(const CPubKey& vchPubKey)
 {
-    const unsigned char* pbegin = &vchPubKey.vchPubKey[0];
-    if (o2i_ECPublicKey(&pkey, &pbegin, vchPubKey.vchPubKey.size()))
+    const unsigned char* pbegin = vchPubKey.begin();
+    if (o2i_ECPublicKey(&pkey, &pbegin, vchPubKey.size()))
     {
         fSet = true;
-        if (vchPubKey.vchPubKey.size() == 33)
+        if (vchPubKey.size() == 33)
             SetCompressedPubKey();
         return true;
     }
@@ -288,11 +288,13 @@ CPubKey CKey::GetPubKey() const
     int nSize = i2o_ECPublicKey(pkey, NULL);
     if (!nSize)
         throw key_error("CKey::GetPubKey() : i2o_ECPublicKey failed");
-    std::vector<unsigned char> vchPubKey(nSize, 0);
-    unsigned char* pbegin = &vchPubKey[0];
+    assert(nSize <= 65);
+    CPubKey ret;
+    unsigned char *pbegin = ret.begin();
     if (i2o_ECPublicKey(pkey, &pbegin) != nSize)
         throw key_error("CKey::GetPubKey() : i2o_ECPublicKey returned unexpected size");
-    return CPubKey(vchPubKey);
+    assert((int)ret.size() == nSize);
+    return ret;
 }
 
 bool CKey::Sign(uint256 hash, std::vector<unsigned char>& vchSig)

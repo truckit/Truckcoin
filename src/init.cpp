@@ -3,7 +3,7 @@
 // Copyright (c) 2013-2019 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-#include "db.h"
+#include "txdb.h"
 #include "walletdb.h"
 #include "bitcoinrpc.h"
 #include "net.h"
@@ -55,6 +55,8 @@ void StartShutdown()
 #endif
 }
 
+static CCoinsViewDB *pcoinsdbview;
+
 void Shutdown(void* parg)
 {
     static CCriticalSection cs_Shutdown;
@@ -78,7 +80,18 @@ void Shutdown(void* parg)
         fShutdown = true;
         nTransactionsUpdated++;
         bitdb.Flush(false);
+        {
+            LOCK(cs_main);
+            ThreadScriptCheckQuit();
+        }
         StopNode();
+        {
+            LOCK(cs_main);
+            pcoinsTip->Flush();
+            pblocktree->Flush();
+            delete pcoinsTip;
+            delete pcoinsdbview;
+        }
         bitdb.Flush(true);
         boost::filesystem::remove(GetPidFile());
         UnregisterWallet(pwalletMain);
@@ -260,7 +273,6 @@ std::string HelpMessage()
         "  -upnp                  " + _("Use UPnP to map the listening port (default: 0)") + "\n" +
 #endif
 #endif
-        "  -detachdb              " + _("Detach block and address databases. Increases shutdown time (default: 0)") + "\n" +
         "  -paytxfee=<amt>        " + _("Fee per KB to add to transactions you send") + "\n" +
 #ifdef QT_GUI
         "  -server                " + _("Accept command line and JSON-RPC commands") + "\n" +
@@ -290,8 +302,11 @@ std::string HelpMessage()
     	"  -splitthreshold=<n>    " + _("Set stake split threshold within range (default: 300, max: 10000)") + "\n" +
         "  -salvagewallet         " + _("Attempt to recover private keys from a corrupt wallet.dat") + "\n" +
         "  -checkblocks=<n>       " + _("How many blocks to check at startup (default: 2500, 0 = all)") + "\n" +
-        "  -checklevel=<n>        " + _("How thorough the block verification is (0-6, default: 1)") + "\n" +
+        "  -checklevel=<n>        " + _("How thorough the block verification is (0-4, default: 3)") + "\n" +
+        "  -txindex               " + _("Maintain a full transaction index (default: 1)") + "\n" +
         "  -loadblock=<file>      " + _("Imports blocks from external blk000?.dat file") + "\n" +
+        "  -reindex               " + _("Rebuild blockchain index from current blk000??.dat files") + "\n" +
+        "  -par=N                 " + _("Set the number of script verification threads (1-16, 0=auto, default: 0)") + "\n" +
 
         "\n" + _("Block creation options:") + "\n" +
         "  -blockminsize=<n>      "   + _("Set minimum block size in bytes (default: 0)") + "\n" +
@@ -305,6 +320,80 @@ std::string HelpMessage()
         "  -rpcsslciphers=<ciphers>                 " + _("Acceptable ciphers (default: TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!AH:!3DES:@STRENGTH)") + "\n";
 
     return strUsage;
+}
+
+struct CImportingNow
+{
+    CImportingNow() {
+        assert(fImporting == false);
+        fImporting = true;
+    }
+
+    ~CImportingNow() {
+        assert(fImporting == true);
+        fImporting = false;
+    }
+};
+
+struct CImportData {
+    std::vector<boost::filesystem::path> vFiles;
+};
+
+void ThreadImport(void *data) {
+    CImportData *import = reinterpret_cast<CImportData*>(data);
+
+    RenameThread("truckcoin-loadblk");
+
+    vnThreadsRunning[THREAD_IMPORT]++;
+
+    // -reindex
+    if (fReindex) {
+        CImportingNow imp;
+        int nFile = 0;
+        while (!fShutdown) {
+            CDiskBlockPos pos(nFile, 0);
+            FILE *file = OpenBlockFile(pos, true);
+            if (!file)
+                break;
+            printf("Reindexing block file blk%05u.dat...\n", (unsigned int)nFile);
+            LoadExternalBlockFile(file, &pos);
+            nFile++;
+        }
+        if (!fShutdown) {
+            pblocktree->WriteReindexing(false);
+            fReindex = false;
+            printf("Reindexing finished\n");
+        }
+    }
+
+    // hardcoded $DATADIR/bootstrap.dat
+    boost::filesystem::path pathBootstrap = GetDataDir() / "bootstrap.dat";
+    if (boost::filesystem::exists(pathBootstrap) && !fShutdown) {
+        FILE *file = fopen(pathBootstrap.string().c_str(), "rb");
+        if (file) {
+            CImportingNow imp;
+            boost::filesystem::path pathBootstrapOld = GetDataDir() / "bootstrap.dat.old";
+            printf("Importing bootstrap.dat...\n");
+            LoadExternalBlockFile(file);
+            RenameOver(pathBootstrap, pathBootstrapOld);
+        }
+    }
+
+    // -loadblock=
+    for (boost::filesystem::path &path : import->vFiles) {
+        if (fShutdown)
+            break;
+        FILE *file = fopen(path.string().c_str(), "rb");
+        if (file) {
+            CImportingNow imp;
+            printf("Importing %s...\n", path.string().c_str());
+            LoadExternalBlockFile(file);
+        }
+    }
+
+    delete import;
+
+    vnThreadsRunning[THREAD_IMPORT]--;
 }
 
 /** Initialize bitcoin.
@@ -406,14 +495,21 @@ bool AppInit2()
     // ********************************************************* Step 3: parameter-to-internal-flags
 
     fDebug = GetBoolArg("-debug");
+    
+    // -par=0 means autodetect, but nScriptCheckThreads==0 means no concurrency
+    nScriptCheckThreads = GetArg("-par", 0);
+    if (nScriptCheckThreads == 0)
+        nScriptCheckThreads = boost::thread::hardware_concurrency();
+    if (nScriptCheckThreads <= 1) 
+        nScriptCheckThreads = 0;
+    else if (nScriptCheckThreads > MAX_SCRIPTCHECK_THREADS)
+        nScriptCheckThreads = MAX_SCRIPTCHECK_THREADS;
 
     // -debug implies fDebug*
     if (fDebug)
         fDebugNet = true;
     else
         fDebugNet = GetBoolArg("-debugnet");
-
-    bitdb.SetDetach(GetBoolArg("-detachdb", false));
 
 #if !defined(WIN32) && !defined(QT_GUI)
     fDaemon = GetBoolArg("-daemon");
@@ -513,12 +609,18 @@ bool AppInit2()
 
     if (fDaemon)
         fprintf(stdout, "Truckcoin server starting\n");
+    
+    if (nScriptCheckThreads) {
+        printf("Using %u threads for script verification\n", nScriptCheckThreads);
+        for (int i=0; i<nScriptCheckThreads-1; i++)
+            NewThread(ThreadScriptCheck, NULL);
+    }
 
-    int64 nStart;
+    int64_t nStart;
 
-    // ********************************************************* Step 5: verify database integrity
+    // ********************************************************* Step 5: verify wallet database integrity
 
-    uiInterface.InitMessage(_("Verifying database integrity..."));
+    uiInterface.InitMessage(_("Verifying wallet integrity..."));
 
     if (!bitdb.Open(GetDataDir()))
     {
@@ -535,7 +637,7 @@ bool AppInit2()
             return false;
     }
 
-    if (filesystem::exists(GetDataDir() / strWalletFileName))
+    if (boost::filesystem::exists(GetDataDir() / strWalletFileName))
     {
         CDBEnv::VerifyResult r = bitdb.Verify(strWalletFileName, CWalletDB::Recover);
         if (r == CDBEnv::RECOVER_OK)
@@ -549,9 +651,9 @@ bool AppInit2()
         if (r == CDBEnv::RECOVER_FAIL)
             return InitError(_("wallet.dat corrupt, salvage failed"));
     }
-	
+
         // Split threshold
-	    if (mapArgs.count("-splitthreshold")) 
+        if (mapArgs.count("-splitthreshold")) 
     { 
        if (!ParseMoney(mapArgs["-splitthreshold"], nSplitThreshold)) 
            return InitError(strprintf(_("Invalid amount for -splitthreshold=<amount>: '%s'"), mapArgs["-splitthreshold"].c_str())); 
@@ -559,7 +661,7 @@ bool AppInit2()
            if (nSplitThreshold > MAX_SPLIT_AMOUNT) 
                nSplitThreshold = MAX_SPLIT_AMOUNT; 
        } 
-       printf("splitthreshold set to %lld\n",nSplitThreshold); 
+       printf("splitthreshold set to %" PRId64 "\n",nSplitThreshold); 
     } 
 
     // ********************************************************* Step 6: network initialization
@@ -571,7 +673,7 @@ bool AppInit2()
 
     if (mapArgs.count("-onlynet")) {
         std::set<enum Network> nets;
-        BOOST_FOREACH(std::string snet, mapMultiArgs["-onlynet"]) {
+        for (std::string snet : mapMultiArgs["-onlynet"]) {
             enum Network net = ParseNetwork(snet);
             if (net == NET_UNROUTABLE)
                 return InitError(strprintf(_("Unknown network specified in -onlynet: '%s'"), snet.c_str()));
@@ -635,7 +737,7 @@ bool AppInit2()
     {
         std::string strError;
         if (mapArgs.count("-bind")) {
-            BOOST_FOREACH(std::string strBind, mapMultiArgs["-bind"]) {
+            for (std::string strBind : mapMultiArgs["-bind"]) {
                 CService addrBind;
                 if (!Lookup(strBind.c_str(), addrBind, GetListenPort(), false))
                     return InitError(strprintf(_("Cannot resolve -bind address: '%s'"), strBind.c_str()));
@@ -657,7 +759,7 @@ bool AppInit2()
 
     if (mapArgs.count("-externalip"))
     {
-        BOOST_FOREACH(string strAddr, mapMultiArgs["-externalip"]) {
+        for (string strAddr : mapMultiArgs["-externalip"]) {
             CService addrLocal(strAddr, GetListenPort(), fNameLookup);
             if (!addrLocal.IsValid())
                 return InitError(strprintf(_("Cannot resolve -externalip address: '%s'"), strAddr.c_str()));
@@ -667,7 +769,7 @@ bool AppInit2()
 
     if (mapArgs.count("-reservebalance")) // reserve balance amount
     {
-        int64 nReserveBalance = 0;
+        int64_t nReserveBalance = 0;
         if (!ParseMoney(mapArgs["-reservebalance"], nReserveBalance))
         {
             InitError(_("Invalid amount for -reservebalance=<amount>"));
@@ -681,13 +783,15 @@ bool AppInit2()
             InitError(_("Unable to sign checkpoint, wrong checkpointkey?\n"));
     }
 
-    BOOST_FOREACH(string strDest, mapMultiArgs["-seednode"])
+    for (string strDest : mapMultiArgs["-seednode"])
         AddOneShot(strDest);
 
     // TODO: replace this by DNSseed
     // AddOneShot(string(""));
 
     // ********************************************************* Step 7: load blockchain
+        
+    fReindex = GetBoolArg("-reindex");
 
     if (!bitdb.Open(GetDataDir()))
     {
@@ -696,20 +800,44 @@ bool AppInit2()
                                  " everything from it except for wallet.dat."), strDataDir.c_str());
         return InitError(msg);
     }
+    
+    // create database directories if not exist
+    boost::filesystem::path blocksDir = GetDataDir() / "blocks";
+    if (!boost::filesystem::exists(blocksDir))
+        boost::filesystem::create_directories(blocksDir);
 
-    if (GetBoolArg("-loadblockindextest"))
-    {
-        CTxDB txdb("r");
-        txdb.LoadBlockIndex();
-        PrintBlockTree();
-        return false;
-    }
+    // cache size calculations
+    int64_t nTotalCache = GetArg("-dbcache", 25) << 20;
+    if (nTotalCache < (1 << 22))
+        nTotalCache = (1 << 22); // total cache cannot be less than 4 MiB
+    int64_t nBlockTreeDBCache = nTotalCache / 8;
+    if (nBlockTreeDBCache > (1 << 21) && !GetBoolArg("-txindex", false))
+        nBlockTreeDBCache = (1 << 21); // block tree db cache shouldn't be larger than 2 MiB
+    nTotalCache -= nBlockTreeDBCache;
+    int64_t nCoinDBCache = nTotalCache / 2; // use half of the remaining cache for coindb cache
+    nTotalCache -= nCoinDBCache;
+    nCoinCacheSize = nTotalCache / 300; // coins in memory require around 300 bytes
 
     uiInterface.InitMessage(_("Loading block index..."));
     printf("Loading block index...\n");
     nStart = GetTimeMillis();
+    pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
+    pcoinsdbview = new CCoinsViewDB(nCoinDBCache, false, fReindex);
+    pcoinsTip = new CCoinsViewCache(*pcoinsdbview);
+
+    if (fReindex)
+        pblocktree->WriteReindexing(true);
+    
     if (!LoadBlockIndex())
-        return InitError(_("Error loading blkindex.dat"));
+        return InitError(_("Error loading block database"));
+
+    uiInterface.InitMessage(_("Verifying block database integrity..."));
+
+    if (!VerifyDB())
+        return InitError(_("Corrupted block database detected. Please restart the client with -reindex."));
+    
+    if (mapArgs.count("-txindex") && fTxIndex != GetBoolArg("-txindex", false))
+        return InitError(_("You need to rebuild the databases using -reindex to change -txindex"));
 
     // as LoadBlockIndex can take several minutes, it's possible the user
     // requested to kill truckcoin-qt during the last operation. If so, exit.
@@ -719,7 +847,7 @@ bool AppInit2()
         printf("Shutdown requested. Exiting.\n");
         return false;
     }
-    printf(" block index %15lldms\n", GetTimeMillis() - nStart);
+    printf(" block index %15" PRId64 "ms\n", GetTimeMillis() - nStart);
 
     if (GetBoolArg("-printblockindex") || GetBoolArg("-printblocktree"))
     {
@@ -810,7 +938,7 @@ bool AppInit2()
     }
 
     printf("%s", strErrors.str().c_str());
-    printf(" wallet      %15lldms\n", GetTimeMillis() - nStart);
+    printf(" wallet      %15" PRId64 "ms\n", GetTimeMillis() - nStart);
 
     RegisterWallet(pwalletMain);
 
@@ -830,34 +958,23 @@ bool AppInit2()
         printf("Rescanning last %i blocks (from block %i)...\n", pindexBest->nHeight - pindexRescan->nHeight, pindexRescan->nHeight);
         nStart = GetTimeMillis();
         pwalletMain->ScanForWalletTransactions(pindexRescan, true);
-        printf(" rescan      %15lldms\n", GetTimeMillis() - nStart);
+        printf(" rescan      %15" PRId64 "ms\n", GetTimeMillis() - nStart);
     }
 
     // ********************************************************* Step 9: import blocks
+    
+    uiInterface.InitMessage(_("Importing blocks from block database..."));
+    if (!ConnectBestBlock())
+        strErrors << "Failed to connect best block";
+    
+    CImportData *pimport = new CImportData();
 
     if (mapArgs.count("-loadblock"))
     {
-        uiInterface.InitMessage(_("Importing blockchain data file."));
-
-        BOOST_FOREACH(string strFile, mapMultiArgs["-loadblock"])
-        {
-            FILE *file = fopen(strFile.c_str(), "rb");
-            if (file)
-                LoadExternalBlockFile(file);
-        }
+        for (string strFile : mapMultiArgs["-loadblock"])
+            pimport->vFiles.push_back(strFile);
     }
-
-    filesystem::path pathBootstrap = GetDataDir() / "bootstrap.dat";
-    if (filesystem::exists(pathBootstrap)) {
-        uiInterface.InitMessage(_("Importing bootstrap blockchain data file."));
-
-        FILE *file = fopen(pathBootstrap.string().c_str(), "rb");
-        if (file) {
-            filesystem::path pathBootstrapOld = GetDataDir() / "bootstrap.dat.old";
-            LoadExternalBlockFile(file);
-            RenameOver(pathBootstrap, pathBootstrapOld);
-        }
-    }
+    NewThread(ThreadImport, pimport);
 
     // ********************************************************* Step 10: load peers
 
@@ -871,7 +988,7 @@ bool AppInit2()
             printf("Invalid or missing peers.dat; recreating\n");
     }
 
-    printf("Loaded %i addresses from peers.dat  %lldms\n",
+    printf("Loaded %i addresses from peers.dat  %" PRId64 "ms\n",
            addrman.size(), GetTimeMillis() - nStart);
 
     // ********************************************************* Step 11: start node

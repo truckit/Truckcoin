@@ -24,23 +24,23 @@ bool TransactionRecord::showTransaction(const CWalletTx &wtx)
 QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *wallet, const CWalletTx &wtx)
 {
     QList<TransactionRecord> parts;
-    int64 nTime = wtx.GetTxTime();
-    int64 nCredit = wtx.GetCredit(true);
-    int64 nDebit = wtx.GetDebit();
-    int64 nNet = nCredit - nDebit;
+    int64_t nTime = wtx.GetTxTime();
+    int64_t nCredit = wtx.GetCredit(true);
+    int64_t nDebit = wtx.GetDebit();
+    int64_t nNet = nCredit - nDebit;
     uint256 hash = wtx.GetHash();
     std::map<std::string, std::string> mapValue = wtx.mapValue;
 
     if (wtx.IsCoinStake())
     {
         TransactionRecord txrCoinStake = TransactionRecord(hash, nTime, TransactionRecord::StakeMint, "", -nDebit, wtx.GetValueOut());
-		CTxDestination address;
-		if (ExtractDestination(wtx.vout[1].scriptPubKey, address))
+        CTxDestination address;
+        if (ExtractDestination(wtx.vout[1].scriptPubKey, address))
         {
-			txrCoinStake.address = CBitcoinAddress(address).ToString();
+            txrCoinStake.address = CBitcoinAddress(address).ToString();
         }
-		
-		// Stake generation
+
+        // Stake generation
         parts.append(txrCoinStake);
     }
     else if (nNet > 0 || wtx.IsCoinBase())
@@ -48,7 +48,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
         //
         // Credit
         //
-        BOOST_FOREACH(const CTxOut& txout, wtx.vout)
+        for (const CTxOut& txout : wtx.vout)
         {
             if(wallet->IsMine(txout))
             {
@@ -81,32 +81,32 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
     else
     {
         bool fAllFromMe = true;
-        BOOST_FOREACH(const CTxIn& txin, wtx.vin)
+        for (const CTxIn& txin : wtx.vin)
             fAllFromMe = fAllFromMe && wallet->IsMine(txin);
 
         bool fAllToMe = true;
-        BOOST_FOREACH(const CTxOut& txout, wtx.vout)
+        for (const CTxOut& txout : wtx.vout)
             fAllToMe = fAllToMe && wallet->IsMine(txout);
 
         if (fAllFromMe && fAllToMe)
         {
             // Payment to self
-            int64 nChange = wtx.GetChange();	
-			TransactionRecord sub(hash, nTime);
-			sub.type = TransactionRecord::SendToSelf;
-			sub.credit = nCredit - nChange;
-			sub.debit =  -(nDebit - nChange);		
-			CTxDestination address;
-			if (ExtractDestination(wtx.vout[0].scriptPubKey, address))
-				 sub.address = CBitcoinAddress(address).ToString();
-			parts.append(sub);
+            int64_t nChange = wtx.GetChange();	
+            TransactionRecord sub(hash, nTime);
+            sub.type = TransactionRecord::SendToSelf;
+            sub.credit = nCredit - nChange;
+            sub.debit =  -(nDebit - nChange);		
+            CTxDestination address;
+            if (ExtractDestination(wtx.vout[0].scriptPubKey, address))
+                sub.address = CBitcoinAddress(address).ToString();
+            parts.append(sub);
         }
         else if (fAllFromMe)
         {
             //
             // Debit
             //
-            int64 nTxFee = nDebit - wtx.GetValueOut();
+            int64_t nTxFee = nDebit - wtx.GetValueOut();
 
             for (unsigned int nOut = 0; nOut < wtx.vout.size(); nOut++)
             {
@@ -135,7 +135,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
                     sub.address = mapValue["to"];
                 }
 
-                int64 nValue = txout.nValue;
+                int64_t nValue = txout.nValue;
                 /* Add fee to first output */
                 if (nTxFee > 0)
                 {
@@ -211,7 +211,7 @@ void TransactionRecord::updateStatus(const CWalletTx &wtx)
     // For generated transactions, determine maturity
     if(type == TransactionRecord::Generated || type == TransactionRecord::StakeMint)
     {
-        int64 nCredit = wtx.GetCredit(true);
+        int64_t nCredit = wtx.GetCredit(true);
         if (nCredit == 0)
         {
             status.maturity = TransactionStatus::Immature;

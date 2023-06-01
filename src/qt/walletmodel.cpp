@@ -161,11 +161,11 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         return DuplicateAddress;
     }
 
-    int64 nBalance = 0;
+    int64_t nBalance = 0;
     std::vector<COutput> vCoins;
     wallet->AvailableCoins(vCoins, true, coinControl);
 
-    BOOST_FOREACH(const COutput& out, vCoins)
+    for (const COutput& out : vCoins)
         nBalance += out.tx->vout[out.i].nValue;
      if(total > nBalance)
     {
@@ -181,7 +181,7 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         LOCK2(cs_main, wallet->cs_wallet);
 
         // Sendmany
-        std::vector<std::pair<CScript, int64> > vecSend;
+        std::vector<std::pair<CScript, int64_t> > vecSend;
         foreach(const SendCoinsRecipient &rcp, recipients)
         {
             CScript scriptPubKey;
@@ -191,7 +191,7 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
 
         CWalletTx wtx;
         CReserveKey keyChange(wallet);
-        int64 nFeeRequired = 0;
+        int64_t nFeeRequired = 0;
         bool fCreated = wallet->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, nSplitBlock, coinControl);
 
         if(!fCreated)
@@ -326,7 +326,7 @@ bool WalletModel::importWallet(const QString &filename)
   return ImportWallet(wallet, filename.toLocal8Bit().data());
 }
 
-void WalletModel::getStakeWeightFromValue(const int64& nTime, const int64& nValue, uint64& nWeight) 
+void WalletModel::getStakeWeightFromValue(const int64_t& nTime, const int64_t& nValue, uint64_t& nWeight) 
 { 
 	wallet->GetStakeWeightFromValue(nTime, nValue, nWeight); 
 } 
@@ -341,12 +341,12 @@ bool WalletModel::getSplitBlock()
 	return wallet->fSplitBlock; 
  }
 
-void WalletModel::checkWallet(int& nMismatchSpent, int64& nBalanceInQuestion, int& nOrphansFound) 
+void WalletModel::checkWallet(int& nMismatchSpent, int64_t& nBalanceInQuestion, int& nOrphansFound) 
 { 
     wallet->FixSpentCoins(nMismatchSpent, nBalanceInQuestion, nOrphansFound, true); 
 } 
  
-void WalletModel::repairWallet(int& nMismatchSpent, int64& nBalanceInQuestion, int& nOrphansFound) 
+void WalletModel::repairWallet(int& nMismatchSpent, int64_t& nBalanceInQuestion, int& nOrphansFound) 
 { 
     wallet->FixSpentCoins(nMismatchSpent, nBalanceInQuestion, nOrphansFound); 
 } 
@@ -379,17 +379,17 @@ static void NotifyTransactionChanged(WalletModel *walletmodel, CWallet *wallet, 
 void WalletModel::subscribeToCoreSignals()
 {
     // Connect signals to wallet
-    wallet->NotifyStatusChanged.connect(boost::bind(&NotifyKeyStoreStatusChanged, this, _1));
-    wallet->NotifyAddressBookChanged.connect(boost::bind(NotifyAddressBookChanged, this, _1, _2, _3, _4, _5));
-    wallet->NotifyTransactionChanged.connect(boost::bind(NotifyTransactionChanged, this, _1, _2, _3));
+    wallet->NotifyStatusChanged.connect(boost::bind(&NotifyKeyStoreStatusChanged, this, boost::placeholders::_1));
+    wallet->NotifyAddressBookChanged.connect(boost::bind(NotifyAddressBookChanged, this, boost::placeholders::_1, boost::placeholders::_2, boost::placeholders::_3, boost::placeholders::_4, boost::placeholders::_5));
+    wallet->NotifyTransactionChanged.connect(boost::bind(NotifyTransactionChanged, this, boost::placeholders::_1, boost::placeholders::_2, boost::placeholders::_3));
 }
 
 void WalletModel::unsubscribeFromCoreSignals()
 {
     // Disconnect signals from wallet
-    wallet->NotifyStatusChanged.disconnect(boost::bind(&NotifyKeyStoreStatusChanged, this, _1));
-    wallet->NotifyAddressBookChanged.disconnect(boost::bind(NotifyAddressBookChanged, this, _1, _2, _3, _4, _5));
-    wallet->NotifyTransactionChanged.disconnect(boost::bind(NotifyTransactionChanged, this, _1, _2, _3));
+    wallet->NotifyStatusChanged.disconnect(boost::bind(&NotifyKeyStoreStatusChanged, this, boost::placeholders::_1));
+    wallet->NotifyAddressBookChanged.disconnect(boost::bind(NotifyAddressBookChanged, this, boost::placeholders::_1, boost::placeholders::_2, boost::placeholders::_3, boost::placeholders::_4, boost::placeholders::_5));
+    wallet->NotifyTransactionChanged.disconnect(boost::bind(NotifyTransactionChanged, this, boost::placeholders::_1, boost::placeholders::_2, boost::placeholders::_3));
 }
 
 // WalletModel::UnlockContext implementation
@@ -444,7 +444,7 @@ void WalletModel::UnlockContext::CopyFrom(const UnlockContext& rhs)
  // returns a list of COutputs from COutPoints
  void WalletModel::getOutputs(const std::vector<COutPoint>& vOutpoints, std::vector<COutput>& vOutputs)
  {
-     BOOST_FOREACH(const COutPoint& outpoint, vOutpoints)
+     for (const COutPoint& outpoint : vOutpoints)
      {
          if (!wallet->mapWallet.count(outpoint.hash)) continue;
          COutput out(&wallet->mapWallet[outpoint.hash], outpoint.n, wallet->mapWallet[outpoint.hash].GetDepthInMainChain());
@@ -460,14 +460,14 @@ void WalletModel::UnlockContext::CopyFrom(const UnlockContext& rhs)
      std::vector<COutPoint> vLockedCoins;
  
      // add locked coins
-     BOOST_FOREACH(const COutPoint& outpoint, vLockedCoins)
+     for (const COutPoint& outpoint : vLockedCoins)
      {
          if (!wallet->mapWallet.count(outpoint.hash)) continue;
          COutput out(&wallet->mapWallet[outpoint.hash], outpoint.n, wallet->mapWallet[outpoint.hash].GetDepthInMainChain());
          vCoins.push_back(out);
      }
  
-     BOOST_FOREACH(const COutput& out, vCoins)
+     for (const COutput& out : vCoins)
      {
          COutput cout = out;
  

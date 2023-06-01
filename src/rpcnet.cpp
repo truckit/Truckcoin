@@ -30,7 +30,7 @@ static void CopyNodeStats(std::vector<CNodeStats>& vstats)
 
     LOCK(cs_vNodes);
     vstats.reserve(vNodes.size());
-    BOOST_FOREACH(CNode* pnode, vNodes) {
+    for (CNode* pnode : vNodes) {
         CNodeStats stats;
         pnode->copyStats(stats);
         vstats.push_back(stats);
@@ -49,21 +49,21 @@ Value getpeerinfo(const Array& params, bool fHelp)
 
     Array ret;
 
-    BOOST_FOREACH(const CNodeStats& stats, vstats) {
+    for (const CNodeStats& stats : vstats) {
         Object obj;
 
         obj.push_back(Pair("addr", stats.addrName));
-        obj.push_back(Pair("services", strprintf("%08llx", stats.nServices)));
-        obj.push_back(Pair("lastsend", (boost::int64_t)stats.nLastSend));
-        obj.push_back(Pair("lastrecv", (boost::int64_t)stats.nLastRecv));
-        obj.push_back(Pair("conntime", (boost::int64_t)stats.nTimeConnected));
-		obj.push_back(Pair("bytessent", (boost::int64_t)stats.nSendBytes)); 
-        obj.push_back(Pair("bytesrecv", (boost::int64_t)stats.nRecvBytes)); 
-        obj.push_back(Pair("blocksrequested", (boost::int64_t)stats.nBlocksRequested)); 
+        obj.push_back(Pair("services", strprintf("%08" PRIx64, stats.nServices)));
+        obj.push_back(Pair("lastsend", (int64_t)stats.nLastSend));
+        obj.push_back(Pair("lastrecv", (int64_t)stats.nLastRecv));
+        obj.push_back(Pair("conntime", (int64_t)stats.nTimeConnected));
+        obj.push_back(Pair("bytessent", (int64_t)stats.nSendBytes)); 
+        obj.push_back(Pair("bytesrecv", (int64_t)stats.nRecvBytes)); 
+        obj.push_back(Pair("blocksrequested", (int64_t)stats.nBlocksRequested)); 
         obj.push_back(Pair("version", stats.nVersion));
         obj.push_back(Pair("subver", stats.strSubVer));
         obj.push_back(Pair("inbound", stats.fInbound));
-        obj.push_back(Pair("releasetime", (boost::int64_t)stats.nReleaseTime));
+        obj.push_back(Pair("releasetime", (int64_t)stats.nReleaseTime));
         obj.push_back(Pair("startingheight", stats.nStartingHeight));
         obj.push_back(Pair("banscore", stats.nMisbehavior));
 
@@ -123,7 +123,7 @@ Value sendalert(const Array& params, bool fHelp)
     // Relay alert
     {
         LOCK(cs_vNodes);
-        BOOST_FOREACH(CNode* pnode, vNodes)
+        for (CNode* pnode : vNodes)
             alert.RelayTo(pnode);
     }
 
@@ -148,8 +148,8 @@ Value getnettotals(const Array& params, bool fHelp)
             "and current time."); 
  
     Object obj; 
-    obj.push_back(Pair("totalbytesrecv", static_cast< boost::uint64_t>(CNode::GetTotalBytesRecv()))); 
-    obj.push_back(Pair("totalbytessent", static_cast<boost::uint64_t>(CNode::GetTotalBytesSent()))); 
-    obj.push_back(Pair("timemillis", static_cast<boost::int64_t>(GetTimeMillis()))); 
+    obj.push_back(Pair("totalbytesrecv", static_cast<uint64_t>(CNode::GetTotalBytesRecv()))); 
+    obj.push_back(Pair("totalbytessent", static_cast<uint64_t>(CNode::GetTotalBytesSent()))); 
+    obj.push_back(Pair("timemillis", static_cast<int64_t>(GetTimeMillis()))); 
     return obj; 
 } 

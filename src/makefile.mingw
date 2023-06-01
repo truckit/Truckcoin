@@ -28,7 +28,7 @@ LIBS= \
  -l ssl \
  -l crypto
 
-DEFS=-DWIN32 -D_WINDOWS -DBOOST_THREAD_USE_LIB -DBOOST_SPIRIT_THREADSAFE -D__NO_SYSTEM_INCLUDES -D__USE_MINGW_ANSI_STDIO
+DEFS=-DWIN32 -D_WINDOWS -DBOOST_THREAD_USE_LIB -DBOOST_SPIRIT_THREADSAFE -D__NO_SYSTEM_INCLUDES -D__USE_MINGW_ANSI_STDIO -D__STDC_FORMAT_MACROS
 DEBUGFLAGS=-g
 CFLAGS=-mthreads -O2 -msse2 -w -Wall -Wextra -Wformat -Wformat-security -Wno-unused-parameter $(DEBUGFLAGS) $(DEFS) $(INCLUDEPATHS)
 LDFLAGS=-Wl,--dynamicbase -Wl,--nxcompat
@@ -60,9 +60,12 @@ OBJS= \
     obj/checkpoints.o \
     obj/netbase.o \
     obj/addrman.o \
+    obj/cleanse.o \
     obj/crypter.o \
     obj/key.o \
     obj/db.o \
+    obj/leveldb.o \
+    obj/txdb.o \
     obj/init.o \
     obj/keystore.o \
     obj/main.o \
@@ -76,11 +79,18 @@ OBJS= \
     obj/rpcwallet.o \
     obj/rpcblockchain.o \
     obj/rpcrawtransaction.o \
+    obj/base58.o \
     obj/script.o \
     obj/sync.o \
     obj/util.o \
     obj/wallet.o \
     obj/walletdb.o \
+    obj/sha1.o \
+    obj/sha256.o \
+    obj/hmac_sha256.o \
+    obj/rfc6979_hmac_sha256.o \
+    obj/ripemd160.o \
+    obj/hash.o \
     obj/noui.o \
     obj/kernel.o \
     obj/pbkdf2.o \
@@ -98,8 +108,12 @@ OBJS= \
 
 all: truckcoind.exe
 
-test check: test_truckcoin.exe FORCE
-	test_truckcoin.exe
+LIBS += $(CURDIR)/leveldb/out-static/libleveldb.a $(CURDIR)/leveldb/out-static/libmemenv.a -lshlwapi
+DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
+DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
+leveldb/out-static/libleveldb.a:
+	cd leveldb; make out-static/libleveldb.a out-static/libmemenv.a; cd ..
+obj/txdb-leveldb.o: leveldb/out-static/libleveldb.a
 
 obj/%.o: %.cpp $(HEADERS)
 	g++ -c $(CFLAGS) -o $@ $<
@@ -116,17 +130,8 @@ obj/scrypt-x86_64.o: scrypt-x86_64.S
 truckcoind.exe: $(OBJS:obj/%=obj/%)
 	g++ $(CFLAGS) $(LDFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS)
 
-TESTOBJS := $(patsubst test/%.cpp,obj-test/%.o,$(wildcard test/*.cpp))
-
-obj-test/%.o: test/%.cpp $(HEADERS)
-	g++ -c $(TESTDEFS) $(CFLAGS) -o $@ $<
-
-test_truckcoin.exe: $(TESTOBJS) $(filter-out obj/init.o,$(OBJS:obj/%=obj/%))
-	g++ $(CFLAGS) $(LDFLAGS) -o $@ $(LIBPATHS) $^ -lboost_unit_test_framework $(LIBS)
-
 clean:
-	-del /Q truckcoin test_truckcoin
+	-del /Q truckcoin
 	-del /Q obj\*
-	-del /Q obj-test\*
 
 FORCE:

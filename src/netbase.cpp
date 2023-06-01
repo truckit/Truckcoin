@@ -7,6 +7,7 @@
 #include "netbase.h"
 #include "util.h"
 #include "sync.h"
+#include "hash.h"
 
 #ifndef WIN32
 #include <sys/fcntl.h>
@@ -915,10 +916,10 @@ std::vector<unsigned char> CNetAddr::GetGroup() const
     return vchRet;
 }
 
-uint64 CNetAddr::GetHash() const
+uint64_t CNetAddr::GetHash() const
 {
     uint256 hash = Hash(&ip[0], &ip[16]);
-    uint64 nRet;
+    uint64_t nRet;
     memcpy(&nRet, &hash, sizeof(nRet));
     return nRet;
 }

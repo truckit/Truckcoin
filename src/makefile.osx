@@ -24,12 +24,8 @@ USE_IPV6:=1
 
 LIBS= -dead_strip
 
-TESTDEFS = -DTEST_DATA_DIR=$(abspath test/data)
-
 ifdef STATIC
 # Build STATIC if you are redistributing the bitcoind binary
-TESTLIBS += \
- $(DEPSDIR)/lib/libboost_unit_test_framework-mt.a
 LIBS += \
  $(DEPSDIR)/lib/db48/libdb_cxx-4.8.a \
  $(DEPSDIR)/lib/libboost_system-mt.a \
@@ -40,8 +36,6 @@ LIBS += \
  $(DEPSDIR)/lib/libcrypto.a \
  -lz
 else
-TESTLIBS += \
- -lboost_unit_test_framework-mt
 LIBS += \
  -ldb_cxx-4.8 \
  -lboost_system-mt \
@@ -51,10 +45,9 @@ LIBS += \
  -lssl \
  -lcrypto \
  -lz
-TESTDEFS += -DBOOST_TEST_DYN_LINK
 endif
 
-DEFS=-DMAC_OSX -DMSG_NOSIGNAL=0 -DBOOST_SPIRIT_THREADSAFE
+DEFS=-DMAC_OSX -DMSG_NOSIGNAL=0 -DBOOST_SPIRIT_THREADSAFE -D__STDC_FORMAT_MACROS
 
 ifdef RELEASE
 # Compile for maximum compatibility and smallest size.
@@ -75,9 +68,12 @@ OBJS= \
     obj/checkpoints.o \
     obj/netbase.o \
     obj/addrman.o \
+    obj/cleanse.o \
     obj/crypter.o \
     obj/key.o \
     obj/db.o \
+    obj/leveldb.o \
+    obj/txdb.o \
     obj/init.o \
     obj/keystore.o \
     obj/main.o \
@@ -91,11 +87,18 @@ OBJS= \
     obj/rpcwallet.o \
     obj/rpcblockchain.o \
     obj/rpcrawtransaction.o \
+    obj/base58.o \
     obj/script.o \
     obj/sync.o \
     obj/util.o \
     obj/wallet.o \
     obj/walletdb.o \
+    obj/sha1.o \
+    obj/sha256.o \
+    obj/hmac_sha256.o \
+    obj/rfc6979_hmac_sha256.o \
+    obj/ripemd160.o \
+    obj/hash.o \
     obj/noui.o \
     obj/pbkdf2.o \
     obj/kernel.o \
@@ -130,12 +133,15 @@ endif
 
 all: truckcoind
 
-test check: test_truckcoin FORCE
-	./test_truckcoin
+LIBS += $(CURDIR)/leveldb/out-static/libleveldb.a $(CURDIR)/leveldb/out-static/libmemenv.a
+DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
+DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
+leveldb/out-static/libleveldb.a:
+	@echo "Building LevelDB ..."; cd leveldb; make out-static/libleveldb.a out-static/libmemenv.a; cd ..;
+obj/txdb-leveldb.o: leveldb/out-static/libleveldb.a
 
 # auto-generated dependencies:
 -include obj/*.P
--include obj-test/*.P
 
 obj/build.h: FORCE
 	/bin/sh ../share/genbuild.sh obj/build.h
@@ -165,24 +171,10 @@ obj/scrypt-x86_64.o: scrypt-x86_64.S
 truckcoind: $(OBJS:obj/%=obj/%)
 	$(CXX) $(CFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS)
 
-TESTOBJS := $(patsubst test/%.cpp,obj-test/%.o,$(wildcard test/*.cpp))
-
-obj-test/%.o: test/%.cpp
-	$(CXX) -c $(TESTDEFS) $(CFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
-	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
-	  sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
-	      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
-	  rm -f $(@:%.o=%.d)
-
-test_truckcoin: $(TESTOBJS) $(filter-out obj/init.o,$(OBJS:obj/%=obj/%))
-	$(CXX) $(CFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS) $(TESTLIBS)
-
 clean:
-	-rm -f truckcoind test_truckcoin
+	-rm -f truckcoind
 	-rm -f obj/*.o
-	-rm -f obj-test/*.o
 	-rm -f obj/*.P
-	-rm -f obj-test/*.P
 	-rm -f obj/build.h
 
 FORCE:

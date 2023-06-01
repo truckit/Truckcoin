@@ -61,8 +61,6 @@ void OptionsModel::Init()
         SoftSetArg("-proxy", settings.value("addrProxy").toString().toStdString());
     if (settings.contains("nSocksVersion") && settings.value("fUseProxy").toBool())
         SoftSetArg("-socks", settings.value("nSocksVersion").toString().toStdString());
-    if (settings.contains("detachDB"))
-        SoftSetBoolArg("-detachdb", settings.value("detachDB").toBool());
     if (!language.isEmpty())
         SoftSetArg("-lang", language.toStdString());
     if (settings.contains("nSplitThreshold"))
@@ -168,17 +166,15 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const
         case ProxySocksVersion:
             return settings.value("nSocksVersion", 5);
         case SplitThreshold:
-            return settings.value("nSplitThreshold", DEF_SPLIT_AMOUNT/1000000);
+            return settings.value("nSplitThreshold", static_cast<qlonglong>(DEF_SPLIT_AMOUNT/1000000));
         case MaxSplitThreshold:
-            return settings.value("nMaxSplitThreshold", MAX_SPLIT_AMOUNT/1000000);
+            return settings.value("nMaxSplitThreshold", static_cast<qlonglong>(MAX_SPLIT_AMOUNT/1000000));
         case Fee:
-            return QVariant(nTransactionFee);
+            return QVariant(static_cast<qlonglong>(nTransactionFee));
         case DisplayUnit:
             return QVariant(nDisplayUnit);
         case DisplayAddresses:
             return QVariant(bDisplayAddresses);
-        case DetachDatabases:
-            return QVariant(bitdb.GetDetach());
         case Language:
             return settings.value("language", "");
         case CoinControlFeatures:
@@ -253,7 +249,7 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
         break;
         case Fee:
             nTransactionFee = value.toLongLong();
-            settings.setValue("nTransactionFee", nTransactionFee);
+            settings.setValue("nTransactionFee", static_cast<qlonglong>(nTransactionFee));
             emit transactionFeeChanged(nTransactionFee);
             break;
         case SplitThreshold:
@@ -269,12 +265,6 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
         case DisplayAddresses:
             bDisplayAddresses = value.toBool();
             settings.setValue("bDisplayAddresses", bDisplayAddresses);
-            break;
-        case DetachDatabases: {
-            bool fDetachDB = value.toBool();
-            bitdb.SetDetach(fDetachDB);
-            settings.setValue("detachDB", fDetachDB);
-            }
             break;
         case Language:
             settings.setValue("language", value);

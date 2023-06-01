@@ -11,9 +11,9 @@
 
 //#define BOOST_SPIRIT_THREADSAFE  // uncomment for multithreaded use, requires linking to boost.thread
 
-#include <boost/bind.hpp>
-#include <boost/function.hpp>
 #include <boost/version.hpp>
+
+#include <functional>
 
 #if BOOST_VERSION >= 103800
     #include <boost/spirit/include/classic_core.hpp>
@@ -33,8 +33,8 @@
 
 namespace json_spirit
 {
-    const spirit_namespace::int_parser < boost::int64_t >  int64_p  = spirit_namespace::int_parser < boost::int64_t  >();
-    const spirit_namespace::uint_parser< boost::uint64_t > uint64_p = spirit_namespace::uint_parser< boost::uint64_t >();
+    const spirit_namespace::int_parser < int64_t >  int64_p  = spirit_namespace::int_parser < int64_t  >();
+    const spirit_namespace::uint_parser< uint64_t > uint64_p = spirit_namespace::uint_parser< uint64_t >();
 
     template< class Iter_type >
     bool is_eq( Iter_type first, Iter_type last, const char* c_str )
@@ -270,12 +270,12 @@ namespace json_spirit
             add_to_current( Value_type() );
         }
 
-        void new_int( boost::int64_t i )
+        void new_int( int64_t i )
         {
             add_to_current( i );
         }
 
-        void new_uint64( boost::uint64_t ui )
+        void new_uint64( uint64_t ui )
         {
             add_to_current( ui );
         }
@@ -422,24 +422,25 @@ namespace json_spirit
                 // first we convert the semantic action class methods to functors with the 
                 // parameter signature expected by spirit
 
-                typedef boost::function< void( Char_type )            > Char_action;
-                typedef boost::function< void( Iter_type, Iter_type ) > Str_action;
-                typedef boost::function< void( double )               > Real_action;
-                typedef boost::function< void( boost::int64_t )       > Int_action;
-                typedef boost::function< void( boost::uint64_t )      > Uint64_action;
+                typedef std::function< void( Char_type )            > Char_action;
+                typedef std::function< void( Iter_type, Iter_type ) > Str_action;
+                typedef std::function< void( double )               > Real_action;
+                typedef std::function< void( int64_t )       > Int_action;
+                typedef std::function< void( uint64_t )      > Uint64_action;
 
-                Char_action   begin_obj  ( boost::bind( &Semantic_actions_t::begin_obj,   &self.actions_, _1 ) );
-                Char_action   end_obj    ( boost::bind( &Semantic_actions_t::end_obj,     &self.actions_, _1 ) );
-                Char_action   begin_array( boost::bind( &Semantic_actions_t::begin_array, &self.actions_, _1 ) );
-                Char_action   end_array  ( boost::bind( &Semantic_actions_t::end_array,   &self.actions_, _1 ) );
-                Str_action    new_name   ( boost::bind( &Semantic_actions_t::new_name,    &self.actions_, _1, _2 ) );
-                Str_action    new_str    ( boost::bind( &Semantic_actions_t::new_str,     &self.actions_, _1, _2 ) );
-                Str_action    new_true   ( boost::bind( &Semantic_actions_t::new_true,    &self.actions_, _1, _2 ) );
-                Str_action    new_false  ( boost::bind( &Semantic_actions_t::new_false,   &self.actions_, _1, _2 ) );
-                Str_action    new_null   ( boost::bind( &Semantic_actions_t::new_null,    &self.actions_, _1, _2 ) );
-                Real_action   new_real   ( boost::bind( &Semantic_actions_t::new_real,    &self.actions_, _1 ) );
-                Int_action    new_int    ( boost::bind( &Semantic_actions_t::new_int,     &self.actions_, _1 ) );
-                Uint64_action new_uint64 ( boost::bind( &Semantic_actions_t::new_uint64,  &self.actions_, _1 ) );
+                namespace stdp = std::placeholders;
+                Char_action   begin_obj  ( std::bind( &Semantic_actions_t::begin_obj,   &self.actions_, stdp::_1 ) );
+                Char_action   end_obj    ( std::bind( &Semantic_actions_t::end_obj,     &self.actions_, stdp::_1 ) );
+                Char_action   begin_array( std::bind( &Semantic_actions_t::begin_array, &self.actions_, stdp::_1 ) );
+                Char_action   end_array  ( std::bind( &Semantic_actions_t::end_array,   &self.actions_, stdp::_1 ) );
+                Str_action    new_name   ( std::bind( &Semantic_actions_t::new_name,    &self.actions_, stdp::_1, stdp::_2 ) );
+                Str_action    new_str    ( std::bind( &Semantic_actions_t::new_str,     &self.actions_, stdp::_1, stdp::_2 ) );
+                Str_action    new_true   ( std::bind( &Semantic_actions_t::new_true,    &self.actions_, stdp::_1, stdp::_2 ) );
+                Str_action    new_false  ( std::bind( &Semantic_actions_t::new_false,   &self.actions_, stdp::_1, stdp::_2 ) );
+                Str_action    new_null   ( std::bind( &Semantic_actions_t::new_null,    &self.actions_, stdp::_1, stdp::_2 ) );
+                Real_action   new_real   ( std::bind( &Semantic_actions_t::new_real,    &self.actions_, stdp::_1 ) );
+                Int_action    new_int    ( std::bind( &Semantic_actions_t::new_int,     &self.actions_, stdp::_1 ) );
+                Uint64_action new_uint64 ( std::bind( &Semantic_actions_t::new_uint64,  &self.actions_, stdp::_1 ) );
 
                 // actual grammer
 
