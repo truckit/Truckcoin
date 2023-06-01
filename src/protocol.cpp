@@ -23,7 +23,6 @@ CMessageHeader::CMessageHeader()
 {
     memcpy(pchMessageStart, ::pchMessageStart, sizeof(pchMessageStart));
     memset(pchCommand, 0, sizeof(pchCommand));
-    pchCommand[1] = 1;
     nMessageSize = -1;
     nChecksum = 0;
 }
@@ -31,6 +30,7 @@ CMessageHeader::CMessageHeader()
 CMessageHeader::CMessageHeader(const char* pszCommand, unsigned int nMessageSizeIn)
 {
     memcpy(pchMessageStart, ::pchMessageStart, sizeof(pchMessageStart));
+    memset(pchCommand, 0, sizeof(pchCommand));
     strncpy(pchCommand, pszCommand, COMMAND_SIZE);
     nMessageSize = nMessageSizeIn;
     nChecksum = 0;
@@ -38,10 +38,7 @@ CMessageHeader::CMessageHeader(const char* pszCommand, unsigned int nMessageSize
 
 std::string CMessageHeader::GetCommand() const
 {
-    if (pchCommand[COMMAND_SIZE-1] == 0)
-        return std::string(pchCommand, pchCommand + strlen(pchCommand));
-    else
-        return std::string(pchCommand, pchCommand + COMMAND_SIZE);
+    return std::string(pchCommand, pchCommand + strnlen(pchCommand, COMMAND_SIZE));
 }
 
 bool CMessageHeader::IsValid() const
