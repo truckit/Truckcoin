@@ -277,6 +277,13 @@ bool CKey::Load(CPrivKey &privkey, CPubKey &vchPubKey, bool fSkipCheck=false) {
     return VerifyPubKey(vchPubKey);
 }
 
+bool ECC_InitSanityCheck() {
+    CKey key;
+    key.MakeNewKey(true);
+    CPubKey pubkey = key.GetPubKey();
+    return key.VerifyPubKey(pubkey);
+}
+
 void ECC_Start() {
     assert(secp256k1_context_sign == NULL);
 
