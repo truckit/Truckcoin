@@ -213,16 +213,11 @@ bool CKey::Load(CPrivKey &privkey, CPubKey &vchPubKey, bool fSkipCheck=false) {
 bool CPubKey::Verify(const uint256 &hash, const std::vector<unsigned char>& vchSig) const {
     if (!IsValid())
         return false;
-#ifdef USE_SECP256K1
-    if (secp256k1_ecdsa_verify((const unsigned char*)&hash, 32, &vchSig[0], vchSig.size(), begin(), size()) != 1)
-        return false;
-#else
     CECKey key;
     if (!key.SetPubKey(begin(), size()))
         return false;
     if (!key.Verify(hash, vchSig))
         return false;
-#endif
     return true;
 }
 
@@ -230,48 +225,33 @@ bool CPubKey::RecoverCompact(const uint256 &hash, const std::vector<unsigned cha
     if (vchSig.size() != 65)
         return false;
     int recid = (vchSig[0] - 27) & 3;
-    bool fComp = (vchSig[0] - 27) & 4;
-#ifdef USE_SECP256K1
-    int pubkeylen = 65;
-    if (!secp256k1_ecdsa_recover_compact((const unsigned char*)&hash, 32, &vchSig[1], (unsigned char*)begin(), &pubkeylen, fComp, recid))
-        return false;
-    assert((int)size() == pubkeylen);
-#else
+    bool fComp = ((vchSig[0] - 27) & 4) != 0;
     CECKey key;
     if (!key.Recover(hash, &vchSig[1], recid))
         return false;
-    key.GetPubKey(*this, fComp);
-#endif
+    std::vector<unsigned char> pubkey;
+    key.GetPubKey(pubkey, fComp);
+    Set(pubkey.begin(), pubkey.end());
     return true;
 }
 
 bool CPubKey::IsFullyValid() const {
     if (!IsValid())
         return false;
-#ifdef USE_SECP256K1
-    if (!secp256k1_ecdsa_pubkey_verify(begin(), size()))
-        return false;
-#else
     CECKey key;
-    if (!key.SetPubKey(*this))
+    if (!key.SetPubKey(begin(), size()))
         return false;
-#endif
     return true;
 }
 
 bool CPubKey::Decompress() {
     if (!IsValid())
         return false;
-#ifdef USE_SECP256K1
-    int clen = size();
-    int ret = secp256k1_ecdsa_pubkey_decompress((unsigned char*)begin(), &clen);
-    assert(ret);
-    assert(clen == (int)size());
-#else
     CECKey key;
-    if (!key.SetPubKey(*this))
+    if (!key.SetPubKey(begin(), size()))
         return false;
-    key.GetPubKey(*this, false);
-#endif
+    std::vector<unsigned char> pubkey;
+    key.GetPubKey(pubkey, false);
+    Set(pubkey.begin(), pubkey.end());
     return true;
 }
