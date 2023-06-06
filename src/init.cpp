@@ -112,6 +112,8 @@ void Shutdown(void* parg)
         MilliSleep(100);
         ExitThread(0);
     }
+
+    ECC_Stop();
 }
 
 void HandleSIGTERM(int)
@@ -556,6 +558,9 @@ bool AppInit2()
     fStaking = GetBoolArg("-staking", true);
 
     // ********************************************************* Step 4: application initialization: dir lock, daemonize, pidfile, debug log
+
+    // Initialize elliptic curve code
+    ECC_Start();
 
     std::string strDataDir = GetDataDir().string();
     std::string strWalletFileName = GetArg("-wallet", "wallet.dat");
