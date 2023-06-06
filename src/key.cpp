@@ -181,8 +181,8 @@ bool CKey::CheckSignatureElement(const unsigned char *vch, int len, bool half) {
 void CKey::MakeNewKey(bool fCompressedIn) {
     RandAddSeedPerfmon();
     do {
-        RAND_bytes(vch, sizeof(vch));
-    } while (!Check(vch));
+        RAND_bytes(keydata.data(), keydata.size());
+    } while (!Check(keydata.data()));
     fValid = true;
     fCompressed = fCompressedIn;
 }
@@ -331,12 +331,10 @@ void ECC_Start() {
 
     {
         // Pass in a random blinding seed to the secp256k1 context.
-        unsigned char seed[32];
-        LockObject(seed);
-        RAND_bytes(seed, 32);
-        bool ret = secp256k1_context_randomize(ctx, seed);
+        std::vector<unsigned char, secure_allocator<unsigned char>> vseed(32);
+        RAND_bytes(vseed.data(), 32);
+        bool ret = secp256k1_context_randomize(ctx, vseed.data());
         assert(ret);
-        UnlockObject(seed);
     }
 
     secp256k1_context_sign = ctx;
