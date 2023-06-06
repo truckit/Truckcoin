@@ -10,6 +10,7 @@
 #include <secp256k1.h>
 
 #include "rfc6979_hmac_sha256.h"
+#include "util.h"
 #include "ecwrapper.h"
 
 //! anonymous namespace
@@ -82,6 +83,7 @@ bool CKey::CheckSignatureElement(const unsigned char *vch, int len, bool half) {
 }
 
 void CKey::MakeNewKey(bool fCompressedIn) {
+    RandAddSeedPerfmon();
     do {
         RAND_bytes(vch, sizeof(vch));
     } while (!Check(vch));
