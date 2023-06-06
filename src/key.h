@@ -250,7 +250,10 @@ public:
     bool SignCompact(const uint256 &hash, std::vector<unsigned char>& vchSig) const;
 
     // Load private key and check that public key matches.
-    bool Load(CPrivKey &privkey, CPubKey &vchPubKey, bool fSkipCheck); 
+    bool Load(CPrivKey &privkey, CPubKey &vchPubKey, bool fSkipCheck);
+
+    // Check whether an element of a signature (r or s) is valid.
+    static bool CheckSignatureElement(const unsigned char *vch, int len, bool half);
 };
 
 #endif
