@@ -21,16 +21,9 @@ public:
     CECKey();
     ~CECKey();
 
-    void GetSecretBytes(unsigned char vch[32]) const;
-    void SetSecretBytes(const unsigned char vch[32]);
-    int GetPrivKeySize(bool fCompressed);
-    int GetPrivKey(unsigned char* privkey, bool fCompressed);
-    bool SetPrivKey(const unsigned char* privkey, size_t size, bool fSkipCheck=false);
     void GetPubKey(std::vector<unsigned char>& pubkey, bool fCompressed);
     bool SetPubKey(const unsigned char* pubkey, size_t size);
-    bool Sign(const uint256 &hash, std::vector<unsigned char>& vchSig);
     bool Verify(const uint256 &hash, const std::vector<unsigned char>& vchSig);
-    bool SignCompact(const uint256 &hash, unsigned char *p64, int &rec);
 
     // reconstruct public key from a compact signature
     // This is only slightly more CPU intensive than just verifying it.
