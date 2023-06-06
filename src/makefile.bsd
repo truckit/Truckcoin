@@ -136,7 +136,6 @@ OBJS= \
     obj/sha1.o \
     obj/sha256.o \
     obj/hmac_sha256.o \
-    obj/rfc6979_hmac_sha256.o \
     obj/ripemd160.o \
     obj/hash.o \
     obj/noui.o \
