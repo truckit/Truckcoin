@@ -1568,7 +1568,7 @@ public:
     // Generate proof-of-stake block signature
     bool SignBlock(const CKeyStore& keystore);
     // Validate header signature
-    bool CheckBlockSignature(bool fProofOfStake) const;
+    bool CheckBlockSignature() const;
     // entropy bit for stake modifier if chosen by modifier
     unsigned int GetStakeEntropyBit(unsigned int nHeight) const
     {
