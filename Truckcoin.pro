@@ -147,7 +147,7 @@ QMAKE_CLEAN += $$PWD/src/leveldb/out-static/libleveldb.a; cd $$PWD/src/leveldb ;
     INCLUDEPATH += src/secp256k1/include
     LIBS += $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o
     # we use QMAKE_CXXFLAGS_RELEASE even without RELEASE=1 because we use RELEASE to indicate linking preferences not -O preferences
-    gensecp256k1.commands = cd $$PWD/src/secp256k1 && chmod 755 * && ./autogen.sh && ./configure --disable-shared --with-pic --with-bignum=no --enable-module-recovery && CC=$$QMAKE_CC CXX=$$QMAKE_CXX $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\"
+    gensecp256k1.commands = cd $$PWD/src/secp256k1 && chmod 755 * && ./autogen.sh && ./configure --disable-shared --with-pic --enable-benchmark=no --enable-tests=no --enable-exhaustive-tests=no --enable-module-recovery --enable-module-schnorrsig --enable-experimental && CC=$$QMAKE_CC CXX=$$QMAKE_CXX $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\"
     gensecp256k1.target = $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o
     gensecp256k1.depends = FORCE
     PRE_TARGETDEPS += $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o
@@ -157,7 +157,7 @@ QMAKE_CLEAN += $$PWD/src/leveldb/out-static/libleveldb.a; cd $$PWD/src/leveldb ;
 } else {
     INCLUDEPATH += src/secp256k1/include
     LIBS += $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o
-    gensecp256k1.commands = cd $$PWD/src/secp256k1 && ./autogen.sh && ./configure --disable-shared --with-pic --with-bignum=no --enable-module-recovery --host=i686-w64-mingw32.static CC=$$QMAKE_CC && CXX=$$QMAKE_CXX $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\"
+    gensecp256k1.commands = cd $$PWD/src/secp256k1 && ./autogen.sh && ./configure --disable-shared --with-pic --enable-benchmark=no --enable-tests=no --enable-exhaustive-tests=no --enable-module-recovery --enable-module-schnorrsig --enable-experimental --host=i686-w64-mingw32.static CC=$$QMAKE_CC && CXX=$$QMAKE_CXX $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\"
     gensecp256k1.target = $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o
     gensecp256k1.depends = FORCE
     PRE_TARGETDEPS += $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o
