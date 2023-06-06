@@ -125,6 +125,7 @@ extern bool fStaking;
 
 void MilliSleep(int64_t nMilliSecs);
 
+bool GetRandBytes(unsigned char *buf, int num);
 void RandAddSeed();
 void RandAddSeedPerfmon();
 int ATTR_WARN_PRINTF(1,2) OutputDebugStringF(const char* pszFormat, ...);

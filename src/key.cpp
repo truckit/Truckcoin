@@ -5,8 +5,6 @@
 
 #include "key.h"
 
-#include <openssl/rand.h>
-
 #include <secp256k1.h>
 #include <secp256k1_recovery.h>
 
@@ -181,7 +179,7 @@ bool CKey::CheckSignatureElement(const unsigned char *vch, int len, bool half) {
 void CKey::MakeNewKey(bool fCompressedIn) {
     RandAddSeedPerfmon();
     do {
-        RAND_bytes(keydata.data(), keydata.size());
+        GetRandBytes(keydata.data(), keydata.size());
     } while (!Check(keydata.data()));
     fValid = true;
     fCompressed = fCompressedIn;
@@ -242,7 +240,7 @@ bool CKey::VerifyPubKey(const CPubKey& pubkey) const {
     }
     unsigned char rnd[8];
     std::string str = "Truckcoin key verification\n";
-    RAND_bytes(rnd, sizeof(rnd));
+    GetRandBytes(rnd, sizeof(rnd));
     uint256 hash;
     CHash256().Write((unsigned char*)str.data(), str.size()).Write(rnd, sizeof(rnd)).Finalize(hash.begin());
     std::vector<unsigned char> vchSig;
@@ -332,7 +330,7 @@ void ECC_Start() {
     {
         // Pass in a random blinding seed to the secp256k1 context.
         std::vector<unsigned char, secure_allocator<unsigned char>> vseed(32);
-        RAND_bytes(vseed.data(), 32);
+        GetRandBytes(vseed.data(), 32);
         bool ret = secp256k1_context_randomize(ctx, vseed.data());
         assert(ret);
     }
