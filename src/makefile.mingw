@@ -64,6 +64,7 @@ OBJS= \
     obj/crypter.o \
     obj/ecwrapper.o \
     obj/key.o \
+    obj/pubkey.o \
     obj/db.o \
     obj/leveldb.o \
     obj/txdb.o \

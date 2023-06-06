@@ -15,7 +15,7 @@ using namespace boost;
 #include "sha256.h"
 #include "ripemd160.h"
 #include "bignum.h"
-#include "key.h"
+#include "pubkey.h"
 #include "main.h"
 #include "sync.h"
 #include "util.h"
