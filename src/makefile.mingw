@@ -62,7 +62,6 @@ OBJS= \
     obj/addrman.o \
     obj/cleanse.o \
     obj/crypter.o \
-    obj/ecwrapper.o \
     obj/key.o \
     obj/pubkey.o \
     obj/db.o \

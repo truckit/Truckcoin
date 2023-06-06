@@ -58,6 +58,8 @@ void StartShutdown()
 
 static CCoinsViewDB *pcoinsdbview;
 
+static boost::scoped_ptr<ECCVerifyHandle> globalVerifyHandle;
+
 void Shutdown(void* parg)
 {
     static CCriticalSection cs_Shutdown;
@@ -97,6 +99,8 @@ void Shutdown(void* parg)
         boost::filesystem::remove(GetPidFile());
         UnregisterWallet(pwalletMain);
         delete pwalletMain;
+        globalVerifyHandle.reset();
+        ECC_Stop();
         NewThread(ExitTimeout, NULL);
         MilliSleep(50);
         printf("Truckcoin exited\n\n");
@@ -113,8 +117,6 @@ void Shutdown(void* parg)
         MilliSleep(100);
         ExitThread(0);
     }
-
-    ECC_Stop();
 }
 
 void HandleSIGTERM(int)
@@ -406,8 +408,7 @@ void ThreadImport(void *data) {
 bool InitSanityCheck(void)
 {
     if(!ECC_InitSanityCheck()) {
-        InitError("OpenSSL appears to lack support for elliptic curve cryptography. For more "
-                  "information, visit https://en.bitcoin.it/wiki/OpenSSL_and_EC_Libraries");
+        InitError("Elliptic curve cryptography sanity check failure. Aborting.");
         return false;
     }
 
@@ -579,6 +580,7 @@ bool AppInit2()
     
     // Initialize elliptic curve code
     ECC_Start();
+    globalVerifyHandle.reset(new ECCVerifyHandle());
 
     // Sanity check
     if (!InitSanityCheck())

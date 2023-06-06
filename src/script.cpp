@@ -348,16 +348,8 @@ bool static IsLowDERSignature(const valtype &vchSig) {
     if (!IsValidSignatureEncoding(vchSig)) {
         return false;
     }
-    unsigned int nLenR = vchSig[3];
-    unsigned int nLenS = vchSig[5+nLenR];
-    const unsigned char *S = &vchSig[6+nLenR];
-    // If the S value is above the order of the curve divided by two, its
-    // complement modulo the order could have been used instead, which is
-    // one byte shorter when encoded correctly.
-    if (!CKey::CheckSignatureElement(S, nLenS, true))
-        return error("Non-canonical signature: S value is unnecessarily high");
-
-    return true;
+    std::vector<unsigned char> vchSigCopy(vchSig.begin(), vchSig.begin() + vchSig.size() - 1);
+    return CPubKey::CheckLowS(vchSigCopy);
 }
 
 bool static IsDefinedHashtypeSignature(const valtype &vchSig) {
