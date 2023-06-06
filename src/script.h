@@ -540,10 +540,8 @@ public:
         return true;
     }
 
-
     void SetDestination(const CTxDestination& address);
-    void SetMultisig(int nRequired, const std::vector<CKey>& keys);
-
+    void SetMultisig(int nRequired, const std::vector<CPubKey>& keys);
 
     void PrintHex() const
     {
@@ -613,7 +611,7 @@ protected:
     // form).
     bool IsToKeyID(CKeyID &hash) const;
     bool IsToScriptID(CScriptID &hash) const;
-    bool IsToPubKey(std::vector<unsigned char> &pubkey) const;
+    bool IsToPubKey(CPubKey &pubkey) const;
 
     bool Compress(std::vector<unsigned char> &out) const;
     unsigned int GetSpecialSize(unsigned int nSize) const;
@@ -633,12 +631,12 @@ public:
     void Serialize(Stream &s, int nType, int nVersion) const {
         std::vector<unsigned char> compr;
         if (Compress(compr)) {
-            s << CFlatData(compr);
+            s << CFlatData(&compr[0], &compr[compr.size()]);
             return;
         }
         unsigned int nSize = script.size() + nSpecialScripts;
         s << VARINT(nSize);
-        s << CFlatData(script);
+        s << CFlatData(&script[0], &script[script.size()]);
     }
 
     template<typename Stream>
@@ -647,13 +645,13 @@ public:
         s >> VARINT(nSize);
         if (nSize < nSpecialScripts) {
             std::vector<unsigned char> vch(GetSpecialSize(nSize), 0x00);
-            s >> REF(CFlatData(vch));
+            s >> REF(CFlatData(&vch[0], &vch[vch.size()]));
             Decompress(nSize, vch);
             return;
         }
         nSize -= nSpecialScripts;
         script.resize(nSize);
-        s >> REF(CFlatData(script));
+        s >> REF(CFlatData(&script[0], &script[script.size()]));
     }
 };
 
