@@ -87,6 +87,8 @@ OBJS= \
     obj/util.o \
     obj/wallet.o \
     obj/walletdb.o \
+    obj/crypto/aes.o \
+    obj/crypto/sha512.o \
     obj/sha1.o \
     obj/sha256.o \
     obj/hmac_sha256.o \

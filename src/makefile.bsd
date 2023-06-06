@@ -134,6 +134,8 @@ OBJS= \
     obj/util.o \
     obj/wallet.o \
     obj/walletdb.o \
+    obj/crypto/aes.o \
+    obj/crypto/sha512.o \
     obj/sha1.o \
     obj/sha256.o \
     obj/hmac_sha256.o \
@@ -208,6 +210,8 @@ clean:
 	-rm -f truckcoind
 	-rm -f obj/*.o
 	-rm -f obj/*.P
+	-rm -f obj/crypto/*.o
+	-rm -f obj/crypto/*.P
 	-rm -f obj/build.h
 
 FORCE:
