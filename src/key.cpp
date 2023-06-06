@@ -140,6 +140,20 @@ bool CKey::Sign(const uint256 &hash, std::vector<unsigned char>& vchSig, uint32_
     } while(true);
 }
 
+bool CKey::VerifyPubKey(const CPubKey& pubkey) const {
+    if (pubkey.IsCompressed() != fCompressed) {
+        return false;
+    }
+    unsigned char rnd[8];
+    std::string str = "Truckcoin key verification\n";
+    RAND_bytes(rnd, sizeof(rnd));
+    uint256 hash;
+    CHash256().Write((unsigned char*)str.data(), str.size()).Write(rnd, sizeof(rnd)).Finalize((unsigned char*)&hash);
+    std::vector<unsigned char> vchSig;
+    Sign(hash, vchSig);
+    return pubkey.Verify(hash, vchSig);
+}
+
 bool CKey::SignCompact(const uint256 &hash, std::vector<unsigned char>& vchSig) const {
     if (!fValid)
         return false;
@@ -168,10 +182,7 @@ bool CKey::Load(CPrivKey &privkey, CPubKey &vchPubKey, bool fSkipCheck=false) {
     if (fSkipCheck)
         return true;
 
-    if (GetPubKey() != vchPubKey)
-        return false;
-
-    return true;
+    return VerifyPubKey(vchPubKey);
 }
 
 bool CPubKey::Verify(const uint256 &hash, const std::vector<unsigned char>& vchSig) const {

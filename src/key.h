@@ -253,6 +253,12 @@ public:
     //                  add 0x04 for compressed keys.
     bool SignCompact(const uint256 &hash, std::vector<unsigned char>& vchSig) const;
 
+    /**
+     * Verify thoroughly whether a private key and a public key match.
+     * This is done using a different mechanism than just regenerating it.
+     */
+    bool VerifyPubKey(const CPubKey& vchPubKey) const;
+
     // Load private key and check that public key matches.
     bool Load(CPrivKey &privkey, CPubKey &vchPubKey, bool fSkipCheck);
 
