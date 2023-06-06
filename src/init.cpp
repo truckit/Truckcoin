@@ -245,7 +245,7 @@ std::string HelpMessage()
         "  -pid=<file>            " + _("Specify pid file (default: Truckcoind.pid)") + "\n" +
         "  -gen                   " + _("Generate coins") + "\n" +
         "  -gen=0                 " + _("Don't generate coins") + "\n" +
-        "  -staking=<n>      " + _("Enable or disable PoS minting (default: 1 = enabled)") + "\n" +
+        "  -staking=<n>           " + _("Enable or disable PoS minting (default: 1 = enabled)") + "\n" +
         "  -datadir=<dir>         " + _("Specify data directory") + "\n" +
         "  -wallet=<file>         " + _("Specify wallet file (within data directory)") + "\n" +
         "  -dbcache=<n>           " + _("Set database cache size in megabytes (default: 25)") + "\n" +
@@ -691,7 +691,7 @@ bool AppInit2()
            if (nSplitThreshold > MAX_SPLIT_AMOUNT) 
                nSplitThreshold = MAX_SPLIT_AMOUNT; 
        } 
-       printf("splitthreshold set to %" PRId64 "\n",nSplitThreshold); 
+       printf("splitthreshold set to %" PRId64 "\n", nSplitThreshold / 1000000); 
     } 
 
     // ********************************************************* Step 6: network initialization
