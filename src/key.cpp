@@ -9,6 +9,7 @@
 #include <secp256k1_recovery.h>
 
 #include "common.h"
+#include "random.h"
 #include "util.h"
 #include "ecwrapper.h"
 

@@ -203,6 +203,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/compat.h \
     src/coincontrol.h \
     src/sync.h \
+    src/random.h \
     src/util.h \
     src/hash.h \
     src/uint256.h \
@@ -308,6 +309,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/cleanse.cpp \
     src/version.cpp \
     src/sync.cpp \
+    src/random.cpp \
     src/util.cpp \
     src/hash.cpp \
     src/netbase.cpp \

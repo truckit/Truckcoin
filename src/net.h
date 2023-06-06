@@ -13,6 +13,7 @@
 #include <arpa/inet.h>
 #endif
 
+#include "random.h"
 #include "mruset.h"
 #include "netbase.h"
 #include "protocol.h"
