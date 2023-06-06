@@ -154,17 +154,12 @@ public:
     // If this public key is not fully valid, the return value will be false.
     bool Verify(const uint256 &hash, const std::vector<unsigned char>& vchSig) const;
 
-    // Verify a compact signature (~65 bytes).
-    // See CKey::SignCompact.
-    bool VerifyCompact(const uint256 &hash, const std::vector<unsigned char>& vchSig) const;
-
     // Recover a public key from a compact signature.
     bool RecoverCompact(const uint256 &hash, const std::vector<unsigned char>& vchSig);
 
     // Turn this public key into an uncompressed public key.
     bool Decompress();
 };
-
 
 // secure_allocator is defined in allocators.h
 // CPrivKey is a serialized private key, with all parameters included (279 bytes)
