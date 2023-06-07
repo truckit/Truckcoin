@@ -112,8 +112,8 @@ extern unsigned int nStakeMinAgeV2;
 extern unsigned int nNodeLifespan;
 extern int nCoinbaseMaturity;
 extern int nBestHeight;
-extern CBigNum bnBestChainTrust;
-extern CBigNum bnBestInvalidTrust;
+extern uint256 nBestChainTrust;
+extern uint256 nBestInvalidTrust;
 extern uint256 hashBestChain;
 extern CBlockIndex* pindexBest;
 extern unsigned int nTransactionsUpdated;
@@ -1680,7 +1680,7 @@ public:
     // Byte offset within rev?????.dat where this block's undo data is stored
     unsigned int nUndoPos;
     // (memory only) Trust score of block chain up to and including this block
-    CBigNum bnChainTrust;
+    uint256 nChainTrust;
     // Number of transactions in this block.
     unsigned int nTx;
     // (memory only) Number of transactions in the chain up to and including this block
@@ -1731,7 +1731,7 @@ public:
         nFile = 0;
         nDataPos = 0;
         nUndoPos = 0;
-        bnChainTrust = 0;
+        nChainTrust = 0;
         nMint = 0;
         nMoneySupply = 0;
         nFlags = 0;
@@ -1760,7 +1760,7 @@ public:
         nFile = 0;
         nDataPos = 0;
         nUndoPos = 0;
-        bnChainTrust = 0;
+        nChainTrust = 0;
         nMint = 0;
         nMoneySupply = 0;
         nFlags = 0;
@@ -1830,7 +1830,7 @@ public:
         return (int64_t)nTime;
     }
 
-    CBigNum GetBlockTrust() const;
+    uint256 GetBlockTrust() const;
 
     bool IsInMainChain() const
     {
@@ -1938,8 +1938,8 @@ public:
 struct CBlockIndexTrustComparator
 {
     bool operator()(CBlockIndex *pa, CBlockIndex *pb) const {
-        if (pa->bnChainTrust > pb->bnChainTrust) return false;
-        if (pa->bnChainTrust < pb->bnChainTrust) return true;
+        if (pa->nChainTrust > pb->nChainTrust) return false;
+        if (pa->nChainTrust < pb->nChainTrust) return true;
 
         return false; // identical blocks
     }

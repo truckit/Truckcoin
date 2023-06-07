@@ -51,8 +51,8 @@ int64_t nChainStartTime = 1399495660;
 int nCoinbaseMaturity = 160;
 CBlockIndex* pindexGenesisBlock = NULL;
 int nBestHeight = -1;
-CBigNum bnBestChainTrust = 0;
-CBigNum bnBestInvalidTrust = 0;
+uint256 nBestChainTrust = 0;
+uint256 nBestInvalidTrust = 0;
 uint256 hashBestChain = 0;
 CBlockIndex* pindexBest = NULL;
 int64_t nTimeBestReceived = 0;
@@ -1301,19 +1301,18 @@ bool IsInitialBlockDownload()
 
 void static InvalidChainFound(CBlockIndex* pindexNew)
 {
-    if (pindexNew->bnChainTrust > bnBestInvalidTrust)
+    if (pindexNew->nChainTrust > nBestInvalidTrust)
     {
-        bnBestInvalidTrust = pindexNew->bnChainTrust;
-        pblocktree->WriteBestInvalidTrust(CBigNum(bnBestInvalidTrust));
+        nBestInvalidTrust = pindexNew->nChainTrust;
+        pblocktree->WriteBestInvalidTrust(CBigNum(nBestInvalidTrust));
         uiInterface.NotifyBlocksChanged();
     }
-
-    printf("InvalidChainFound: invalid block=%s  height=%d  trust=%s  date=%s\n",
+    printf("InvalidChainFound: invalid block=%s  height=%d  log2_trust=%.8g  date=%s\n",
       pindexNew->GetBlockHash().ToString().substr(0,20).c_str(), pindexNew->nHeight,
-      pindexNew->bnChainTrust.ToString().c_str(), DateTimeStrFormat("%x %H:%M:%S",
+      log(pindexNew->nChainTrust.getdouble())/log(2.0), DateTimeStrFormat("%x %H:%M:%S", 
       pindexNew->GetBlockTime()).c_str());
-    printf("InvalidChainFound:  current best=%s  height=%d  trust=%s  date=%s\n",
-      hashBestChain.ToString().substr(0,20).c_str(), nBestHeight, bnBestChainTrust.ToString().c_str(),
+    printf("InvalidChainFound:  current best=%s  height=%d  log2_trust=%.8g  date=%s\n",
+      hashBestChain.ToString().substr(0,20).c_str(), nBestHeight, log(nBestChainTrust.getdouble())/log(2.0),
       DateTimeStrFormat("%x %H:%M:%S", pindexBest->GetBlockTime()).c_str());
 }
 
@@ -1358,7 +1357,7 @@ bool ConnectBestBlock() {
                 break;
             }
 
-            if (pindexBest == NULL || pindexTest->bnChainTrust > pindexBest->bnChainTrust)
+            if (pindexBest == NULL || pindexTest->nChainTrust > pindexBest->nChainTrust)
                 vAttach.push_back(pindexTest);
 
             if (pindexTest->pprev == NULL || pindexTest->pnext != NULL) {
@@ -1913,7 +1912,7 @@ bool SetBestChain(CBlockIndex* pindexNew)
         pindexBest = pindexNew;
         hashBestChain = pindexNew->GetBlockHash();
         nBestHeight = pindexBest->nHeight;
-        bnBestChainTrust = pindexNew->bnChainTrust;
+        nBestChainTrust = pindexNew->nChainTrust;
         return true;
     }
 
@@ -2026,17 +2025,19 @@ bool SetBestChain(CBlockIndex* pindexNew)
     pindexBest = pindexNew;
     pblockindexFBBHLast = NULL;
     nBestHeight = pindexBest->nHeight;
-    bnBestChainTrust = pindexNew->bnChainTrust;
+    nBestChainTrust = pindexNew->nChainTrust;
     nTimeBestReceived = GetTime();
     nTransactionsUpdated++;
-    
-    CBigNum bnBestBlockTrust = pindexBest->nHeight != 0 ? (pindexBest->bnChainTrust - pindexBest->pprev->bnChainTrust) : pindexBest->bnChainTrust;
-    
-    printf("SetBestChain: new best=%s  height=%d  trust=%s blocktrust=%s  tx=%lu  date=%s\n",
-      hashBestChain.ToString().substr(0,20).c_str(), nBestHeight, CBigNum(bnBestChainTrust).ToString().c_str(), CBigNum(bnBestBlockTrust).ToString().c_str(), (unsigned long)pindexNew->nChainTx,
-      DateTimeStrFormat("%x %H:%M:%S", pindexBest->GetBlockTime()).c_str());
 
-	printf("Stake checkpoint: %x\n", pindexBest->nStakeModifierChecksum);
+//    printf("SetBestChain: new best=%s  height=%d  log2_trust=%.8g  tx=%lu  date=%s\n",
+    printf("SetBestChain: new best=%s  height=%d  date=%s\n",
+      hashBestChain.ToString().substr(0,20).c_str(), 
+      nBestHeight,
+//      log(nBestChainTrust.getdouble())/log(2.0),
+//      (unsigned long)pindexNew->nChainTx,
+      DateTimeStrFormat("%d/%m/%Y %H:%M:%S", pindexBest->GetBlockTime()).c_str());
+
+    printf("Stake checkpoint: %x\n", pindexBest->nStakeModifierChecksum);
 
     // Check the version of the last 100 blocks to see if we need to upgrade:
     if (!fIsInitialDownload)
@@ -2150,7 +2151,7 @@ bool CBlock::AddToBlockIndex(const CDiskBlockPos &pos)
     }
 
     pindexNew->nTx = vtx.size();
-    pindexNew->bnChainTrust = (pindexNew->pprev ? pindexNew->pprev->bnChainTrust : 0) + pindexNew->GetBlockTrust();
+    pindexNew->nChainTrust = (pindexNew->pprev ? pindexNew->pprev->nChainTrust : 0) + pindexNew->GetBlockTrust();
     pindexNew->nChainTx = (pindexNew->pprev ? pindexNew->pprev->nChainTx : 0) + pindexNew->nTx;
     pindexNew->nFile = pos.nFile;
     pindexNew->nDataPos = pos.nPos;
@@ -2456,23 +2457,24 @@ bool CBlock::AcceptBlock(CDiskBlockPos *dbp)
     return true;
 }
 
-CBigNum CBlockIndex::GetBlockTrust() const
+uint256 CBlockIndex::GetBlockTrust() const
 {
     CBigNum bnTarget;
     bnTarget.SetCompact(nBits);
+
     if (bnTarget <= 0)
         return 0;
 
     if (IsProofOfStake())
     {
         // Return trust score as usual
-        return (CBigNum(1)<<256) / (bnTarget+1);
+        return ((CBigNum(1)<<256) / (bnTarget+1)).getuint256();
     }
     else
     {
         // Calculate work amount for block
-        CBigNum bnPoWTrust = (bnProofOfWorkLimit / (bnTarget+1));
-        return bnPoWTrust > 1 ? bnPoWTrust : 1;
+        uint256 nPoWTrust = (bnProofOfWorkLimit / (bnTarget+1)).getuint256();
+        return nPoWTrust > 1 ? nPoWTrust : 1;
     }
 } 
 
@@ -2773,7 +2775,7 @@ bool static LoadBlockIndexDB()
     if (fRequestShutdown)
         return true;
 
-    // Calculate bnChainTrust
+    // Calculate nChainTrust
     vector<pair<int, CBlockIndex*> > vSortedByHeight;
     vSortedByHeight.reserve(mapBlockIndex.size());
     for (const auto& item : mapBlockIndex)
@@ -2785,7 +2787,7 @@ bool static LoadBlockIndexDB()
     for (const auto& item : vSortedByHeight)
     {
         CBlockIndex* pindex = item.second;
-        pindex->bnChainTrust = (pindex->pprev ? pindex->pprev->bnChainTrust : 0) + pindex->GetBlockTrust();
+        pindex->nChainTrust = (pindex->pprev ? pindex->pprev->nChainTrust : 0) + pindex->GetBlockTrust();
         // Calculate stake modifier checksum
         pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
         if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex->nStakeModifierChecksum))
@@ -2810,10 +2812,10 @@ bool static LoadBlockIndexDB()
     }
     printf("LoadBlockIndexDB(): synchronized checkpoint %s\n", Checkpoints::hashSyncCheckpoint.ToString().c_str());
 
-    // Load bnBestInvalidTrust, OK if it doesn't exist
+    // Load nBestInvalidTrust, OK if it doesn't exist
     CBigNum bnBestInvalidTrust;
     pblocktree->ReadBestInvalidTrust(bnBestInvalidTrust);
-//    nBestInvalidTrust = bnBestInvalidTrust.getuint256();
+    nBestInvalidTrust = bnBestInvalidTrust.getuint256();
 
     // Check whether we need to continue reindexing
     bool fReindexing = false;
@@ -2832,7 +2834,7 @@ bool static LoadBlockIndexDB()
         return true;
     hashBestChain = pindexBest->GetBlockHash();
     nBestHeight = pindexBest->nHeight;
-//    nBestChainTrust = pindexBest->bnChainTrust;
+    nBestChainTrust = pindexBest->nChainTrust;
 
     // set 'next' pointers in best chain
     CBlockIndex *pindex = pindexBest;
