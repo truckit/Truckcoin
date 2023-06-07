@@ -5,7 +5,7 @@
 #ifndef BITCOIN_HMAC_SHA256_H
 #define BITCOIN_HMAC_SHA256_H
 
-#include "sha256.h"
+#include "crypto/sha256.h"
 
 #include <stdint.h>
 #include <stdlib.h>

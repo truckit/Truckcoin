@@ -8,7 +8,7 @@
 #include <secp256k1.h>
 #include <secp256k1_recovery.h>
 
-#include "common.h"
+#include "crypto/common.h"
 #include "random.h"
 #include "util.h"
 #include "pubkey.h"
