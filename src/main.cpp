@@ -52,7 +52,7 @@ int nCoinbaseMaturity = 160;
 CBlockIndex* pindexGenesisBlock = NULL;
 int nBestHeight = -1;
 uint256 nBestChainTrust = 0;
-uint256 nBestInvalidTrust = 0;
+CBlockIndex *pindexBestInvalid;
 uint256 hashBestChain = 0;
 CBlockIndex* pindexBest = NULL;
 int64_t nTimeBestReceived = 0;
@@ -1301,10 +1301,9 @@ bool IsInitialBlockDownload()
 
 void static InvalidChainFound(CBlockIndex* pindexNew)
 {
-    if (pindexNew->nChainTrust > nBestInvalidTrust)
+    if (!pindexBestInvalid || pindexNew->nChainTrust > pindexBestInvalid->nChainTrust)
     {
-        nBestInvalidTrust = pindexNew->nChainTrust;
-        pblocktree->WriteBestInvalidTrust(CBigNum(nBestInvalidTrust));
+        pindexBestInvalid = pindexNew;
         uiInterface.NotifyBlocksChanged();
     }
     printf("InvalidChainFound: invalid block=%s  height=%d  log2_trust=%.8g  date=%s\n",
@@ -2796,6 +2795,8 @@ bool static LoadBlockIndexDB()
         pindex->nChainTx = (pindex->pprev ? pindex->pprev->nChainTx : 0) + pindex->nTx;
         if ((pindex->nStatus & BLOCK_VALID_MASK) >= BLOCK_VALID_TRANSACTIONS && !(pindex->nStatus & BLOCK_FAILED_MASK))
             setBlockIndexValid.insert(pindex);
+        if (pindex->nStatus & BLOCK_FAILED_MASK && (!pindexBestInvalid || pindex->nChainTrust > pindexBestInvalid->nChainTrust))
+            pindexBestInvalid = pindex;
     }
 
     // Load block file info
@@ -2811,11 +2812,6 @@ bool static LoadBlockIndexDB()
         Checkpoints::hashSyncCheckpoint = hashGenesisBlock;
     }
     printf("LoadBlockIndexDB(): synchronized checkpoint %s\n", Checkpoints::hashSyncCheckpoint.ToString().c_str());
-
-    // Load nBestInvalidTrust, OK if it doesn't exist
-    CBigNum bnBestInvalidTrust;
-    pblocktree->ReadBestInvalidTrust(bnBestInvalidTrust);
-    nBestInvalidTrust = bnBestInvalidTrust.getuint256();
 
     // Check whether we need to continue reindexing
     bool fReindexing = false;
@@ -2928,7 +2924,7 @@ void UnloadBlockIndex()
     pindexGenesisBlock = NULL;
     nBestHeight = 0;
     nBestChainTrust = 0;
-    nBestInvalidTrust = 0;
+    pindexBestInvalid = NULL;
     hashBestChain = 0;
     pindexBest = NULL;
 }
