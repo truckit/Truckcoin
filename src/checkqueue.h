@@ -165,6 +165,10 @@ public:
             condQuit.wait(lock);
     }
 
+    ~CCheckQueue() {
+        Quit();
+    }
+
     friend class CCheckQueueControl<T>;
 };
 

@@ -170,6 +170,8 @@ FILE* OpenUndoFile(const CDiskBlockPos &pos, bool fReadOnly = false);
 bool LoadExternalBlockFile(FILE* fileIn, CDiskBlockPos *dbp = NULL);
 /** Load the block tree and coins database from disk */
 bool LoadBlockIndex();
+/** Unload database information */
+void UnloadBlockIndex();
 /** Verify consistency of the block and coin databases */
 bool VerifyDB();
 /** Print the loaded block tree */
