@@ -6,11 +6,11 @@
 #ifndef BITCOIN_UINT256_H
 #define BITCOIN_UINT256_H
 
-#include <limits.h>
+#include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
-#include <string.h>
-#include <inttypes.h>
 #include <string>
+#include <string.h>
 #include <vector>
 
 extern const signed char p_util_hexdigit[256]; // defined in util.cpp
@@ -19,8 +19,6 @@ inline signed char HexDigit(char c)
 {
     return p_util_hexdigit[(unsigned char)c];
 }
-
-#include <stdint.h>
 
 /** Base class without constructors for uint256 and uint160.
  * This makes the compiler let u use it in a union.
@@ -203,7 +201,7 @@ public:
     {
         // prefix operator
         int i = 0;
-        while (--pn[i] == -1 && i < WIDTH-1)
+        while (--pn[i] == (uint32_t)-1 && i < WIDTH-1)
             i++;
         return *this;
     }
@@ -370,9 +368,10 @@ public:
         return sizeof(pn);
     }
 
-    uint64_t Get64(int n=0) const
+    uint64_t GetLow64() const
     {
-        return pn[2*n] | (uint64_t)pn[2*n+1] << 32;
+        assert(WIDTH >= 2);
+        return pn[0] | (uint64_t)pn[1] << 32;
     }
 
 //    unsigned int GetSerializeSize(int nType=0, int nVersion=PROTOCOL_VERSION) const

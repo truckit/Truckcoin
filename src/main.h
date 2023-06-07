@@ -1564,7 +1564,7 @@ public:
     unsigned int GetStakeEntropyBit(unsigned int nHeight) const
     {
         // Take last bit of block hash as entropy bit
-        unsigned int nEntropyBit = ((GetHash().Get64()) & 1ULL);
+        unsigned int nEntropyBit = ((GetHash().GetLow64()) & 1ULL);
         if (fDebug && GetBoolArg("-printstakemodifier"))
             printf("GetStakeEntropyBit: nHeight=%u hashBlock=%s nEntropyBit=%u\n", nHeight, GetHash().ToString().c_str(), nEntropyBit);
         return nEntropyBit;
