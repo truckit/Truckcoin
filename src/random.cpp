@@ -8,6 +8,7 @@
 #include "cleanse.h"
 #ifdef WIN32
 #include "compat.h" // for Windows API
+#include "serialize.h" // for begin_ptr(vec)
 #endif
 #include "util.h"
 
@@ -75,7 +76,7 @@ void RandAddSeedPerfmon()
         static bool warned = false; // Warn only once
         if (!warned)
         {
-            LogPrintf("%s: Warning: RegQueryValueExA(HKEY_PERFORMANCE_DATA) failed with code %i\n", __func__, ret);
+            printf("%s: Warning: RegQueryValueExA(HKEY_PERFORMANCE_DATA) failed with code %i\n", __func__, ret);
             warned = true;
         }
     }
