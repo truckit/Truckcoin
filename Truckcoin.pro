@@ -274,26 +274,25 @@ HEADERS += src/qt/bitcoingui.h \
     src/version.h \
     src/netbase.h \
     src/clientversion.h \
-    src/hashblock.h \
-    src/sph_blake.h \
-    src/sph_skein.h \
-    src/sph_keccak.h \
-    src/sph_jh.h \
-    src/sph_groestl.h \
-    src/sph_bmw.h \
-    src/sph_types.h \
-    src/sph_luffa.h \
-    src/sph_cubehash.h \
-    src/sph_echo.h \
-    src/sph_shavite.h \
-    src/sph_simd.h \
-    src/sph_types.h \
     src/qt/macnotificationhandler.h \
     src/qt/blockbrowser.h \
     src/qt/trafficgraphwidget.h \
     src/qt/winshutdownmonitor.h \
     src/qt/splitthresholdfield.h \
-    src/qt/stakereportdialog.h
+    src/qt/stakereportdialog.h \
+    src/hashblock.h \
+    src/crypto/sph_blake.h \
+    src/crypto/sph_skein.h \
+    src/crypto/sph_keccak.h \
+    src/crypto/sph_jh.h \
+    src/crypto/sph_groestl.h \
+    src/crypto/sph_bmw.h \
+    src/crypto/sph_luffa.h \
+    src/crypto/sph_cubehash.h \
+    src/crypto/sph_echo.h \
+    src/crypto/sph_shavite.h \
+    src/crypto/sph_simd.h \
+    src/crypto/sph_types.h
     
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/transactiontablemodel.cpp \
@@ -377,17 +376,17 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/noui.cpp \
     src/kernel.cpp \
     src/pbkdf2.cpp \
-    src/blake.c \
-    src/bmw.c \
-    src/groestl.c \
-    src/jh.c \
-    src/keccak.c \
-    src/skein.c \
-    src/luffa.c \
-    src/cubehash.c \
-    src/shavite.c \
-    src/echo.c \
-    src/simd.c
+    src/crypto/blake.c \
+    src/crypto/bmw.c \
+    src/crypto/groestl.c \
+    src/crypto/jh.c \
+    src/crypto/keccak.c \
+    src/crypto/skein.c \
+    src/crypto/luffa.c \
+    src/crypto/cubehash.c \
+    src/crypto/shavite.c \
+    src/crypto/echo.c \
+    src/crypto/simd.c
 
 RESOURCES += \
     src/qt/bitcoin.qrc

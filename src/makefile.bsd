@@ -144,19 +144,18 @@ OBJS= \
     obj/noui.o \
     obj/kernel.o \
     obj/pbkdf2.o \
-    obj/scrypt-x86.o \
-    obj/scrypt-x86_64.o \
-    obj/groestl.o \
-    obj/blake.o \
-    obj/bmw.o \
-    obj/skein.o \
-    obj/keccak.o \
-    obj/shavite.o \
-    obj/jh.o \
-    obj/luffa.o \
-    obj/cubehash.o \
-    obj/echo.o \
-    obj/simd.o 
+    obj/crypto/aes_helper.o \
+    obj/crypto/cubehash.o \
+    obj/crypto/luffa.o \
+    obj/crypto/echo.o \
+    obj/crypto/shavite.o \
+    obj/crypto/simd.o \
+    obj/crypto/blake.o\
+    obj/crypto/bmw.o\
+    obj/crypto/groestl.o\
+    obj/crypto/jh.o\
+    obj/crypto/keccak.o\
+    obj/crypto/skein.o
 
 
 all: truckcoind
@@ -173,7 +172,7 @@ DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
 leveldb/out-static/libleveldb.a:
 	@echo "Building LevelDB ..."; cd leveldb; gmake out-static/libleveldb.a out-static/libmemenv.a; cd ..;
-obj/txdb-leveldb.o: leveldb/out-static/libleveldb.a
+obj/leveldb.o: leveldb/out-static/libleveldb.a
 
 # auto-generated dependencies:
 -include obj/*.P

@@ -1,8 +1,10 @@
-/* $Id: sph_simd.h 154 2010-04-26 17:00:24Z tp $ */
+/* $Id: sph_shavite.h 208 2010-06-02 20:33:00Z tp $ */
 /**
- * SIMD interface. SIMD is a family of functions which differ by
- * their output size; this implementation defines SIMD for output
- * sizes 224, 256, 384 and 512 bits.
+ * SHAvite-3 interface. This code implements SHAvite-3 with the
+ * recommended parameters for SHA-3, with outputs of 224, 256, 384 and
+ * 512 bits. In the following, we call the function "SHAvite" (without
+ * the "-3" suffix), thus "SHAvite-224" is "SHAvite-3 with a 224-bit
+ * output".
  *
  * ==========================(LICENSE BEGIN)============================
  *
@@ -29,128 +31,130 @@
  *
  * ===========================(LICENSE END)=============================
  *
- * @file     sph_simd.h
+ * @file     sph_shavite.h
  * @author   Thomas Pornin <thomas.pornin@cryptolog.com>
  */
 
-#ifndef SPH_SIMD_H__
-#define SPH_SIMD_H__
+#ifndef SPH_SHAVITE_H__
+#define SPH_SHAVITE_H__
+
+#include <stddef.h>
+#include "crypto/sph_types.h"
 
 #ifdef __cplusplus
 extern "C"{
 #endif
 
-#include <stddef.h>
-#include "sph_types.h"
-
 /**
- * Output size (in bits) for SIMD-224.
+ * Output size (in bits) for SHAvite-224.
  */
-#define SPH_SIZE_simd224   224
+#define SPH_SIZE_shavite224   224
 
 /**
- * Output size (in bits) for SIMD-256.
+ * Output size (in bits) for SHAvite-256.
  */
-#define SPH_SIZE_simd256   256
+#define SPH_SIZE_shavite256   256
 
 /**
- * Output size (in bits) for SIMD-384.
+ * Output size (in bits) for SHAvite-384.
  */
-#define SPH_SIZE_simd384   384
+#define SPH_SIZE_shavite384   384
 
 /**
- * Output size (in bits) for SIMD-512.
+ * Output size (in bits) for SHAvite-512.
  */
-#define SPH_SIZE_simd512   512
+#define SPH_SIZE_shavite512   512
 
 /**
- * This structure is a context for SIMD computations: it contains the
- * intermediate values and some data from the last entered block. Once
- * an SIMD computation has been performed, the context can be reused for
- * another computation. This specific structure is used for SIMD-224
- * and SIMD-256.
+ * This structure is a context for SHAvite-224 and SHAvite-256 computations:
+ * it contains the intermediate values and some data from the last
+ * entered block. Once a SHAvite computation has been performed, the
+ * context can be reused for another computation.
  *
- * The contents of this structure are private. A running SIMD computation
- * can be cloned by copying the context (e.g. with a simple
+ * The contents of this structure are private. A running SHAvite
+ * computation can be cloned by copying the context (e.g. with a simple
  * <code>memcpy()</code>).
  */
 typedef struct {
 #ifndef DOXYGEN_IGNORE
 	unsigned char buf[64];    /* first field, for alignment */
 	size_t ptr;
-	sph_u32 state[16];
-	sph_u32 count_low, count_high;
+	sph_u32 h[8];
+	sph_u32 count0, count1;
 #endif
-} sph_simd_small_context;
+} sph_shavite_small_context;
 
 /**
- * This structure is a context for SIMD computations: it contains the
- * intermediate values and some data from the last entered block. Once
- * an SIMD computation has been performed, the context can be reused for
- * another computation. This specific structure is used for SIMD-384
- * and SIMD-512.
+ * This structure is a context for SHAvite-224 computations. It is
+ * identical to the common <code>sph_shavite_small_context</code>.
+ */
+typedef sph_shavite_small_context sph_shavite224_context;
+
+/**
+ * This structure is a context for SHAvite-256 computations. It is
+ * identical to the common <code>sph_shavite_small_context</code>.
+ */
+typedef sph_shavite_small_context sph_shavite256_context;
+
+/**
+ * This structure is a context for SHAvite-384 and SHAvite-512 computations:
+ * it contains the intermediate values and some data from the last
+ * entered block. Once a SHAvite computation has been performed, the
+ * context can be reused for another computation.
  *
- * The contents of this structure are private. A running SIMD computation
- * can be cloned by copying the context (e.g. with a simple
+ * The contents of this structure are private. A running SHAvite
+ * computation can be cloned by copying the context (e.g. with a simple
  * <code>memcpy()</code>).
  */
 typedef struct {
 #ifndef DOXYGEN_IGNORE
 	unsigned char buf[128];    /* first field, for alignment */
 	size_t ptr;
-	sph_u32 state[32];
-	sph_u32 count_low, count_high;
+	sph_u32 h[16];
+	sph_u32 count0, count1, count2, count3;
 #endif
-} sph_simd_big_context;
+} sph_shavite_big_context;
 
 /**
- * Type for a SIMD-224 context (identical to the common "small" context).
+ * This structure is a context for SHAvite-384 computations. It is
+ * identical to the common <code>sph_shavite_small_context</code>.
  */
-typedef sph_simd_small_context sph_simd224_context;
+typedef sph_shavite_big_context sph_shavite384_context;
 
 /**
- * Type for a SIMD-256 context (identical to the common "small" context).
+ * This structure is a context for SHAvite-512 computations. It is
+ * identical to the common <code>sph_shavite_small_context</code>.
  */
-typedef sph_simd_small_context sph_simd256_context;
+typedef sph_shavite_big_context sph_shavite512_context;
 
 /**
- * Type for a SIMD-384 context (identical to the common "big" context).
- */
-typedef sph_simd_big_context sph_simd384_context;
-
-/**
- * Type for a SIMD-512 context (identical to the common "big" context).
- */
-typedef sph_simd_big_context sph_simd512_context;
-
-/**
- * Initialize an SIMD-224 context. This process performs no memory allocation.
+ * Initialize a SHAvite-224 context. This process performs no memory allocation.
  *
- * @param cc   the SIMD-224 context (pointer to a
- *             <code>sph_simd224_context</code>)
+ * @param cc   the SHAvite-224 context (pointer to a
+ *             <code>sph_shavite224_context</code>)
  */
-void sph_simd224_init(void *cc);
+void sph_shavite224_init(void *cc);
 
 /**
  * Process some data bytes. It is acceptable that <code>len</code> is zero
  * (in which case this function does nothing).
  *
- * @param cc     the SIMD-224 context
+ * @param cc     the SHAvite-224 context
  * @param data   the input data
  * @param len    the input data length (in bytes)
  */
-void sph_simd224(void *cc, const void *data, size_t len);
+void sph_shavite224(void *cc, const void *data, size_t len);
 
 /**
- * Terminate the current SIMD-224 computation and output the result into
+ * Terminate the current SHAvite-224 computation and output the result into
  * the provided buffer. The destination buffer must be wide enough to
  * accomodate the result (28 bytes). The context is automatically
  * reinitialized.
  *
- * @param cc    the SIMD-224 context
+ * @param cc    the SHAvite-224 context
  * @param dst   the destination buffer
  */
-void sph_simd224_close(void *cc, void *dst);
+void sph_shavite224_close(void *cc, void *dst);
 
 /**
  * Add a few additional bits (0 to 7) to the current computation, then
@@ -160,42 +164,42 @@ void sph_simd224_close(void *cc, void *dst);
  * numbered 7 downto 8-n (this is the big-endian convention at the byte
  * level). The context is automatically reinitialized.
  *
- * @param cc    the SIMD-224 context
+ * @param cc    the SHAvite-224 context
  * @param ub    the extra bits
  * @param n     the number of extra bits (0 to 7)
  * @param dst   the destination buffer
  */
-void sph_simd224_addbits_and_close(
+void sph_shavite224_addbits_and_close(
 	void *cc, unsigned ub, unsigned n, void *dst);
 
 /**
- * Initialize an SIMD-256 context. This process performs no memory allocation.
+ * Initialize a SHAvite-256 context. This process performs no memory allocation.
  *
- * @param cc   the SIMD-256 context (pointer to a
- *             <code>sph_simd256_context</code>)
+ * @param cc   the SHAvite-256 context (pointer to a
+ *             <code>sph_shavite256_context</code>)
  */
-void sph_simd256_init(void *cc);
+void sph_shavite256_init(void *cc);
 
 /**
  * Process some data bytes. It is acceptable that <code>len</code> is zero
  * (in which case this function does nothing).
  *
- * @param cc     the SIMD-256 context
+ * @param cc     the SHAvite-256 context
  * @param data   the input data
  * @param len    the input data length (in bytes)
  */
-void sph_simd256(void *cc, const void *data, size_t len);
+void sph_shavite256(void *cc, const void *data, size_t len);
 
 /**
- * Terminate the current SIMD-256 computation and output the result into
+ * Terminate the current SHAvite-256 computation and output the result into
  * the provided buffer. The destination buffer must be wide enough to
  * accomodate the result (32 bytes). The context is automatically
  * reinitialized.
  *
- * @param cc    the SIMD-256 context
+ * @param cc    the SHAvite-256 context
  * @param dst   the destination buffer
  */
-void sph_simd256_close(void *cc, void *dst);
+void sph_shavite256_close(void *cc, void *dst);
 
 /**
  * Add a few additional bits (0 to 7) to the current computation, then
@@ -205,42 +209,42 @@ void sph_simd256_close(void *cc, void *dst);
  * numbered 7 downto 8-n (this is the big-endian convention at the byte
  * level). The context is automatically reinitialized.
  *
- * @param cc    the SIMD-256 context
+ * @param cc    the SHAvite-256 context
  * @param ub    the extra bits
  * @param n     the number of extra bits (0 to 7)
  * @param dst   the destination buffer
  */
-void sph_simd256_addbits_and_close(
+void sph_shavite256_addbits_and_close(
 	void *cc, unsigned ub, unsigned n, void *dst);
 
 /**
- * Initialize an SIMD-384 context. This process performs no memory allocation.
+ * Initialize a SHAvite-384 context. This process performs no memory allocation.
  *
- * @param cc   the SIMD-384 context (pointer to a
- *             <code>sph_simd384_context</code>)
+ * @param cc   the SHAvite-384 context (pointer to a
+ *             <code>sph_shavite384_context</code>)
  */
-void sph_simd384_init(void *cc);
+void sph_shavite384_init(void *cc);
 
 /**
  * Process some data bytes. It is acceptable that <code>len</code> is zero
  * (in which case this function does nothing).
  *
- * @param cc     the SIMD-384 context
+ * @param cc     the SHAvite-384 context
  * @param data   the input data
  * @param len    the input data length (in bytes)
  */
-void sph_simd384(void *cc, const void *data, size_t len);
+void sph_shavite384(void *cc, const void *data, size_t len);
 
 /**
- * Terminate the current SIMD-384 computation and output the result into
+ * Terminate the current SHAvite-384 computation and output the result into
  * the provided buffer. The destination buffer must be wide enough to
  * accomodate the result (48 bytes). The context is automatically
  * reinitialized.
  *
- * @param cc    the SIMD-384 context
+ * @param cc    the SHAvite-384 context
  * @param dst   the destination buffer
  */
-void sph_simd384_close(void *cc, void *dst);
+void sph_shavite384_close(void *cc, void *dst);
 
 /**
  * Add a few additional bits (0 to 7) to the current computation, then
@@ -250,42 +254,42 @@ void sph_simd384_close(void *cc, void *dst);
  * numbered 7 downto 8-n (this is the big-endian convention at the byte
  * level). The context is automatically reinitialized.
  *
- * @param cc    the SIMD-384 context
+ * @param cc    the SHAvite-384 context
  * @param ub    the extra bits
  * @param n     the number of extra bits (0 to 7)
  * @param dst   the destination buffer
  */
-void sph_simd384_addbits_and_close(
+void sph_shavite384_addbits_and_close(
 	void *cc, unsigned ub, unsigned n, void *dst);
 
 /**
- * Initialize an SIMD-512 context. This process performs no memory allocation.
+ * Initialize a SHAvite-512 context. This process performs no memory allocation.
  *
- * @param cc   the SIMD-512 context (pointer to a
- *             <code>sph_simd512_context</code>)
+ * @param cc   the SHAvite-512 context (pointer to a
+ *             <code>sph_shavite512_context</code>)
  */
-void sph_simd512_init(void *cc);
+void sph_shavite512_init(void *cc);
 
 /**
  * Process some data bytes. It is acceptable that <code>len</code> is zero
  * (in which case this function does nothing).
  *
- * @param cc     the SIMD-512 context
+ * @param cc     the SHAvite-512 context
  * @param data   the input data
  * @param len    the input data length (in bytes)
  */
-void sph_simd512(void *cc, const void *data, size_t len);
+void sph_shavite512(void *cc, const void *data, size_t len);
 
 /**
- * Terminate the current SIMD-512 computation and output the result into
+ * Terminate the current SHAvite-512 computation and output the result into
  * the provided buffer. The destination buffer must be wide enough to
  * accomodate the result (64 bytes). The context is automatically
  * reinitialized.
  *
- * @param cc    the SIMD-512 context
+ * @param cc    the SHAvite-512 context
  * @param dst   the destination buffer
  */
-void sph_simd512_close(void *cc, void *dst);
+void sph_shavite512_close(void *cc, void *dst);
 
 /**
  * Add a few additional bits (0 to 7) to the current computation, then
@@ -295,15 +299,16 @@ void sph_simd512_close(void *cc, void *dst);
  * numbered 7 downto 8-n (this is the big-endian convention at the byte
  * level). The context is automatically reinitialized.
  *
- * @param cc    the SIMD-512 context
+ * @param cc    the SHAvite-512 context
  * @param ub    the extra bits
  * @param n     the number of extra bits (0 to 7)
  * @param dst   the destination buffer
  */
-void sph_simd512_addbits_and_close(
+void sph_shavite512_addbits_and_close(
 	void *cc, unsigned ub, unsigned n, void *dst);
+	
 #ifdef __cplusplus
 }
-#endif
-
+#endif	
+	
 #endif

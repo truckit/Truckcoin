@@ -62,8 +62,8 @@ OBJS= \
     obj/addrman.o \
     obj/cleanse.o \
     obj/crypter.o \
-    obj/key.o \
     obj/pubkey.o \
+    obj/key.o \
     obj/db.o \
     obj/leveldb.o \
     obj/txdb.o \
@@ -97,17 +97,18 @@ OBJS= \
     obj/noui.o \
     obj/kernel.o \
     obj/pbkdf2.o \
-    src/blake.o \
-    src/bmw.o \
-    src/groestl.o \
-    src/jh.o \
-    src/keccak.o \
-    src/skein.o \
-    src/luffa.o \
-    src/cubehash.o \
-    src/shavite.o \
-    src/echo.o \
-    src/simd.o
+    obj/crypto/aes_helper.o \
+    obj/crypto/cubehash.o \
+    obj/crypto/luffa.o \
+    obj/crypto/echo.o \
+    obj/crypto/shavite.o \
+    obj/crypto/simd.o \
+    obj/crypto/blake.o\
+    obj/crypto/bmw.o\
+    obj/crypto/groestl.o\
+    obj/crypto/jh.o\
+    obj/crypto/keccak.o\
+    obj/crypto/skein.o
 
 all: truckcoind.exe
 
