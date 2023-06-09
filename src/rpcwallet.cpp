@@ -4,12 +4,17 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+// getstakereport RPC by Navcoin
+// Copyright (c) 2017-2023 The Navcoin developers
+
 #include "wallet.h"
 #include "walletdb.h"
 #include "bitcoinrpc.h"
 #include "init.h"
 #include "util.h"
 #include "base58.h"
+
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 using namespace json_spirit;
 using namespace std;
@@ -1914,15 +1919,13 @@ vStakePeriodRange_T PrepareRangeForStakeReport()
     vStakePeriodRange_T aRange;
     StakePeriodRange_T x;
 
-    struct tm Loc_MidNight;
-
     int64_t n1Hour = 60*60;
     int64_t n1Day = 24 * n1Hour;
 
     int64_t nToday = GetTime();
-    time_t CurTime = nToday;
+    auto localTime = boost::posix_time::second_clock::local_time();
+    struct tm Loc_MidNight = boost::posix_time::to_tm(localTime);
 
-    localtime_r(&CurTime, &Loc_MidNight);
     Loc_MidNight.tm_hour = 0;
     Loc_MidNight.tm_min = 0;
     Loc_MidNight.tm_sec = 0;  // set midnight
@@ -1933,7 +1936,7 @@ vStakePeriodRange_T PrepareRangeForStakeReport()
     x.Total = 0;
 
     // prepare last single 30 day Range
-    for(int i=0; i<30; i++)
+    for(int i = 0; i < 30; i++)
     {
         x.Name = DateTimeStrFormat(x.Start);
 
@@ -1949,7 +1952,7 @@ vStakePeriodRange_T PrepareRangeForStakeReport()
 
     nToday = GetTime();
 
-    for(int i=0; i<4; i++)
+    for(int i = 0; i < 4; i++)
     {
         x.Start = nToday - GroupDays[i][0] * n1Day;
         x.End   = nToday - GroupDays[i][1] * n1Day;
