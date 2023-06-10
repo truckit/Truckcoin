@@ -6,9 +6,9 @@
 
 #include <algorithm>
 #include <vector>
-#include <mutex>
-#include <condition_variable>
-#include <cassert>
+
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/condition_variable.hpp>
 
 extern bool fShutdown;
 
@@ -26,16 +26,16 @@ template<typename T> class CCheckQueueControl;
 template<typename T> class CCheckQueue {
 private:
     // Mutex to protect the inner state
-    std::mutex mutex;
+    boost::mutex mutex;
 
     // Worker threads block on this when out of work
-    std::condition_variable condWorker;
+    boost::condition_variable condWorker;
 
     // Master thread blocks on this when out of work
-    std::condition_variable condMaster;
+    boost::condition_variable condMaster;
 
     // Quit method blocks on this until all workers are gone
-    std::condition_variable condQuit;
+    boost::condition_variable condQuit;
 
     // The queue of elements to be processed.
     // As the order of booleans doesn't matter, it is used as a LIFO (stack)
@@ -63,14 +63,14 @@ private:
 
     // Internal function that does bulk of the verification work.
     bool Loop(bool fMaster = false) {
-        std::condition_variable &cond = fMaster ? condMaster : condWorker;
+        boost::condition_variable &cond = fMaster ? condMaster : condWorker;
         std::vector<T> vChecks;
         vChecks.reserve(nBatchSize);
         unsigned int nNow = 0;
         bool fOk = true;
         do {
             {
-                std::unique_lock<std::mutex> lock(mutex);
+                boost::unique_lock<boost::mutex> lock(mutex);
                 // first do the clean-up of the previous loop run (allowing us to do it in the same critsect)
                 if (nNow) {
                     fAllOk &= fOk;
@@ -141,7 +141,7 @@ public:
 
     // Add a batch of checks to the queue
     void Add(std::vector<T> &vChecks) {
-        std::unique_lock<std::mutex> lock(mutex);
+        boost::unique_lock<boost::mutex> lock(mutex);
         for (T &check : vChecks) {
             queue.push_back(T());
             check.swap(queue.back());
@@ -155,7 +155,7 @@ public:
 
     // Shut the queue down
     void Quit() {
-        std::unique_lock<std::mutex> lock(mutex);
+        boost::unique_lock<boost::mutex> lock(mutex);
         fQuit = true;
         // No need to wake the master, as he will quit automatically when all jobs are
         // done.
@@ -163,6 +163,10 @@ public:
 
         while (nTotal > 0)
             condQuit.wait(lock);
+    }
+
+    ~CCheckQueue() {
+        Quit();
     }
 
     friend class CCheckQueueControl<T>;

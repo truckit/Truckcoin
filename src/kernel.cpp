@@ -39,6 +39,11 @@ static std::map<int, unsigned int> mapStakeModifierCheckpoints =
     ( 1693797, 0xca3f12f5u )
     ( 1776009, 0x2d92b8f0u )
     ( 1937023, 0x34adf336u )
+    ( 2000023, 0x78cb4b4fu )
+    ( 2302323, 0xe00e2fd2u )
+    ( 2602323, 0x15e2ed91u )
+    ( 2902323, 0xb5dd9966u )
+    ( 3130023, 0xf32794e0u )
 ;
 // Get time weight
 int64_t GetWeight(int64_t nIntervalBeginning, int64_t nIntervalEnd)
@@ -472,7 +477,7 @@ unsigned int GetStakeModifierChecksum(const CBlockIndex* pindex)
     ss << pindex->nFlags << pindex->hashProofOfStake << pindex->nStakeModifier;
     uint256 hashChecksum = Hash(ss.begin(), ss.end());
     hashChecksum >>= (256 - 32);
-    return hashChecksum.Get64();
+    return hashChecksum.GetCheapHash();
 }
 
 // Check stake modifier hard checkpoints

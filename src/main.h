@@ -10,7 +10,6 @@
 #include "sync.h"
 #include "net.h"
 #include "script.h"
-#include "scrypt_mine.h"
 #include "hashblock.h"
 
 #include <iostream>
@@ -112,8 +111,7 @@ extern unsigned int nStakeMinAgeV2;
 extern unsigned int nNodeLifespan;
 extern int nCoinbaseMaturity;
 extern int nBestHeight;
-extern CBigNum bnBestChainTrust;
-extern CBigNum bnBestInvalidTrust;
+extern uint256 nBestChainTrust;
 extern uint256 hashBestChain;
 extern CBlockIndex* pindexBest;
 extern unsigned int nTransactionsUpdated;
@@ -170,6 +168,8 @@ FILE* OpenUndoFile(const CDiskBlockPos &pos, bool fReadOnly = false);
 bool LoadExternalBlockFile(FILE* fileIn, CDiskBlockPos *dbp = NULL);
 /** Load the block tree and coins database from disk */
 bool LoadBlockIndex();
+/** Unload database information */
+void UnloadBlockIndex();
 /** Verify consistency of the block and coin databases */
 bool VerifyDB();
 /** Print the loaded block tree */
@@ -888,21 +888,11 @@ public:
         uint256 hashChecksum;
         try {
             filein >> *this;
+            filein >> hashChecksum;
         }
         catch (std::exception &e) {
             return error("%s() : deserialize or I/O error", __PRETTY_FUNCTION__);
         }
-
-        // for compatibility with pre-release code that didn't write checksums to undo data
-        // TODO: replace by a simply 'filein >> hashChecksum' in the above try block
-        try {
-            filein >> hashChecksum;
-        } catch (std::exception &e) {
-            hashChecksum = 0;
-        }
-        uint32_t hashInit = hashChecksum.Get64(0) & 0xFFFFFFFFUL;
-        if (hashChecksum == 0 || memcmp(&hashInit, pchMessageStart, 4) == 0)
-            return true;
 
         // Verify checksum
         CHashWriter hasher(SER_GETHASH, PROTOCOL_VERSION);
@@ -1210,7 +1200,7 @@ private:
     int nHashType;
 
 public:
-    CScriptCheck() {}
+    CScriptCheck(): ptxTo(0), nIn(0), nFlags(0), nHashType(0) {}
     CScriptCheck(const CCoins& txFromIn, const CTransaction& txToIn, unsigned int nInIn, unsigned int nFlagsIn, int nHashTypeIn) :
         scriptPubKey(txFromIn.vout[txToIn.vin[nInIn].prevout.n].scriptPubKey),
         ptxTo(&txToIn), nIn(nInIn), nFlags(nFlagsIn), nHashType(nHashTypeIn) { }
@@ -1568,12 +1558,12 @@ public:
     // Generate proof-of-stake block signature
     bool SignBlock(const CKeyStore& keystore);
     // Validate header signature
-    bool CheckBlockSignature(bool fProofOfStake) const;
+    bool CheckBlockSignature() const;
     // entropy bit for stake modifier if chosen by modifier
     unsigned int GetStakeEntropyBit(unsigned int nHeight) const
     {
         // Take last bit of block hash as entropy bit
-        unsigned int nEntropyBit = ((GetHash().Get64()) & 1ULL);
+        unsigned int nEntropyBit = ((GetHash().GetCheapHash()) & 1ULL);
         if (fDebug && GetBoolArg("-printstakemodifier"))
             printf("GetStakeEntropyBit: nHeight=%u hashBlock=%s nEntropyBit=%u\n", nHeight, GetHash().ToString().c_str(), nEntropyBit);
         return nEntropyBit;
@@ -1680,7 +1670,7 @@ public:
     // Byte offset within rev?????.dat where this block's undo data is stored
     unsigned int nUndoPos;
     // (memory only) Trust score of block chain up to and including this block
-    CBigNum bnChainTrust;
+    uint256 nChainTrust;
     // Number of transactions in this block.
     unsigned int nTx;
     // (memory only) Number of transactions in the chain up to and including this block
@@ -1731,7 +1721,7 @@ public:
         nFile = 0;
         nDataPos = 0;
         nUndoPos = 0;
-        bnChainTrust = 0;
+        nChainTrust = 0;
         nMint = 0;
         nMoneySupply = 0;
         nFlags = 0;
@@ -1760,7 +1750,7 @@ public:
         nFile = 0;
         nDataPos = 0;
         nUndoPos = 0;
-        bnChainTrust = 0;
+        nChainTrust = 0;
         nMint = 0;
         nMoneySupply = 0;
         nFlags = 0;
@@ -1830,7 +1820,7 @@ public:
         return (int64_t)nTime;
     }
 
-    CBigNum GetBlockTrust() const;
+    uint256 GetBlockTrust() const;
 
     bool IsInMainChain() const
     {
@@ -1938,8 +1928,8 @@ public:
 struct CBlockIndexTrustComparator
 {
     bool operator()(CBlockIndex *pa, CBlockIndex *pb) const {
-        if (pa->bnChainTrust > pb->bnChainTrust) return false;
-        if (pa->bnChainTrust < pb->bnChainTrust) return true;
+        if (pa->nChainTrust > pb->nChainTrust) return false;
+        if (pa->nChainTrust < pb->nChainTrust) return true;
 
         return false; // identical blocks
     }

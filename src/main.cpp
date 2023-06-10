@@ -13,7 +13,6 @@
 #include "ui_interface.h"
 #include "checkqueue.h"
 #include "kernel.h"
-#include "scrypt_mine.h"
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <regex>
@@ -51,8 +50,8 @@ int64_t nChainStartTime = 1399495660;
 int nCoinbaseMaturity = 160;
 CBlockIndex* pindexGenesisBlock = NULL;
 int nBestHeight = -1;
-CBigNum bnBestChainTrust = 0;
-CBigNum bnBestInvalidTrust = 0;
+uint256 nBestChainTrust = 0;
+CBlockIndex *pindexBestInvalid;
 uint256 hashBestChain = 0;
 CBlockIndex* pindexBest = NULL;
 int64_t nTimeBestReceived = 0;
@@ -1301,19 +1300,17 @@ bool IsInitialBlockDownload()
 
 void static InvalidChainFound(CBlockIndex* pindexNew)
 {
-    if (pindexNew->bnChainTrust > bnBestInvalidTrust)
+    if (!pindexBestInvalid || pindexNew->nChainTrust > pindexBestInvalid->nChainTrust)
     {
-        bnBestInvalidTrust = pindexNew->bnChainTrust;
-        pblocktree->WriteBestInvalidTrust(CBigNum(bnBestInvalidTrust));
+        pindexBestInvalid = pindexNew;
         uiInterface.NotifyBlocksChanged();
     }
-
-    printf("InvalidChainFound: invalid block=%s  height=%d  trust=%s  date=%s\n",
+    printf("InvalidChainFound: invalid block=%s  height=%d  log2_trust=%.8g  date=%s\n",
       pindexNew->GetBlockHash().ToString().substr(0,20).c_str(), pindexNew->nHeight,
-      pindexNew->bnChainTrust.ToString().c_str(), DateTimeStrFormat("%x %H:%M:%S",
+      log(pindexNew->nChainTrust.getdouble())/log(2.0), DateTimeStrFormat("%x %H:%M:%S", 
       pindexNew->GetBlockTime()).c_str());
-    printf("InvalidChainFound:  current best=%s  height=%d  trust=%s  date=%s\n",
-      hashBestChain.ToString().substr(0,20).c_str(), nBestHeight, bnBestChainTrust.ToString().c_str(),
+    printf("InvalidChainFound:  current best=%s  height=%d  log2_trust=%.8g  date=%s\n",
+      hashBestChain.ToString().substr(0,20).c_str(), nBestHeight, log(nBestChainTrust.getdouble())/log(2.0),
       DateTimeStrFormat("%x %H:%M:%S", pindexBest->GetBlockTime()).c_str());
 }
 
@@ -1358,7 +1355,7 @@ bool ConnectBestBlock() {
                 break;
             }
 
-            if (pindexBest == NULL || pindexTest->bnChainTrust > pindexBest->bnChainTrust)
+            if (pindexBest == NULL || pindexTest->nChainTrust > pindexBest->nChainTrust)
                 vAttach.push_back(pindexTest);
 
             if (pindexTest->pprev == NULL || pindexTest->pnext != NULL) {
@@ -1913,7 +1910,7 @@ bool SetBestChain(CBlockIndex* pindexNew)
         pindexBest = pindexNew;
         hashBestChain = pindexNew->GetBlockHash();
         nBestHeight = pindexBest->nHeight;
-        bnBestChainTrust = pindexNew->bnChainTrust;
+        nBestChainTrust = pindexNew->nChainTrust;
         return true;
     }
 
@@ -2026,17 +2023,19 @@ bool SetBestChain(CBlockIndex* pindexNew)
     pindexBest = pindexNew;
     pblockindexFBBHLast = NULL;
     nBestHeight = pindexBest->nHeight;
-    bnBestChainTrust = pindexNew->bnChainTrust;
+    nBestChainTrust = pindexNew->nChainTrust;
     nTimeBestReceived = GetTime();
     nTransactionsUpdated++;
-    
-    CBigNum bnBestBlockTrust = pindexBest->nHeight != 0 ? (pindexBest->bnChainTrust - pindexBest->pprev->bnChainTrust) : pindexBest->bnChainTrust;
-    
-    printf("SetBestChain: new best=%s  height=%d  trust=%s blocktrust=%s  tx=%lu  date=%s\n",
-      hashBestChain.ToString().substr(0,20).c_str(), nBestHeight, CBigNum(bnBestChainTrust).ToString().c_str(), CBigNum(bnBestBlockTrust).ToString().c_str(), (unsigned long)pindexNew->nChainTx,
-      DateTimeStrFormat("%x %H:%M:%S", pindexBest->GetBlockTime()).c_str());
 
-	printf("Stake checkpoint: %x\n", pindexBest->nStakeModifierChecksum);
+//    printf("SetBestChain: new best=%s  height=%d  log2_trust=%.8g  tx=%lu  date=%s\n",
+    printf("SetBestChain: new best=%s  height=%d  date=%s\n",
+      hashBestChain.ToString().substr(0,20).c_str(), 
+      nBestHeight,
+//      log(nBestChainTrust.getdouble())/log(2.0),
+//      (unsigned long)pindexNew->nChainTx,
+      DateTimeStrFormat("%d/%m/%Y %H:%M:%S", pindexBest->GetBlockTime()).c_str());
+
+    printf("Stake checkpoint: %x\n", pindexBest->nStakeModifierChecksum);
 
     // Check the version of the last 100 blocks to see if we need to upgrade:
     if (!fIsInitialDownload)
@@ -2150,7 +2149,7 @@ bool CBlock::AddToBlockIndex(const CDiskBlockPos &pos)
     }
 
     pindexNew->nTx = vtx.size();
-    pindexNew->bnChainTrust = (pindexNew->pprev ? pindexNew->pprev->bnChainTrust : 0) + pindexNew->GetBlockTrust();
+    pindexNew->nChainTrust = (pindexNew->pprev ? pindexNew->pprev->nChainTrust : 0) + pindexNew->GetBlockTrust();
     pindexNew->nChainTx = (pindexNew->pprev ? pindexNew->pprev->nChainTx : 0) + pindexNew->nTx;
     pindexNew->nFile = pos.nFile;
     pindexNew->nDataPos = pos.nPos;
@@ -2327,7 +2326,7 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
         return DoS(50, error("CheckBlock() : coinstake timestamp violation nTimeBlock=%" PRId64 " nTimeTx=%u", GetBlockTime(), vtx[1].nTime));
 
     // Check proof-of-stake block signature 
-    if (IsProofOfStake() && fCheckSig && !CheckBlockSignature(true)) 
+    if (IsProofOfStake() && fCheckSig && !CheckBlockSignature()) 
     return DoS(100, error("CheckBlock() : bad proof-of-stake block signature")); 
 
     // Check transactions
@@ -2456,23 +2455,24 @@ bool CBlock::AcceptBlock(CDiskBlockPos *dbp)
     return true;
 }
 
-CBigNum CBlockIndex::GetBlockTrust() const
+uint256 CBlockIndex::GetBlockTrust() const
 {
     CBigNum bnTarget;
     bnTarget.SetCompact(nBits);
+
     if (bnTarget <= 0)
         return 0;
 
     if (IsProofOfStake())
     {
         // Return trust score as usual
-        return (CBigNum(1)<<256) / (bnTarget+1);
+        return ((CBigNum(1)<<256) / (bnTarget+1)).getuint256();
     }
     else
     {
         // Calculate work amount for block
-        CBigNum bnPoWTrust = (bnProofOfWorkLimit / (bnTarget+1));
-        return bnPoWTrust > 1 ? bnPoWTrust : 1;
+        uint256 nPoWTrust = (bnProofOfWorkLimit / (bnTarget+1)).getuint256();
+        return nPoWTrust > 1 ? nPoWTrust : 1;
     }
 } 
 
@@ -2669,57 +2669,26 @@ bool CBlock::SignBlock(const CKeyStore& keystore)
     return false;
 }
 
-// check block signature
-bool CBlock::CheckBlockSignature(bool fProofOfStake) const
+// ppcoin: check block signature
+bool CBlock::CheckBlockSignature() const
 {
-    if (GetHash() == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet))
-        return vchBlockSig.empty();
+    if (vchBlockSig.empty())
+        return false;
 
-    vector<valtype> vSolutions;
     txnouttype whichType;
+    vector<valtype> vSolutions;
+    if (!Solver(vtx[1].vout[1].scriptPubKey, whichType, vSolutions))
+        return false;
 
-    if(fProofOfStake)
+    if (whichType == TX_PUBKEY)
     {
-        const CTxOut& txout = vtx[1].vout[1];
-
-        if (!Solver(txout.scriptPubKey, whichType, vSolutions))
+        valtype& vchPubKey = vSolutions[0];
+        CPubKey key(vchPubKey);
+        if (!key.IsValid())
             return false;
-        if (whichType == TX_PUBKEY)
-        {
-            valtype& vchPubKey = vSolutions[0];
-            CKey key;
-            if (!key.SetPubKey(vchPubKey))
-                return false;
-            if (vchBlockSig.empty())
-                return false;
-            return key.Verify(GetHash(), vchBlockSig);
-        }
+        return key.Verify(GetHash(), vchBlockSig);
     }
-    else
-    {
-        for(unsigned int i = 0; i < vtx[0].vout.size(); i++)
-        {
-            const CTxOut& txout = vtx[0].vout[i];
 
-            if (!Solver(txout.scriptPubKey, whichType, vSolutions))
-                return false;
-
-            if (whichType == TX_PUBKEY)
-            {
-                // Verify
-                valtype& vchPubKey = vSolutions[0];
-                CKey key;
-                if (!key.SetPubKey(vchPubKey))
-                    continue;
-                if (vchBlockSig.empty())
-                    continue;
-                if(!key.Verify(GetHash(), vchBlockSig))
-                    continue;
-
-                return true;
-            }
-        }
-    }
     return false;
 }
 
@@ -2804,7 +2773,7 @@ bool static LoadBlockIndexDB()
     if (fRequestShutdown)
         return true;
 
-    // Calculate bnChainTrust
+    // Calculate nChainTrust
     vector<pair<int, CBlockIndex*> > vSortedByHeight;
     vSortedByHeight.reserve(mapBlockIndex.size());
     for (const auto& item : mapBlockIndex)
@@ -2816,7 +2785,7 @@ bool static LoadBlockIndexDB()
     for (const auto& item : vSortedByHeight)
     {
         CBlockIndex* pindex = item.second;
-        pindex->bnChainTrust = (pindex->pprev ? pindex->pprev->bnChainTrust : 0) + pindex->GetBlockTrust();
+        pindex->nChainTrust = (pindex->pprev ? pindex->pprev->nChainTrust : 0) + pindex->GetBlockTrust();
         // Calculate stake modifier checksum
         pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
         if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex->nStakeModifierChecksum))
@@ -2825,6 +2794,8 @@ bool static LoadBlockIndexDB()
         pindex->nChainTx = (pindex->pprev ? pindex->pprev->nChainTx : 0) + pindex->nTx;
         if ((pindex->nStatus & BLOCK_VALID_MASK) >= BLOCK_VALID_TRANSACTIONS && !(pindex->nStatus & BLOCK_FAILED_MASK))
             setBlockIndexValid.insert(pindex);
+        if (pindex->nStatus & BLOCK_FAILED_MASK && (!pindexBestInvalid || pindex->nChainTrust > pindexBestInvalid->nChainTrust))
+            pindexBestInvalid = pindex;
     }
 
     // Load block file info
@@ -2840,11 +2811,6 @@ bool static LoadBlockIndexDB()
         Checkpoints::hashSyncCheckpoint = hashGenesisBlock;
     }
     printf("LoadBlockIndexDB(): synchronized checkpoint %s\n", Checkpoints::hashSyncCheckpoint.ToString().c_str());
-
-    // Load bnBestInvalidTrust, OK if it doesn't exist
-    CBigNum bnBestInvalidTrust;
-    pblocktree->ReadBestInvalidTrust(bnBestInvalidTrust);
-//    nBestInvalidTrust = bnBestInvalidTrust.getuint256();
 
     // Check whether we need to continue reindexing
     bool fReindexing = false;
@@ -2863,7 +2829,7 @@ bool static LoadBlockIndexDB()
         return true;
     hashBestChain = pindexBest->GetBlockHash();
     nBestHeight = pindexBest->nHeight;
-//    nBestChainTrust = pindexBest->bnChainTrust;
+    nBestChainTrust = pindexBest->nChainTrust;
 
     // set 'next' pointers in best chain
     CBlockIndex *pindex = pindexBest;
@@ -2950,6 +2916,18 @@ bool VerifyDB() {
     return true;
 }
 
+void UnloadBlockIndex()
+{
+    mapBlockIndex.clear();
+    setBlockIndexValid.clear();
+    pindexGenesisBlock = NULL;
+    nBestHeight = 0;
+    nBestChainTrust = 0;
+    pindexBestInvalid = NULL;
+    hashBestChain = 0;
+    pindexBest = NULL;
+}
+
 bool LoadBlockIndex()
 {
     if (fTestNet)
@@ -2999,7 +2977,7 @@ bool LoadBlockIndex()
         txNew.nTime = nChainStartTime;
         txNew.vin.resize(1);
         txNew.vout.resize(1);
-        txNew.vin[0].scriptSig = CScript() << 486604799 << CBigNum(9999) << vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
+        txNew.vin[0].scriptSig = CScript() << 486604799 << CScriptNum(9999) << vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
         txNew.vout[0].SetEmpty();
 
         CBlock block;
@@ -3313,7 +3291,6 @@ unsigned char pchMessageStart[4] = { 0xdb, 0xad, 0xbd, 0xda };
 bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 {
     static map<CService, CPubKey> mapReuseKey;
-    RandAddSeedPerfmon();
     if (fDebug)
         printf("received: %s (%lu bytes)\n", strCommand.c_str(), vRecv.size());
     if (mapArgs.count("-dropmessagestest") && GetRand(atoi(mapArgs["-dropmessagestest"])) == 0)

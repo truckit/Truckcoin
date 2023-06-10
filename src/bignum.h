@@ -94,15 +94,17 @@ public:
     }
 
     //CBigNum(char n) is not portable.  Use 'signed char' or 'unsigned char'.
-    CBigNum(signed char n) : self(NULL)      { init(); if (n >= 0) setulong(n); else setint64(n); }
-    CBigNum(short n) : self(NULL)            { init(); if (n >= 0) setulong(n); else setint64(n); }
-    CBigNum(int n) : self(NULL)              { init(); if (n >= 0) setulong(n); else setint64(n); }
-    CBigNum(long n) : self(NULL)             { init(); if (n >= 0) setulong(n); else setint64(n); }
-    CBigNum(unsigned char n) : self(NULL)    { init(); setulong(n); }
-    CBigNum(unsigned short n) : self(NULL)   { init(); setulong(n); }
-    CBigNum(unsigned int n) : self(NULL)     { init(); setulong(n); }
-    CBigNum(unsigned long n) : self(NULL)    { init(); setulong(n); }
-    explicit CBigNum(uint256 n) : self(NULL) { init(); setuint256(n); }
+    CBigNum(signed char n) : self(NULL)        { init(); if (n >= 0) setulong(n); else setint64(n); }
+    CBigNum(short n) : self(NULL)              { init(); if (n >= 0) setulong(n); else setint64(n); }
+    CBigNum(int n) : self(NULL)                { init(); if (n >= 0) setulong(n); else setint64(n); }
+    CBigNum(long n) : self(NULL)               { init(); if (n >= 0) setulong(n); else setint64(n); }
+    CBigNum(long long n) : self(NULL)          { init(); setint64(n); }
+    CBigNum(unsigned char n) : self(NULL)      { init(); setulong(n); }
+    CBigNum(unsigned short n) : self(NULL)     { init(); setulong(n); }
+    CBigNum(unsigned int n) : self(NULL)       { init(); setulong(n); }
+    CBigNum(unsigned long n) : self(NULL)      { init(); setulong(n); }
+    CBigNum(unsigned long long n) : self(NULL) { init(); setuint64(n); }
+    explicit CBigNum(uint256 n) : self(NULL)   { init(); setuint256(n); }
 
     explicit CBigNum(const std::vector<unsigned char>& vch) : self(NULL)
     {
@@ -248,7 +250,7 @@ public:
         BN_mpi2bn(pch, p - pch, self);
     }
 
-    uint256 getuint256()
+    uint256 getuint256() const
     {
         unsigned int nSize = BN_bn2mpi(self, NULL);
         if (nSize < 4)
@@ -351,13 +353,13 @@ public:
             psz++;
 
         // hex string to bignum
-        static const signed char phexdigit[256] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,1,2,3,4,5,6,7,8,9,0,0,0,0,0,0, 0,0xa,0xb,0xc,0xd,0xe,0xf,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0xa,0xb,0xc,0xd,0xe,0xf,0,0,0,0,0,0,0,0,0 };
         *this = 0;
-        while (isxdigit(*psz))
+        int n;
+        while ((n = HexDigit(*psz)) != -1)
         {
             *this <<= 4;
-            int n = phexdigit[(unsigned char)*psz++];
             *this += n;
+            ++psz;
         }
         if (fNegative)
             *this = 0 - *this;

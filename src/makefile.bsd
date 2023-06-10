@@ -109,6 +109,7 @@ OBJS= \
     obj/addrman.o \
     obj/cleanse.o \
     obj/crypter.o \
+    obj/pubkey.o \
     obj/key.o \
     obj/db.o \
     obj/leveldb.o \
@@ -129,41 +130,49 @@ OBJS= \
     obj/base58.o \
     obj/script.o \
     obj/sync.o \
+    obj/random.o \
     obj/util.o \
     obj/wallet.o \
     obj/walletdb.o \
-    obj/sha1.o \
-    obj/sha256.o \
-    obj/hmac_sha256.o \
-    obj/rfc6979_hmac_sha256.o \
-    obj/ripemd160.o \
+    obj/crypto/aes.o \
+    obj/crypto/sha512.o \
+    obj/crypto/sha1.o \
+    obj/crypto/sha256.o \
+    obj/crypto/hmac_sha256.o \
+    obj/crypto/ripemd160.o \
     obj/hash.o \
     obj/noui.o \
     obj/kernel.o \
     obj/pbkdf2.o \
-    obj/scrypt-x86.o \
-    obj/scrypt-x86_64.o \
-    obj/groestl.o \
-    obj/blake.o \
-    obj/bmw.o \
-    obj/skein.o \
-    obj/keccak.o \
-    obj/shavite.o \
-    obj/jh.o \
-    obj/luffa.o \
-    obj/cubehash.o \
-    obj/echo.o \
-    obj/simd.o 
+    obj/crypto/aes_helper.o \
+    obj/crypto/cubehash.o \
+    obj/crypto/luffa.o \
+    obj/crypto/echo.o \
+    obj/crypto/shavite.o \
+    obj/crypto/simd.o \
+    obj/crypto/blake.o\
+    obj/crypto/bmw.o\
+    obj/crypto/groestl.o\
+    obj/crypto/jh.o\
+    obj/crypto/keccak.o\
+    obj/crypto/skein.o
 
 
 all: truckcoind
 
+# build secp256k1
+DEFS += $(addprefix -I,$(CURDIR)/secp256k1/include)
+secp256k1/src/libsecp256k1_la-secp256k1.o:
+	@echo "Building Secp256k1 ..."; cd secp256k1; chmod 755 *; ./autogen.sh; ./configure --disable-shared --with-pic --enable-benchmark=no --enable-tests=no --enable-exhaustive-tests=no --enable-module-recovery --enable-module-schnorrsig --enable-experimental; make; cd ..;
+truckcoind: secp256k1/src/libsecp256k1_la-secp256k1.o
+
+# build leveldb
 LIBS += $(CURDIR)/leveldb/out-static/libleveldb.a $(CURDIR)/leveldb/out-static/libmemenv.a
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
 leveldb/out-static/libleveldb.a:
 	@echo "Building LevelDB ..."; cd leveldb; gmake out-static/libleveldb.a out-static/libmemenv.a; cd ..;
-obj/txdb-leveldb.o: leveldb/out-static/libleveldb.a
+obj/leveldb.o: leveldb/out-static/libleveldb.a
 
 # auto-generated dependencies:
 -include obj/*.P
@@ -172,12 +181,6 @@ obj/build.h: FORCE
 	/bin/sh ../share/genbuild.sh obj/build.h
 version.cpp: obj/build.h
 DEFS += -DHAVE_BUILD_INFO
-
-obj/scrypt-x86.o: scrypt-x86.S
-	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
-
-obj/scrypt-x86_64.o: scrypt-x86_64.S
-	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
 
 obj/%.o: %.cpp
 	$(CXX) -c $(xCXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
@@ -200,6 +203,8 @@ clean:
 	-rm -f truckcoind
 	-rm -f obj/*.o
 	-rm -f obj/*.P
+	-rm -f obj/crypto/*.o
+	-rm -f obj/crypto/*.P
 	-rm -f obj/build.h
 
 FORCE:

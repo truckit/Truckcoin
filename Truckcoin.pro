@@ -1,8 +1,8 @@
 TEMPLATE = app
 TARGET = truckcoin-qt
-VERSION = 2.1.3.0
+VERSION = 2.2.7.0
 INCLUDEPATH += src src/json src/qt
-DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE BOOST_THREAD_PROVIDES_GENERIC_SHARED_MUTEX_ON_WIN __NO_SYSTEM_INCLUDES __STDC_FORMAT_MACROS
+DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE BOOST_THREAD_PROVIDES_GENERIC_SHARED_MUTEX_ON_WIN __STDC_FORMAT_MACROS
 CONFIG += no_include_pwd
 
 QT += core gui xml
@@ -52,14 +52,10 @@ QMAKE_LFLAGS *= -fstack-protector-all --param ssp-buffer-size=1
 # We need to exclude this for Windows cross compile with MinGW 4.2.x, as it will result in a non-working executable!
 # This can be enabled for Windows, when we switch to MinGW >= 4.4.x.
 }
-# for extra security (see: https://wiki.debian.org/Hardening): this flag is GCC compiler-specific
-QMAKE_CXXFLAGS += -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2
 # for extra security on Windows: enable ASLR and DEP via GCC linker flags
 win32:QMAKE_LFLAGS *= -Wl,--dynamicbase -Wl,--nxcompat
-# on Windows: enable GCC large address aware linker flag
-win32:QMAKE_LFLAGS *= -Wl,--large-address-aware
 # i686-w64-mingw32
-win32:QMAKE_LFLAGS *= -static -static-libgcc -static-libstdc++
+win32:QMAKE_LFLAGS *= -static -static-libgcc -static-libstdc++ -pthread
 
 # use: qmake "USE_QRCODE=1"
 # libqrencode (http://fukuchi.org/works/qrencode/index.en.html) must be installed for support
@@ -121,6 +117,7 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
     QTPLUGIN += qcncodecs qjpcodecs qtwcodecs qkrcodecs qtaccessiblewidgets
 }
 
+#Build Leveldb
 INCLUDEPATH += src/leveldb/include src/leveldb/helpers
 LIBS += $$PWD/src/leveldb/out-static/libleveldb.a $$PWD/src/leveldb/out-static/libmemenv.a
 !win32 {
@@ -140,6 +137,30 @@ PRE_TARGETDEPS += $$PWD/src/leveldb/out-static/libleveldb.a
 QMAKE_EXTRA_TARGETS += genleveldb
 # Gross ugly hack that depends on qmake internals, unfortunately there is no other way to do it.
 QMAKE_CLEAN += $$PWD/src/leveldb/out-static/libleveldb.a; cd $$PWD/src/leveldb ; $(MAKE) clean
+
+#Build Secp256k1
+!win32 {
+    INCLUDEPATH += src/secp256k1/include
+    LIBS += $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o
+    # we use QMAKE_CXXFLAGS_RELEASE even without RELEASE=1 because we use RELEASE to indicate linking preferences not -O preferences
+    gensecp256k1.commands = cd $$PWD/src/secp256k1 && chmod 755 * && ./autogen.sh && ./configure --disable-shared --with-pic --enable-benchmark=no --enable-tests=no --enable-exhaustive-tests=no --enable-module-recovery --enable-module-schnorrsig --enable-experimental && CC=$$QMAKE_CC CXX=$$QMAKE_CXX $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\"
+    gensecp256k1.target = $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o
+    gensecp256k1.depends = FORCE
+    PRE_TARGETDEPS += $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o
+    QMAKE_EXTRA_TARGETS += gensecp256k1
+    # Gross ugly hack that depends on qmake internals, unfortunately there is no other way to do it.
+    QMAKE_CLEAN += $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o; cd $$PWD/src/secp256k1; $(MAKE) clean
+} else {
+    INCLUDEPATH += src/secp256k1/include
+    LIBS += $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o
+    gensecp256k1.commands = cd $$PWD/src/secp256k1 && ./autogen.sh && ./configure --disable-shared --with-pic --enable-benchmark=no --enable-tests=no --enable-exhaustive-tests=no --enable-module-recovery --enable-module-schnorrsig --enable-experimental --host=i686-w64-mingw32.static CC=$$QMAKE_CC && CXX=$$QMAKE_CXX $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\"
+    gensecp256k1.target = $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o
+    gensecp256k1.depends = FORCE
+    PRE_TARGETDEPS += $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o
+    QMAKE_EXTRA_TARGETS += gensecp256k1
+    # Gross ugly hack that depends on qmake internals, unfortunately there is no other way to do it.
+    QMAKE_CLEAN += $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o; cd $$PWD/src/secp256k1; $(MAKE) clean
+}
 
 # regenerate src/build.h
 !windows|contains(USE_BUILD_INFO, 1) {
@@ -178,23 +199,25 @@ HEADERS += src/qt/bitcoingui.h \
     src/compat.h \
     src/coincontrol.h \
     src/sync.h \
+    src/random.h \
     src/util.h \
     src/hash.h \
     src/uint256.h \
     src/kernel.h \
-    src/scrypt_mine.h \
     src/pbkdf2.h \
     src/serialize.h \
-    src/common.h \
-    src/sha1.h \
-    src/sha256.h \
-    src/hmac_sha256.h \
-    src/rfc6979_hmac_sha256.h \
-    src/ripemd160.h \
+    src/crypto/common.h \
+    src/crypto/aes.h \
+    src/crypto/sha512.h \
+    src/crypto/sha1.h \
+    src/crypto/sha256.h \
+    src/crypto/hmac_sha256.h \
+    src/crypto/ripemd160.h \
     src/strlcpy.h \
     src/main.h \
     src/miner.h \
     src/net.h \
+    src/pubkey.h \
     src/key.h \
     src/db.h \
     src/leveldb.h \
@@ -246,26 +269,25 @@ HEADERS += src/qt/bitcoingui.h \
     src/version.h \
     src/netbase.h \
     src/clientversion.h \
-    src/hashblock.h \
-    src/sph_blake.h \
-    src/sph_skein.h \
-    src/sph_keccak.h \
-    src/sph_jh.h \
-    src/sph_groestl.h \
-    src/sph_bmw.h \
-    src/sph_types.h \
-    src/sph_luffa.h \
-    src/sph_cubehash.h \
-    src/sph_echo.h \
-    src/sph_shavite.h \
-    src/sph_simd.h \
-    src/sph_types.h \
     src/qt/macnotificationhandler.h \
     src/qt/blockbrowser.h \
     src/qt/trafficgraphwidget.h \
     src/qt/winshutdownmonitor.h \
     src/qt/splitthresholdfield.h \
-    src/qt/stakereportdialog.h
+    src/qt/stakereportdialog.h \
+    src/hashblock.h \
+    src/crypto/sph_blake.h \
+    src/crypto/sph_skein.h \
+    src/crypto/sph_keccak.h \
+    src/crypto/sph_jh.h \
+    src/crypto/sph_groestl.h \
+    src/crypto/sph_bmw.h \
+    src/crypto/sph_luffa.h \
+    src/crypto/sph_cubehash.h \
+    src/crypto/sph_echo.h \
+    src/crypto/sph_shavite.h \
+    src/crypto/sph_simd.h \
+    src/crypto/sph_types.h
     
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/transactiontablemodel.cpp \
@@ -283,17 +305,20 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/cleanse.cpp \
     src/version.cpp \
     src/sync.cpp \
+    src/random.cpp \
     src/util.cpp \
     src/hash.cpp \
     src/netbase.cpp \
+    src/pubkey.cpp \
     src/key.cpp \
     src/base58.cpp \
     src/script.cpp \
-    src/sha1.cpp \
-    src/sha256.cpp \
-    src/hmac_sha256.cpp \
-    src/rfc6979_hmac_sha256.cpp \
-    src/ripemd160.cpp \
+    src/crypto/aes.cpp \
+    src/crypto/sha512.cpp \
+    src/crypto/sha1.cpp \
+    src/crypto/sha256.cpp \
+    src/crypto/hmac_sha256.cpp \
+    src/crypto/ripemd160.cpp \
     src/main.cpp \
     src/miner.cpp \
     src/init.cpp \
@@ -346,17 +371,17 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/noui.cpp \
     src/kernel.cpp \
     src/pbkdf2.cpp \
-    src/blake.c \
-    src/bmw.c \
-    src/groestl.c \
-    src/jh.c \
-    src/keccak.c \
-    src/skein.c \
-    src/luffa.c \
-    src/cubehash.c \
-    src/shavite.c \
-    src/echo.c \
-    src/simd.c
+    src/crypto/blake.c \
+    src/crypto/bmw.c \
+    src/crypto/groestl.c \
+    src/crypto/jh.c \
+    src/crypto/keccak.c \
+    src/crypto/skein.c \
+    src/crypto/luffa.c \
+    src/crypto/cubehash.c \
+    src/crypto/shavite.c \
+    src/crypto/echo.c \
+    src/crypto/simd.c
 
 RESOURCES += \
     src/qt/bitcoin.qrc
@@ -472,7 +497,7 @@ INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$
 LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,)
 LIBS += -lssl -lcrypto -ldb_cxx$$BDB_LIB_SUFFIX
 # -lgdi32 has to happen after -lcrypto (see  #681)
-win32:LIBS += -lws2_32 -lshlwapi -lmswsock -lole32 -loleaut32 -luuid -lgdi32 -lcrypt32
+win32:LIBS += -lws2_32 -lshlwapi -lmswsock -lole32 -loleaut32 -luuid -lgdi32 -lcrypt32 -lpthread
 LIBS += -lboost_system$$BOOST_LIB_SUFFIX -lboost_filesystem$$BOOST_LIB_SUFFIX -lboost_program_options$$BOOST_LIB_SUFFIX -lboost_thread$$BOOST_THREAD_LIB_SUFFIX
 
 contains(RELEASE, 1) {

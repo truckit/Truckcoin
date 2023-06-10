@@ -6,16 +6,19 @@
 #ifndef BITCOIN_UINT256_H
 #define BITCOIN_UINT256_H
 
-#include <limits.h>
+#include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
-#include <string.h>
-#include <inttypes.h>
 #include <string>
+#include <string.h>
 #include <vector>
 
-#include <stdint.h>
+extern const signed char p_util_hexdigit[256]; // defined in util.cpp
 
-inline int Testuint256AdHoc(std::vector<std::string> vArg);
+inline signed char HexDigit(char c)
+{
+    return p_util_hexdigit[(unsigned char)c];
+}
 
 /** Base class without constructors for uint256 and uint160.
  * This makes the compiler let u use it in a union.
@@ -198,7 +201,7 @@ public:
     {
         // prefix operator
         int i = 0;
-        while (--pn[i] == -1 && i < WIDTH-1)
+        while (--pn[i] == (uint32_t)-1 && i < WIDTH-1)
             i++;
         return *this;
     }
@@ -302,8 +305,7 @@ public:
 
     void SetHex(const char* psz)
     {
-        for (int i = 0; i < WIDTH; i++)
-            pn[i] = 0;
+        memset(pn,0,sizeof(pn));
 
         // skip leading spaces
         while (isspace(*psz))
@@ -314,19 +316,18 @@ public:
             psz += 2;
 
         // hex string to uint
-        static const unsigned char phexdigit[256] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,1,2,3,4,5,6,7,8,9,0,0,0,0,0,0, 0,0xa,0xb,0xc,0xd,0xe,0xf,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0xa,0xb,0xc,0xd,0xe,0xf,0,0,0,0,0,0,0,0,0 };
         const char* pbegin = psz;
-        while (phexdigit[(unsigned char)*psz] || *psz == '0')
+        while (::HexDigit(*psz) != -1)
             psz++;
         psz--;
         unsigned char* p1 = (unsigned char*)pn;
         unsigned char* pend = p1 + WIDTH * 4;
         while (psz >= pbegin && p1 < pend)
         {
-            *p1 = phexdigit[(unsigned char)*psz--];
+            *p1 = ::HexDigit(*psz--);
             if (psz >= pbegin)
             {
-                *p1 |= (phexdigit[(unsigned char)*psz--] << 4);
+                *p1 |= ((unsigned char)::HexDigit(*psz--) << 4);
                 p1++;
             }
         }
@@ -367,36 +368,49 @@ public:
         return sizeof(pn);
     }
 
-    uint64_t Get64(int n=0) const
+    uint64_t GetLow64() const
     {
-        return pn[2*n] | (uint64_t)pn[2*n+1] << 32;
+        assert(WIDTH >= 2);
+        return pn[0] | (uint64_t)pn[1] << 32;
     }
 
-//    unsigned int GetSerializeSize(int nType=0, int nVersion=PROTOCOL_VERSION) const
     unsigned int GetSerializeSize(int nType, int nVersion) const
     {
         return sizeof(pn);
     }
 
     template<typename Stream>
-//    void Serialize(Stream& s, int nType=0, int nVersion=PROTOCOL_VERSION) const
     void Serialize(Stream& s, int nType, int nVersion) const
     {
         s.write((char*)pn, sizeof(pn));
     }
 
     template<typename Stream>
-//    void Unserialize(Stream& s, int nType=0, int nVersion=PROTOCOL_VERSION)
     void Unserialize(Stream& s, int nType, int nVersion)
     {
         s.read((char*)pn, sizeof(pn));
     }
 
+    // Temporary for migration to opaque uint160/256
+    uint64_t GetCheapHash() const
+    {
+        return GetLow64();
+    }
+    void SetNull()
+    {
+        memset(pn, 0, sizeof(pn));
+    }
+    bool IsNull() const
+    {
+        for (int i = 0; i < WIDTH; i++)
+            if (pn[i] != 0)
+                return false;
+        return true;
+    }
 
     friend class uint160;
     friend class uint256;
-	friend class uint512;
-    friend inline int Testuint256AdHoc(std::vector<std::string> vArg);
+    friend class uint512;
 };
 
 typedef base_uint<160> base_uint160;
@@ -408,8 +422,6 @@ typedef base_uint<512> base_uint512;
 // uint160 and uint256 could be implemented as templates, but to keep
 // compile errors and debugging cleaner, they're copy and pasted.
 //
-
-
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -520,11 +532,6 @@ inline const uint160 operator&(const uint160& a, const uint160& b)      { return
 inline const uint160 operator|(const uint160& a, const uint160& b)      { return (base_uint160)a |  (base_uint160)b; }
 inline const uint160 operator+(const uint160& a, const uint160& b)      { return (base_uint160)a +  (base_uint160)b; }
 inline const uint160 operator-(const uint160& a, const uint160& b)      { return (base_uint160)a -  (base_uint160)b; }
-
-
-
-
-
 
 //////////////////////////////////////////////////////////////////////////////
 //

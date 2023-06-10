@@ -71,16 +71,6 @@ bool CBlockTreeDB::WriteBlockIndex(const CDiskBlockIndex& blockindex)
     return Write(make_pair('b', blockindex.GetBlockHash()), blockindex);
 }
 
-bool CBlockTreeDB::ReadBestInvalidTrust(CBigNum& bnBestInvalidTrust)
-{
-    return Read('I', bnBestInvalidTrust);
-}
-
-bool CBlockTreeDB::WriteBestInvalidTrust(CBigNum bnBestInvalidTrust)
-{
-    return Write('I', bnBestInvalidTrust);
-}
-
 bool CBlockTreeDB::ReadSyncCheckpoint(uint256& hashCheckpoint)
 {
     return Read('H', hashCheckpoint);

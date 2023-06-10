@@ -1,7 +1,7 @@
 // Copyright (c) 2013 NovaCoin Developers
 
 #include "pbkdf2.h"
-#include "hmac_sha256.h"
+#include "crypto/hmac_sha256.h"
 #include <string.h>
 
 static inline uint32_t

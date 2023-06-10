@@ -11,6 +11,7 @@
 #include "util.h"
 #include "ui_interface.h"
 #include "checkpoints.h"
+#include "key.h"
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/convenience.hpp>
@@ -57,6 +58,8 @@ void StartShutdown()
 
 static CCoinsViewDB *pcoinsdbview;
 
+static boost::scoped_ptr<ECCVerifyHandle> globalVerifyHandle;
+
 void Shutdown(void* parg)
 {
     static CCriticalSection cs_Shutdown;
@@ -78,6 +81,7 @@ void Shutdown(void* parg)
     if (fFirstThread)
     {
         fShutdown = true;
+        fRequestShutdown = true;
         nTransactionsUpdated++;
         bitdb.Flush(false);
         {
@@ -96,6 +100,8 @@ void Shutdown(void* parg)
         boost::filesystem::remove(GetPidFile());
         UnregisterWallet(pwalletMain);
         delete pwalletMain;
+        globalVerifyHandle.reset();
+        ECC_Stop();
         NewThread(ExitTimeout, NULL);
         MilliSleep(50);
         printf("Truckcoin exited\n\n");
@@ -240,7 +246,7 @@ std::string HelpMessage()
         "  -pid=<file>            " + _("Specify pid file (default: Truckcoind.pid)") + "\n" +
         "  -gen                   " + _("Generate coins") + "\n" +
         "  -gen=0                 " + _("Don't generate coins") + "\n" +
-        "  -staking=<n>      " + _("Enable or disable PoS minting (default: 1 = enabled)") + "\n" +
+        "  -staking=<n>           " + _("Enable or disable PoS minting (default: 1 = enabled)") + "\n" +
         "  -datadir=<dir>         " + _("Specify data directory") + "\n" +
         "  -wallet=<file>         " + _("Specify wallet file (within data directory)") + "\n" +
         "  -dbcache=<n>           " + _("Set database cache size in megabytes (default: 25)") + "\n" +
@@ -350,7 +356,7 @@ void ThreadImport(void *data) {
     if (fReindex) {
         CImportingNow imp;
         int nFile = 0;
-        while (!fShutdown) {
+        while (!fRequestShutdown) {
             CDiskBlockPos pos(nFile, 0);
             FILE *file = OpenBlockFile(pos, true);
             if (!file)
@@ -359,7 +365,7 @@ void ThreadImport(void *data) {
             LoadExternalBlockFile(file, &pos);
             nFile++;
         }
-        if (!fShutdown) {
+        if (!fRequestShutdown) {
             pblocktree->WriteReindexing(false);
             fReindex = false;
             printf("Reindexing finished\n");
@@ -368,7 +374,7 @@ void ThreadImport(void *data) {
 
     // hardcoded $DATADIR/bootstrap.dat
     boost::filesystem::path pathBootstrap = GetDataDir() / "bootstrap.dat";
-    if (boost::filesystem::exists(pathBootstrap) && !fShutdown) {
+    if (boost::filesystem::exists(pathBootstrap) && !fRequestShutdown) {
         FILE *file = fopen(pathBootstrap.string().c_str(), "rb");
         if (file) {
             CImportingNow imp;
@@ -381,7 +387,7 @@ void ThreadImport(void *data) {
 
     // -loadblock=
     for (boost::filesystem::path &path : import->vFiles) {
-        if (fShutdown)
+        if (fRequestShutdown)
             break;
         FILE *file = fopen(path.string().c_str(), "rb");
         if (file) {
@@ -396,7 +402,23 @@ void ThreadImport(void *data) {
     vnThreadsRunning[THREAD_IMPORT]--;
 }
 
-/** Initialize bitcoin.
+/** Sanity checks
+ *  Ensure that Bitcoin is running in a usable environment with all
+ *  necessary library support.
+ */
+bool InitSanityCheck(void)
+{
+    if(!ECC_InitSanityCheck()) {
+        InitError("Elliptic curve cryptography sanity check failure. Aborting.");
+        return false;
+    }
+
+    // TODO: remaining sanity checks, see #4081
+
+    return true;
+}
+
+/** Initialize truckcoin.
  *  @pre Parameters should be parsed and config file should be read.
  */
 bool AppInit2()
@@ -556,6 +578,15 @@ bool AppInit2()
     fStaking = GetBoolArg("-staking", true);
 
     // ********************************************************* Step 4: application initialization: dir lock, daemonize, pidfile, debug log
+    
+    // Initialize elliptic curve code
+    ECC_Start();
+    globalVerifyHandle.reset(new ECCVerifyHandle());
+
+    // Sanity check
+    if (!InitSanityCheck())
+        return InitError(_("Elliptic curve cryptography sanity check failed. Truckcoin Core is shutting down."));
+//        return InitError(_("Initialization sanity check failed. Truckcoin Core is shutting down."));
 
     std::string strDataDir = GetDataDir().string();
     std::string strWalletFileName = GetArg("-wallet", "wallet.dat");
@@ -600,6 +631,7 @@ bool AppInit2()
     printf("Truckcoin %s (%s)\n", FormatFullVersion().c_str(), CLIENT_DATE.c_str());
     printf("%s\n", SSLeay_version(SSLEAY_VERSION)); // OpenSSL version
     printf("%s\n", DbEnv::version(0, 0, 0)); // BerkeleyDB version
+    printf("LevelDB %d.%d\n", leveldb::kMajorVersion, leveldb::kMinorVersion); // LevelDB version
     printf("Boost v%d.%d.%d\n", BOOST_VERSION / 100000, BOOST_VERSION / 100 % 1000, BOOST_VERSION % 100);
     if (!fLogTimestamps)
         printf("Startup time: %s\n", DateTimeStrFormat("%x %H:%M:%S", GetTime()).c_str());
@@ -661,7 +693,7 @@ bool AppInit2()
            if (nSplitThreshold > MAX_SPLIT_AMOUNT) 
                nSplitThreshold = MAX_SPLIT_AMOUNT; 
        } 
-       printf("splitthreshold set to %" PRId64 "\n",nSplitThreshold); 
+       printf("splitthreshold set to %" PRId64 "\n", nSplitThreshold / 1000000); 
     } 
 
     // ********************************************************* Step 6: network initialization
@@ -818,23 +850,63 @@ bool AppInit2()
     nTotalCache -= nCoinDBCache;
     nCoinCacheSize = nTotalCache / 300; // coins in memory require around 300 bytes
 
+    bool fLoaded = false;
+    while (!fLoaded) {
+        bool fReset = fReindex;
+        std::string strLoadError;
+
     uiInterface.InitMessage(_("Loading block index..."));
     printf("Loading block index...\n");
-    nStart = GetTimeMillis();
-    pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
-    pcoinsdbview = new CCoinsViewDB(nCoinDBCache, false, fReindex);
-    pcoinsTip = new CCoinsViewCache(*pcoinsdbview);
 
-    if (fReindex)
-        pblocktree->WriteReindexing(true);
-    
-    if (!LoadBlockIndex())
-        return InitError(_("Error loading block database"));
+        nStart = GetTimeMillis();
+        do {
+            try {
+                UnloadBlockIndex();
+                delete pcoinsTip;
+                delete pcoinsdbview;
+                delete pblocktree;
 
-    uiInterface.InitMessage(_("Verifying block database integrity..."));
+                pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
+                pcoinsdbview = new CCoinsViewDB(nCoinDBCache, false, fReindex);
+                pcoinsTip = new CCoinsViewCache(*pcoinsdbview);
 
-    if (!VerifyDB())
-        return InitError(_("Corrupted block database detected. Please restart the client with -reindex."));
+                if (fReindex)
+                    pblocktree->WriteReindexing(true);
+
+                if (!LoadBlockIndex()) {
+                    strLoadError = _("Error loading block database");
+                    break;
+                }
+
+                uiInterface.InitMessage(_("Verifying block database integrity..."));
+                if (!VerifyDB()) {
+                    strLoadError = _("Corrupted block database detected");
+                    break;
+                }
+            } catch(std::exception &e) {
+                strLoadError = _("Error opening block database");
+                break;
+            }
+            fLoaded = true;
+        } while(false);
+
+        if (!fLoaded) {
+            // first suggest a reindex
+            if (!fReset) {
+                bool fRet = uiInterface.ThreadSafeMessageBox(
+                    strLoadError + ".\n" + _("Do you want to rebuild the block database now?"),
+                    "", CClientUIInterface::MSG_ERROR | CClientUIInterface::BTN_ABORT);
+                if (fRet) {
+                    fReindex = true;
+                    fRequestShutdown = false;
+                } else {
+                    return false;
+                }
+            } else {
+                return InitError(strLoadError);
+            }
+        }
+    }
     
     if (mapArgs.count("-txindex") && fTxIndex != GetBoolArg("-txindex", false))
         return InitError(_("You need to rebuild the databases using -reindex to change -txindex"));
@@ -927,8 +999,6 @@ bool AppInit2()
     if (fFirstRun)
     {
         // Create new keyUser and set as default key
-        RandAddSeedPerfmon();
-
         CPubKey newDefaultKey;
         if (!pwalletMain->GetKeyFromPool(newDefaultKey, false))
             strErrors << _("Cannot initialize keypool") << "\n";
@@ -995,8 +1065,6 @@ bool AppInit2()
 
     if (!CheckDiskSpace())
         return false;
-
-    RandAddSeedPerfmon();
 
     //// debug print
     printf("mapBlockIndex.size() = %lu\n",   mapBlockIndex.size());

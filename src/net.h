@@ -8,12 +8,12 @@
 
 #include <deque>
 #include <boost/array.hpp>
-#include <openssl/rand.h>
 
 #ifndef WIN32
 #include <arpa/inet.h>
 #endif
 
+#include "random.h"
 #include "mruset.h"
 #include "netbase.h"
 #include "protocol.h"
@@ -620,7 +620,7 @@ public:
                      void (*fn)(void*, CDataStream&), void* param1)
     {
         uint256 hashReply;
-        RAND_bytes((unsigned char*)&hashReply, sizeof(hashReply));
+        GetRandBytes((unsigned char*)&hashReply, sizeof(hashReply));
 
         {
             LOCK(cs_mapRequests);
@@ -635,7 +635,7 @@ public:
                      void (*fn)(void*, CDataStream&), void* param1)
     {
         uint256 hashReply;
-        RAND_bytes((unsigned char*)&hashReply, sizeof(hashReply));
+        GetRandBytes((unsigned char*)&hashReply, sizeof(hashReply));
 
         {
             LOCK(cs_mapRequests);
@@ -650,7 +650,7 @@ public:
                      void (*fn)(void*, CDataStream&), void* param1)
     {
         uint256 hashReply;
-        RAND_bytes((unsigned char*)&hashReply, sizeof(hashReply));
+        GetRandBytes((unsigned char*)&hashReply, sizeof(hashReply));
 
         {
             LOCK(cs_mapRequests);
