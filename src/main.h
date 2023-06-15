@@ -129,7 +129,6 @@ extern std::map<uint256, CBlock*> mapOrphanBlocks;
 extern std::map<unsigned int, unsigned int> mapHashedBlocks;
 extern bool fImporting;
 extern bool fReindex;
-extern bool fTxIndex;
 extern int nScriptCheckThreads;
 extern unsigned int nCoinCacheSize;
 
@@ -221,8 +220,9 @@ void ResendWalletTransactions();
 
 bool GetWalletFile(CWallet* pwallet, std::string &strWalletFileOut);
 
-struct CDiskBlockPos
+class CDiskBlockPos
 {
+public:
     int nFile;
     unsigned int nPos;
 
@@ -250,28 +250,6 @@ struct CDiskBlockPos
 
     void SetNull() { nFile = -1; nPos = 0; }
     bool IsNull() const { return (nFile == -1); }
-};
-
-struct CDiskTxPos : public CDiskBlockPos
-{
-    unsigned int nTxOffset; // after header
-
-    IMPLEMENT_SERIALIZE(
-        READWRITE(*(CDiskBlockPos*)this);
-        READWRITE(VARINT(nTxOffset));
-    )
-
-    CDiskTxPos(const CDiskBlockPos &blockIn, unsigned int nTxOffsetIn) : CDiskBlockPos(blockIn.nFile, blockIn.nPos), nTxOffset(nTxOffsetIn) {
-    }
-
-    CDiskTxPos() {
-        SetNull();
-    }
-    
-    void SetNull() {
-        CDiskBlockPos::SetNull();
-        nTxOffset = 0;
-    }
 };
 
 /** An inpoint - a combination of a transaction and an index n into its vin */
