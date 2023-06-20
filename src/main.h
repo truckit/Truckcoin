@@ -2189,11 +2189,14 @@ extern CTxMemPool mempool;
 struct CCoinsStats
 {
     int nHeight;
+    uint256 hashBlock;
     uint64_t nTransactions;
     uint64_t nTransactionOutputs;
     uint64_t nSerializedSize;
+    uint256 hashSerialized;
+    int64_t nTotalAmount;
 
-    CCoinsStats() : nHeight(0), nTransactions(0), nTransactionOutputs(0), nSerializedSize(0) {}
+    CCoinsStats() : nHeight(0), hashBlock(0), nTransactions(0), nTransactionOutputs(0), nSerializedSize(0), hashSerialized(0), nTotalAmount(0) {}
 };
 
 /** Abstract view on the open txout dataset. */

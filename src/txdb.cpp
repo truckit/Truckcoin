@@ -5,6 +5,7 @@
 
 #include "txdb.h"
 #include "main.h"
+#include "hash.h"
 
 using namespace std;
 
@@ -123,6 +124,10 @@ bool CCoinsViewDB::GetStats(CCoinsStats &stats) {
     leveldb::Iterator *pcursor = db.NewIterator();
     pcursor->SeekToFirst();
 
+    CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
+    stats.hashBlock = GetBestBlock()->GetBlockHash();
+    ss << stats.hashBlock;
+    int64_t nTotalAmount = 0;
     while (pcursor->Valid()) {
         try {
             leveldb::Slice slKey = pcursor->key();
@@ -136,13 +141,22 @@ bool CCoinsViewDB::GetStats(CCoinsStats &stats) {
                 ssValue >> coins;
                 uint256 txhash;
                 ssKey >> txhash;
-
+                ss << txhash;
+                ss << VARINT(coins.nVersion);
+                ss << (coins.fCoinBase ? 'c' : 'n'); 
+                ss << VARINT(coins.nHeight);
                 stats.nTransactions++;
-                for (const CTxOut &out : coins.vout) {
-                    if (!out.IsNull())
+                for (unsigned int i=0; i<coins.vout.size(); i++) {
+                    const CTxOut &out = coins.vout[i];
+                    if (!out.IsNull()) {
                         stats.nTransactionOutputs++;
+                        ss << VARINT(i+1);
+                        ss << out;
+                        nTotalAmount += out.nValue;
+                    }
                 }
                 stats.nSerializedSize += 32 + slValue.size();
+                ss << VARINT(0);
             }
             pcursor->Next();
         } catch (std::exception &e) {
@@ -151,6 +165,8 @@ bool CCoinsViewDB::GetStats(CCoinsStats &stats) {
     }
     delete pcursor;
     stats.nHeight = GetBestBlock()->nHeight;
+    stats.hashSerialized = ss.GetHash();
+    stats.nTotalAmount = nTotalAmount;
     return true;
 }
 
@@ -175,10 +191,8 @@ bool CBlockTreeDB::LoadBlockIndexGuts()
                 CDiskBlockIndex diskindex;
                 ssValue >> diskindex;
 
-                uint256 blockHash = diskindex.GetBlockHash();
-
                 // Construct block index object
-                CBlockIndex* pindexNew = InsertBlockIndex(blockHash);
+                CBlockIndex* pindexNew = InsertBlockIndex(diskindex.GetBlockHash());
                 pindexNew->pprev          = InsertBlockIndex(diskindex.hashPrev);
                 pindexNew->nHeight        = diskindex.nHeight;
                 pindexNew->nFile          = diskindex.nFile;
@@ -200,7 +214,7 @@ bool CBlockTreeDB::LoadBlockIndexGuts()
                 pindexNew->nTx            = diskindex.nTx;
 
                 // Watch for genesis block
-                if (pindexGenesisBlock == NULL && blockHash == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet))
+                if (pindexGenesisBlock == NULL && diskindex.GetBlockHash() == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet))
                     pindexGenesisBlock = pindexNew;
 
                 if (!pindexNew->CheckIndex())
