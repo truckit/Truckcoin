@@ -94,6 +94,7 @@ OBJS= \
     obj/crypto/hmac_sha256.o \
     obj/crypto/ripemd160.o \
     obj/hash.o \
+    obj/bloom.o \
     obj/noui.o \
     obj/kernel.o \
     obj/pbkdf2.o \

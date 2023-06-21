@@ -202,6 +202,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/random.h \
     src/util.h \
     src/hash.h \
+    src/bloom.h \
     src/uint256.h \
     src/kernel.h \
     src/pbkdf2.h \
@@ -308,6 +309,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/random.cpp \
     src/util.cpp \
     src/hash.cpp \
+    src/bloom.cpp \
     src/netbase.cpp \
     src/pubkey.cpp \
     src/key.cpp \

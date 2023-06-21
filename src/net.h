@@ -19,6 +19,7 @@
 #include "protocol.h"
 #include "addrman.h"
 #include "hash.h"
+#include "bloom.h"
 
 class CRequestTracker;
 class CNode;
@@ -65,12 +66,6 @@ bool GetLocal(CService &addr, const CNetAddr *paddrPeer = NULL);
 bool IsReachable(const CNetAddr &addr);
 void SetReachable(enum Network net, bool fFlag = true);
 CAddress GetLocalAddress(const CNetAddr *paddrPeer = NULL);
-
-enum
-{
-    MSG_TX = 1,
-    MSG_BLOCK,
-};
 
 class CRequestTracker
 {
@@ -215,7 +210,14 @@ public:
     bool fNetworkNode;
     bool fSuccessfullyConnected;
     bool fDisconnect;
+    // We use fRelayTxes for two purposes -
+    // a) it allows us to not relay tx invs before receiving the peer's version message
+    // b) the peer may tell us in their version message that we should not relay tx invs
+    //    until they have initialized their bloom filter.
+    bool fRelayTxes;
     CSemaphoreGrant grantOutbound;
+    CCriticalSection cs_filter;
+    CBloomFilter* pfilter;
 protected:
     int nRefCount;
 
@@ -256,7 +258,7 @@ public:
         nLastRecv = 0;
         nLastSendEmpty = GetTime();
         nTimeConnected = GetTime();
-		nSendBytes = 0; 
+        nSendBytes = 0; 
         nRecvBytes = 0; 
         nBlocksRequested = 0; 
         addr = addrIn;
@@ -280,10 +282,12 @@ public:
         fGetAddr = false;
         nMisbehavior = 0;
         hashCheckpointKnown = 0;
+        fRelayTxes = false;
         setInventoryKnown.max_size(SendBufferSize() / 1000);
+        pfilter = NULL;
 
         // Be shy and don't send version until we hear
-		// Don't announce non-peer CNodes
+        // Don't announce non-peer CNodes
         if (hSocket != INVALID_SOCKET && !fInbound)
             PushVersion();
     }
@@ -295,6 +299,8 @@ public:
             closesocket(hSocket);
             hSocket = INVALID_SOCKET;
         }
+        if (pfilter)
+            delete pfilter;
     }
 
 private:
@@ -693,16 +699,6 @@ public:
     static uint64_t GetTotalBytesRecv(); 
     static uint64_t GetTotalBytesSent(); 
 };
-
-inline void RelayInventory(const CInv& inv)
-{
-    // Put on lists to offer to the other nodes
-    {
-        LOCK(cs_vNodes);
-        for (CNode* pnode : vNodes)
-            pnode->PushInventory(inv);
-    }
-}
 
 class CTransaction;
 void RelayTransaction(const CTransaction& tx, const uint256& hash);
