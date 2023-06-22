@@ -58,6 +58,7 @@ int64_t nTimeBestReceived = 0;
 int nScriptCheckThreads = 0;
 bool fImporting = false;
 bool fReindex = false;
+bool fTxIndex = false;
 set<CBlockIndex*, CBlockIndexTrustComparator> setBlockIndexValid; // may contain all CBlockIndex*'s that have validness >=BLOCK_VALID_TRANSACTIONS, and must contain those who aren't failed
 unsigned int nCoinCacheSize = 5000;
 
@@ -969,6 +970,25 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, uint256 &hashBlock
             }
         }
 
+        if (fTxIndex) {
+            CDiskTxPos postx;
+            if (pblocktree->ReadTxIndex(hash, postx)) {
+                CAutoFile file(OpenBlockFile(postx, true), SER_DISK, CLIENT_VERSION);
+                CBlockHeader header;
+                try {
+                    file >> header;
+                    fseek(file, postx.nTxOffset, SEEK_CUR);
+                    file >> txOut;
+                } catch (std::exception &e) {
+                    return error("%s() : deserialize or I/O error", __PRETTY_FUNCTION__);
+                }
+                hashBlock = header.GetHash();
+                if (txOut.GetHash() != hash)
+                    return error("%s() : txid mismatch", __PRETTY_FUNCTION__);
+                return true;
+            }
+        }
+
         if (fAllowSlow) { // use coin database to locate block that contains transaction, and scan it
             int nHeight = -1;
             {
@@ -1817,8 +1837,13 @@ bool CBlock::ConnectBlock(CBlockIndex* pindex, CCoinsViewCache &view, bool fJust
     
     CCheckQueueControl<CScriptCheck> control(fScriptChecks && nScriptCheckThreads ? &scriptcheckqueue : NULL);
 
-    int64_t nFees = 0, nValueIn = 0, nValueOut = 0;
+    int64_t nFees = 0;
+    int64_t nValueIn = 0;
+    int64_t nValueOut = 0;
     unsigned int nSigOps = 0;
+    CDiskTxPos pos(pindex->GetBlockPos(), GetSizeOfCompactSize(vtx.size()));
+    std::vector<std::pair<uint256, CDiskTxPos> > vPos;
+    vPos.reserve(vtx.size());
     for (unsigned int i=0; i<vtx.size(); i++)
     {
         const CTransaction &tx = vtx[i];
@@ -1865,6 +1890,9 @@ bool CBlock::ConnectBlock(CBlockIndex* pindex, CCoinsViewCache &view, bool fJust
             return error("ConnectBlock() : UpdateInputs failed");
         if (!tx.IsCoinBase())
             blockundo.vtxundo.push_back(txundo);
+
+        vPos.push_back(std::make_pair(GetTxHash(i), pos));
+        pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
     }
 
     pindex->nMint = nValueOut - nValueIn + nFees;
@@ -1907,6 +1935,10 @@ bool CBlock::ConnectBlock(CBlockIndex* pindex, CCoinsViewCache &view, bool fJust
         if (!pblocktree->WriteBlockIndex(blockindex))
             return error("ConnectBlock() : WriteBlockIndex failed");
     }
+
+    if (fTxIndex)
+        if (!pblocktree->WriteTxIndex(vPos))
+            return error("Failed to write transaction index");
 
     // add this block to the view's blockchain
     if (!view.SetBestBlock(pindex))
@@ -2987,6 +3019,10 @@ bool static LoadBlockIndexDB()
     pblocktree->ReadReindexing(fReindexing);
     fReindex |= fReindexing;
     
+    // Check whether we have a transaction index
+    pblocktree->ReadFlag("txindex", fTxIndex);
+    printf("LoadBlockIndexDB(): transaction index %s\n", fTxIndex ? "enabled" : "disabled");
+
     // Load hashBestChain pointer to end of best chain
     pindexBest = pcoinsTip->GetBestBlock();
     if (pindexBest == NULL)
@@ -3110,13 +3146,10 @@ bool LoadBlockIndex()
         nStakeTargetSpacing = 30; // test block spacing is 3 minutes
     }
 
-    if (fReindex)
-        return true;
-
     //
     // Load block index from databases
     //
-    if (!LoadBlockIndexDB())
+    if (!fReindex && !LoadBlockIndexDB())
         return false;
 
     //
@@ -3124,6 +3157,13 @@ bool LoadBlockIndex()
     //
     if (mapBlockIndex.empty())
     {
+        fTxIndex = true; // txindex is always enabled
+        pblocktree->WriteFlag("txindex", fTxIndex);
+        printf("Initializing databases...\n");
+
+        if (fReindex)
+            return true;
+
         // Only add the genesis block if not reindexing (in which case we reuse the one already on disk)
         if (!fReindex) {
         // Genesis block
