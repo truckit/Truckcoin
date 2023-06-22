@@ -2316,8 +2316,15 @@ public:
 
     // Modify the currently active block index
     virtual bool SetBestBlock(CBlockIndex *pindex);
+
+    // Do a bulk modification (multiple SetCoins + one SetBestBlock)
     virtual bool BatchWrite(const std::map<uint256, CCoins> &mapCoins, CBlockIndex *pindex);
+
+    // Calculate statistics about the unspent transaction output set
     virtual bool GetStats(CCoinsStats &stats);
+
+    // As we use CCoinsViews polymorphically, have a virtual destructor
+    virtual ~CCoinsView() {}
 };
 
 /** CCoinsView backed by another CCoinsView */
