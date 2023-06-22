@@ -886,7 +886,6 @@ public:
 
         return true;
     }
-
 };
 
 /** pruned version of CTransaction: only retains metadata and unspent transaction outputs
@@ -989,20 +988,23 @@ public:
 
     void swap(CCoins &to) {
         std::swap(to.fCoinBase, fCoinBase);
+        std::swap(to.fCoinStake, fCoinStake);
         to.vout.swap(vout);
         std::swap(to.nHeight, nHeight);
         std::swap(to.nVersion, nVersion);
+        std::swap(to.nTime, nTime);
+        std::swap(to.nBlockTime, nBlockTime);
     }
 
     // equality test
     friend bool operator==(const CCoins &a, const CCoins &b) {
          return a.fCoinBase == b.fCoinBase &&
                 a.fCoinStake == b.fCoinStake &&
+                a.vout == b.vout &&
                 a.nHeight == b.nHeight &&
                 a.nVersion == b.nVersion &&
                 a.nTime == b.nTime &&
-                a.nBlockTime == b.nBlockTime &&
-                a.vout == b.vout;
+                a.nBlockTime == b.nBlockTime;
     }
     friend bool operator!=(const CCoins &a, const CCoins &b) {
         return !(a == b);
@@ -1033,7 +1035,6 @@ public:
         return fCoinBase;
     }
     
-
     bool IsCoinStake() const {
         return fCoinStake;
     }
@@ -1148,12 +1149,12 @@ public:
         vout[out.n].SetNull();
         Cleanup();
         if (vout.size() == 0) {
-            undo.nHeight = nHeight;
-            undo.nTime = nTime;
-            undo.nBlockTime = nBlockTime;
             undo.fCoinBase = fCoinBase;
             undo.fCoinStake = fCoinStake;
+            undo.nHeight = nHeight;
             undo.nVersion = this->nVersion;
+            undo.nTime = nTime;
+            undo.nBlockTime = nBlockTime;
         }
         return true;
     }
