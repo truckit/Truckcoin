@@ -3152,20 +3152,26 @@ bool LoadBlockIndex()
     if (!fReindex && !LoadBlockIndexDB())
         return false;
 
-    //
-    // Init with genesis block
-    //
-    if (mapBlockIndex.empty())
-    {
-        fTxIndex = true; // txindex is always enabled
-        pblocktree->WriteFlag("txindex", fTxIndex);
-        printf("Initializing databases...\n");
+    return true;
+}
 
-        if (fReindex)
-            return true;
+bool InitBlockIndex() {
+    // Check whether we're already initialized
+    if (pindexGenesisBlock != NULL)
+        return true;
 
-        // Only add the genesis block if not reindexing (in which case we reuse the one already on disk)
-        if (!fReindex) {
+    // Use the provided setting for -txindex in the new database
+    fTxIndex = true; // txindex is always enabled
+    pblocktree->WriteFlag("txindex", fTxIndex);
+    printf("Initializing databases...\n");
+
+    // Only add the genesis block if not reindexing (in which case we reuse the one already on disk)
+    if (!fReindex) {
+        // Genesis Block:
+        // CBlock(hash=000005fe04e512585c3611369c7ce23f130958038c18a462577d002680dab4fc, ver=1, 
+        // hashMerkleRoot=37ad323037e6e55553fadebbe60690a1bff2752f947b7af8cb6b54929f5fee3d, 
+        // nTime=1401331380 (2014-05-28 21:43:00), nBits=1e0fffff, nNonce=1779291)
+
         // Genesis block
         const char* pszTimestamp = "29/5/14 - Replica Ghostbusters car stops the traffic - BBC UK";
         CTransaction txNew;
@@ -3210,20 +3216,22 @@ bool LoadBlockIndex()
         assert(hash == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet));
 
         // Start new block file
-        unsigned int nBlockSize = ::GetSerializeSize(block, SER_DISK, CLIENT_VERSION);
-        CDiskBlockPos blockPos;
-        if (!FindBlockPos(blockPos, nBlockSize+8, 0, block.nTime))
-            return error("AcceptBlock() : FindBlockPos failed");
-        if (!block.WriteToDisk(blockPos))
-            return error("LoadBlockIndex() : writing genesis block to disk failed");
-        if (!block.AddToBlockIndex(blockPos))
-            return error("LoadBlockIndex() : genesis block not accepted");
-
+        try {
+            unsigned int nBlockSize = ::GetSerializeSize(block, SER_DISK, CLIENT_VERSION);
+            CDiskBlockPos blockPos;
+            if (!FindBlockPos(blockPos, nBlockSize+8, 0, block.nTime))
+                return error("AcceptBlock() : FindBlockPos failed");
+            if (!block.WriteToDisk(blockPos))
+                return error("LoadBlockIndex() : writing genesis block to disk failed");
+            if (!block.AddToBlockIndex(blockPos))
+                return error("LoadBlockIndex() : genesis block not accepted");
+        } catch(std::runtime_error &e) {
+            return error("LoadBlockIndex() : failed to initialize block database: %s", e.what());
+        }
         // Initialize synchronized checkpoint
         if (!Checkpoints::WriteSyncCheckpoint((!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet)))
             return error("LoadBlockIndex() : failed to init sync checkpoint");
         }
-    }
 
     string strPubKey = "";
     // if checkpoint master key changed must reset sync-checkpoint
