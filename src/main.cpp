@@ -58,7 +58,7 @@ int64_t nTimeBestReceived = 0;
 int nScriptCheckThreads = 0;
 bool fImporting = false;
 bool fReindex = false;
-bool fTxIndex = false;
+bool fTxIndex = true;
 set<CBlockIndex*, CBlockIndexTrustComparator> setBlockIndexValid; // may contain all CBlockIndex*'s that have validness >=BLOCK_VALID_TRANSACTIONS, and must contain those who aren't failed
 unsigned int nCoinCacheSize = 5000;
 
@@ -816,6 +816,7 @@ bool CTxMemPool::accept(CTransaction &tx, bool fCheckInputs, bool* pfMissingInpu
     // If updated, erase old tx from wallet
     if (ptxOld)
         EraseFromWallets(ptxOld->GetHash());
+    SyncWithWallets(hash, tx, NULL, true);
 
     printf("CTxMemPool::accept() : accepted %s (poolsz %lu)\n",
            hash.ToString().substr(0,10).c_str(),
@@ -1751,6 +1752,10 @@ bool CBlock::DisconnectBlock(CBlockIndex *pindex, CCoinsViewCache &view, bool *p
     // move best block pointer to prevout block
     view.SetBestBlock(pindex->pprev);
 
+    // ppcoin: clean up wallet after disconnecting coinstake
+    for(CTransaction& tx : vtx)
+        SyncWithWallets(tx.GetHash(), tx, this, false, false);
+
     if (pfClean) {
         *pfClean = fClean;
         return true;
@@ -1979,7 +1984,7 @@ bool SetBestChain(CBlockIndex* pindexNew)
     // Find the fork (typically, there is none)
     CBlockIndex* pfork = view.GetBestBlock();
     CBlockIndex* plonger = pindexNew;
-    while (pfork != plonger)
+    while (pfork && pfork != plonger)
     {
         while (plonger->nHeight > pfork->nHeight)
             if (!(plonger = plonger->pprev))
@@ -2242,6 +2247,10 @@ bool CBlock::AddToBlockIndex(const CDiskBlockPos &pos)
     if (!CheckStakeModifierCheckpoints(pindexNew->nHeight, pindexNew->nStakeModifierChecksum))
         return error("AddToBlockIndex() : Rejected by stake modifier checkpoint height=%d, modifier=0x%016" PRIx64 "", pindexNew->nHeight, nStakeModifier);
 
+    // ppcoin: remember stake
+    if (pindexNew->IsProofOfStake())
+        setStakeSeen.insert(make_pair(pindexNew->prevoutStake, pindexNew->nStakeTime));
+
     setBlockIndexValid.insert(pindexNew);    
     
     pblocktree->WriteBlockIndex(CDiskBlockIndex(pindexNew));
@@ -2275,6 +2284,7 @@ bool FindBlockPos(CDiskBlockPos &pos, unsigned int nAddSize, unsigned int nHeigh
             nLastBlockFile = pos.nFile;
             infoLastBlockFile.SetNull();
             pblocktree->ReadBlockFileInfo(nLastBlockFile, infoLastBlockFile);
+            fUpdatedLast = true;
         }
     } else {
         while (infoLastBlockFile.nSize + nAddSize >= MAX_BLOCKFILE_SIZE) {
