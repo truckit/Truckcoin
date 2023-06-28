@@ -1811,6 +1811,14 @@ bool CBlock::ConnectBlock(CBlockIndex* pindex, CCoinsViewCache &view, bool fJust
     // verify that the view's current state corresponds to the previous block
     assert(pindex->pprev == view.GetBestBlock());
 
+    // Special case for the genesis block, skipping connection of its transactions
+    // (its coinbase is unspendable)
+    if (GetHash() == hashGenesisBlock) {
+        view.SetBestBlock(pindex);
+        pindexGenesisBlock = pindex;
+        return true;
+    }
+
     bool fScriptChecks = pindex->nHeight >= Checkpoints::GetTotalBlocksEstimate();
 
     // Do not allow blocks that contain transactions which 'overwrite' older transactions,
@@ -1965,21 +1973,6 @@ bool SetBestChain(CBlockIndex* pindexNew)
     // All modifications to the coin state will be done in this cache.
     // Only when all have succeeded, we push it to pcoinsTip.
     CCoinsViewCache view(*pcoinsTip, true);
-
-    // special case for attaching the genesis block
-    // note that no ConnectBlock is called, so its coinbase output is non-spendable
-    if (pindexGenesisBlock == NULL && pindexNew->GetBlockHash() == hashGenesisBlock)
-    {
-        view.SetBestBlock(pindexNew);
-        if (!view.Flush())
-            return false;
-        pindexGenesisBlock = pindexNew;
-        pindexBest = pindexNew;
-        hashBestChain = pindexNew->GetBlockHash();
-        nBestHeight = pindexBest->nHeight;
-        nBestChainTrust = pindexNew->nChainTrust;
-        return true;
-    }
 
     // Find the fork (typically, there is none)
     CBlockIndex* pfork = view.GetBestBlock();
@@ -2391,8 +2384,8 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
     if (IsProofOfStake() && (vtx[0].vout.size() != 1 || !vtx[0].vout[0].IsEmpty()))
         return DoS(100, error("CheckBlock() : coinbase output not empty for proof-of-stake block"));
 
-    // Check coinbase timestamp
-    if (GetBlockTime() > FutureDrift((int64_t)vtx[0].nTime))
+    // Check coinbase timestamp (don't check truckcoin genesis block because of weird timestamp)
+    if ((GetHash() != hashGenesisBlock) && (GetBlockTime() > FutureDrift((int64_t)vtx[0].nTime)))
         return DoS(50, error("CheckBlock() : coinbase timestamp is too early"));
 
     // Check coinstake timestamp
@@ -3180,7 +3173,7 @@ bool InitBlockIndex() {
         // Genesis Block:
         // CBlock(hash=000005fe04e512585c3611369c7ce23f130958038c18a462577d002680dab4fc, ver=1, 
         // hashMerkleRoot=37ad323037e6e55553fadebbe60690a1bff2752f947b7af8cb6b54929f5fee3d, 
-        // nTime=1401331380 (2014-05-28 21:43:00), nBits=1e0fffff, nNonce=1779291)
+        // nTime=1401331380 (29/5/2014 02:43:00 GMT), nBits=1e0fffff, nNonce=1779291)
 
         // Genesis block
         const char* pszTimestamp = "29/5/14 - Replica Ghostbusters car stops the traffic - BBC UK";
