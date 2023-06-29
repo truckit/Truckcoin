@@ -3231,24 +3231,14 @@ bool InitBlockIndex() {
         } catch(std::runtime_error &e) {
             return error("LoadBlockIndex() : failed to initialize block database: %s", e.what());
         }
-        // Initialize synchronized checkpoint
+        // ppcoin: initialize synchronized checkpoint
         if (!Checkpoints::WriteSyncCheckpoint((!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet)))
             return error("LoadBlockIndex() : failed to init sync checkpoint");
         }
 
-    string strPubKey = "";
-    // if checkpoint master key changed must reset sync-checkpoint
-    if (!pblocktree->ReadCheckpointPubKey(strPubKey) || strPubKey != CSyncCheckpoint::strMasterPubKey)
-    {
-        {
-            LOCK(Checkpoints::cs_hashSyncCheckpoint);
-            // write checkpoint master key to db
-            if (!pblocktree->WriteCheckpointPubKey(CSyncCheckpoint::strMasterPubKey))
-                return error("LoadBlockIndex() : failed to write new checkpoint master key to db");
-        }
-        if ((!fTestNet) && !Checkpoints::ResetSyncCheckpoint())
-            return error("LoadBlockIndex() : failed to reset sync-checkpoint");
-    }
+    // ppcoin: if checkpoint master key changed must reset sync-checkpoint
+    if (!Checkpoints::CheckCheckpointPubKey())
+        return error("LoadBlockIndex() : failed to reset checkpoint master pubkey");
 
     return true;
 }

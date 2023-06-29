@@ -61,13 +61,14 @@ namespace Checkpoints
     bool WantedByPendingSyncCheckpoint(uint256 hashBlock);
     bool ResetSyncCheckpoint();
     void AskForPendingSyncCheckpoint(CNode* pfrom);
+    bool CheckCheckpointPubKey();
     bool SetCheckpointPrivKey(std::string strPrivKey);
     bool SendSyncCheckpoint(uint256 hashCheckpoint);
     bool IsMatureSyncCheckpoint();
     bool IsSyncCheckpointTooOld(unsigned int nSeconds);
 }
 
-// synchronized checkpoint
+// Synchronized checkpoint (introduced first in ppcoin)
 class CUnsignedSyncCheckpoint
 {
 public:

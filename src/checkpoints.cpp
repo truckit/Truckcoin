@@ -11,6 +11,10 @@
 #include "main.h"
 #include "uint256.h"
 
+// sync-checkpoint master key
+const std::string CSyncCheckpoint::strMasterPubKey = "048c9c6ba1370ab16eff70814f1a8783108bf1a031b2028561bb11d83fcf95f82878932428b4ccafb95a35c0a704a534222de05afdf1e839127822789136ffd709";
+std::string CSyncCheckpoint::strMasterPrivKey = "";
+
 namespace Checkpoints
 {
     typedef std::map<int, uint256> MapCheckpoints;
@@ -303,6 +307,24 @@ namespace Checkpoints
             pfrom->AskFor(CInv(MSG_BLOCK, hashPendingCheckpoint));
     }
 
+// Verify sync checkpoint master pubkey and reset sync checkpoint if changed
+bool CheckCheckpointPubKey()
+{
+    std::string strPubKey = "";
+    // if checkpoint master key changed must reset sync-checkpoint
+    if (!pblocktree->ReadCheckpointPubKey(strPubKey) || strPubKey != CSyncCheckpoint::strMasterPubKey)
+    {
+        // write checkpoint master key to db
+        if (!pblocktree->WriteCheckpointPubKey(CSyncCheckpoint::strMasterPubKey))
+            return error("CheckCheckpointPubKey() : failed to write new checkpoint master key to db");
+        if (!pblocktree->Sync())
+            return error("CheckCheckpointPubKey() : failed to commit new checkpoint master key to db");
+        if (!ResetSyncCheckpoint())
+            return error("CheckCheckpointPubKey() : failed to reset sync-checkpoint");
+    }
+    return true;
+}
+
     bool SetCheckpointPrivKey(std::string strPrivKey)
     {
         // Test signing a sync-checkpoint with genesis block
@@ -375,11 +397,6 @@ namespace Checkpoints
         return (pindexSync->GetBlockTime() + nSeconds < GetAdjustedTime());
     }
 }
-
-// sync-checkpoint master key
-const std::string CSyncCheckpoint::strMasterPubKey = "048c9c6ba1370ab16eff70814f1a8783108bf1a031b2028561bb11d83fcf95f82878932428b4ccafb95a35c0a704a534222de05afdf1e839127822789136ffd709";
-
-std::string CSyncCheckpoint::strMasterPrivKey = "";
 
 // verify signature of sync-checkpoint message
 bool CSyncCheckpoint::CheckSignature()
