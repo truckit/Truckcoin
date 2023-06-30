@@ -6,6 +6,7 @@
 
 #include "alert.h"
 #include "checkpoints.h"
+#include "checkpointsync.h"
 #include "db.h"
 #include "txdb.h"
 #include "net.h"
@@ -83,7 +84,7 @@ int64_t nHPSTimerStart;
 // Settings
 int64_t nTransactionFee = MIN_TX_FEE;
 int64_t nSplitThreshold = DEF_SPLIT_AMOUNT;
-extern enum Checkpoints::CPMode CheckpointsMode;
+extern enum CPMode CheckpointsMode;
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -1068,15 +1069,6 @@ uint256 static GetOrphanRoot(const CBlockHeader* pblock)
     while (mapOrphanBlocks.count(pblock->hashPrevBlock))
         pblock = mapOrphanBlocks[pblock->hashPrevBlock];
     return pblock->GetHash();
-}
-
-// find block wanted by given orphan block
-uint256 WantedByOrphan(const CBlock* pblockOrphan)
-{
-    // Work back to the first block in the orphan chain
-    while (mapOrphanBlocks.count(pblockOrphan->hashPrevBlock))
-        pblockOrphan = mapOrphanBlocks[pblockOrphan->hashPrevBlock];
-    return pblockOrphan->hashPrevBlock;
 }
 
 // miner's coin base reward based on nBits
@@ -2471,13 +2463,13 @@ bool CBlock::AcceptBlock(CDiskBlockPos *dbp)
     if (!Checkpoints::CheckHardened(nHeight, hash))
         return DoS(100, error("AcceptBlock() : rejected by hardened checkpoint lock-in at %d", nHeight));
 
-    bool cpSatisfies = Checkpoints::CheckSync(hash, pindexPrev); 
+    bool cpSatisfies = CheckSyncCheckpoint(hash, pindexPrev); 
  
     // Check that the block satisfies synchronized checkpoint 
-    if (CheckpointsMode == Checkpoints::STRICT && !cpSatisfies) 
+    if (CheckpointsMode == STRICT && !cpSatisfies) 
          return error("AcceptBlock() : rejected by synchronized checkpoint"); 
  
-    if (CheckpointsMode == Checkpoints::ADVISORY && !cpSatisfies) 
+    if (CheckpointsMode == ADVISORY && !cpSatisfies) 
          strMiscWarning = _("WARNING: syncronized checkpoint violation detected, but skipped!"); 
 
     // Enforce rule that the coinbase starts with serialized block height
@@ -2517,7 +2509,7 @@ bool CBlock::AcceptBlock(CDiskBlockPos *dbp)
     }
 
     // Check pending sync-checkpoint
-    Checkpoints::AcceptPendingSyncCheckpoint();
+    AcceptPendingSyncCheckpoint();
 
     return true;
 }
@@ -2568,7 +2560,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock, CDiskBlockPos *dbp)
     // check proof-of-stake
     // Limited duplicity on stake: prevents block flood attack
     // Duplicate stake allowed only when there is orphan child block
-    if (pblock->IsProofOfStake() && setStakeSeen.count(pblock->GetProofOfStake()) && !mapOrphanBlocksByPrev.count(hash) && !Checkpoints::WantedByPendingSyncCheckpoint(hash))
+    if (pblock->IsProofOfStake() && setStakeSeen.count(pblock->GetProofOfStake()) && !mapOrphanBlocksByPrev.count(hash) && !WantedByPendingSyncCheckpoint(hash))
         return error("ProcessBlock() : duplicate proof-of-stake (%s, %d) for block %s", pblock->GetProofOfStake().first.ToString().c_str(), pblock->GetProofOfStake().second, hash.ToString().c_str());
 
     // Preliminary checks
@@ -2588,8 +2580,8 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock, CDiskBlockPos *dbp)
             mapProofOfStake.insert(make_pair(hash, hashProofOfStake));
     }
 
-    CBlockIndex* pcheckpoint = Checkpoints::GetLastSyncCheckpoint();
-    if (pcheckpoint && pblock->hashPrevBlock != hashBestChain && !Checkpoints::WantedByPendingSyncCheckpoint(hash))
+    CBlockIndex* pcheckpoint = GetLastSyncCheckpoint();
+    if (pcheckpoint && pblock->hashPrevBlock != hashBestChain && !WantedByPendingSyncCheckpoint(hash))
     {
         // Extra checks to prevent "fill up memory by spamming with bogus blocks"
         int64_t deltaTime = pblock->GetBlockTime() - pcheckpoint->nTime;
@@ -2612,7 +2604,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock, CDiskBlockPos *dbp)
 
     // ask for pending sync-checkpoint if any
     if (!IsInitialBlockDownload())
-        Checkpoints::AskForPendingSyncCheckpoint(pfrom);
+        AskForPendingSyncCheckpoint(pfrom);
 
     // If don't already have its previous block, shunt it off to holding area until we get it
     if (pblock->hashPrevBlock != 0 && !mapBlockIndex.count(pblock->hashPrevBlock))
@@ -2623,7 +2615,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock, CDiskBlockPos *dbp)
         {
             // Limited duplicity on stake: prevents block flood attack
             // Duplicate stake allowed only when there is orphan child block
-            if (setStakeSeenOrphan.count(pblock->GetProofOfStake()) && !mapOrphanBlocksByPrev.count(hash) && !Checkpoints::WantedByPendingSyncCheckpoint(hash)) 
+            if (setStakeSeenOrphan.count(pblock->GetProofOfStake()) && !mapOrphanBlocksByPrev.count(hash) && !WantedByPendingSyncCheckpoint(hash)) 
                 return error("ProcessBlock() : duplicate proof-of-stake (%s, %d) for orphan block %s", pblock->GetProofOfStake().first.ToString().c_str(), pblock->GetProofOfStake().second, hash.ToString().c_str());
             else
                 setStakeSeenOrphan.insert(pblock->GetProofOfStake());
@@ -2673,7 +2665,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock, CDiskBlockPos *dbp)
     /* Checkpoint master sends a new advanced checkpoint
      * according to the depth specified by -checkpointdepth */
     if(pfrom && !CSyncCheckpoint::strMasterPrivKey.empty())
-      Checkpoints::SendSyncCheckpoint(Checkpoints::AutoSelectSyncCheckpoint());
+      SendSyncCheckpoint(AutoSelectSyncCheckpoint());
 
     return true;
 }
@@ -3009,13 +3001,13 @@ bool static LoadBlockIndexDB()
     if (pblocktree->ReadBlockFileInfo(nLastBlockFile, infoLastBlockFile))
         printf("LoadBlockIndexDB(): last block file: %s\n", infoLastBlockFile.ToString().c_str());
 
-    // Load sync-checkpoint
-    if (!pblocktree->ReadSyncCheckpoint(Checkpoints::hashSyncCheckpoint))
+    // ppcoin: load hashSyncCheckpoint
+    if (!pblocktree->ReadSyncCheckpoint(hashSyncCheckpoint))
     {
         printf("LoadBlockIndexDB(): synchronized checkpoint not read\n");
-        Checkpoints::hashSyncCheckpoint = hashGenesisBlock;
+        hashSyncCheckpoint = hashGenesisBlock;
     }
-    printf("LoadBlockIndexDB(): synchronized checkpoint %s\n", Checkpoints::hashSyncCheckpoint.ToString().c_str());
+    printf("LoadBlockIndexDB(): synchronized checkpoint %s\n", hashSyncCheckpoint.ToString().c_str());
 
     // Check whether we need to continue reindexing
     bool fReindexing = false;
@@ -3232,12 +3224,12 @@ bool InitBlockIndex() {
             return error("LoadBlockIndex() : failed to initialize block database: %s", e.what());
         }
         // ppcoin: initialize synchronized checkpoint
-        if (!Checkpoints::WriteSyncCheckpoint((!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet)))
+        if (!WriteSyncCheckpoint(hashGenesisBlock))
             return error("LoadBlockIndex() : failed to init sync checkpoint");
         }
 
     // ppcoin: if checkpoint master key changed must reset sync-checkpoint
-    if (!Checkpoints::CheckCheckpointPubKey())
+    if (!CheckCheckpointPubKey())
         return error("LoadBlockIndex() : failed to reset checkpoint master pubkey");
 
     return true;
@@ -3412,17 +3404,8 @@ string GetWarnings(string strFor)
         strStatusBar = strMiscWarning;
     }
 
-    // Should not enter safe mode for longer invalid chain 
-    // If sync-checkpoint is too old do not enter safe mode 
-    // Display warning only in the STRICT mode 
-//    if (CheckpointsMode == Checkpoints::STRICT && Checkpoints::IsSyncCheckpointTooOld(60 * 60 * 24 * 10) && !fTestNet && !IsInitialBlockDownload()) 
-//    { 
-//        nPriority = 100; 
-//        strStatusBar = _("WARNING: Checkpoint is too old. Wait for block chain to download, or notify developers."); 
-//    } 
-
     // if detected invalid checkpoint enter safe mode
-    if (Checkpoints::hashInvalidCheckpoint != 0)
+    if (hashInvalidCheckpoint != 0)
     {
         nPriority = 3000;
         strStatusBar = strRPC = _("WARNING: Invalid checkpoint found! Displayed transactions may not be correct! You may need to upgrade, or notify developers.");
@@ -3605,9 +3588,9 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 
         // relay sync-checkpoint
         {
-            LOCK(Checkpoints::cs_hashSyncCheckpoint);
-            if (!Checkpoints::checkpointMessage.IsNull())
-                Checkpoints::checkpointMessage.RelayTo(pfrom);
+            LOCK(cs_hashSyncCheckpoint);
+            if (!checkpointMessage.IsNull())
+                checkpointMessage.RelayTo(pfrom);
         }
 
         pfrom->fSuccessfullyConnected = true;
@@ -3623,7 +3606,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
               pfrom->PushGetBlocks(pindexBest, uint256(0));
         } else {
             // ask for pending sync-checkpoint if any
-            Checkpoints::AskForPendingSyncCheckpoint(pfrom);
+            AskForPendingSyncCheckpoint(pfrom);
         }
     }
 

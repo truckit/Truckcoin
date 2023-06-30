@@ -18,7 +18,6 @@ class CBlockIndex;
 #include "json/json_spirit_utils.h"
 
 #include "util.h"
-#include "checkpoints.h"
 
 // HTTP status codes
 enum HTTPStatusCode

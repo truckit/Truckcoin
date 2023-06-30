@@ -144,6 +144,7 @@ OBJS= \
     obj/bloom.o \
     obj/noui.o \
     obj/kernel.o \
+    obj/checkpointsync.o \
     obj/pbkdf2.o \
     obj/crypto/aes_helper.o \
     obj/crypto/cubehash.o \

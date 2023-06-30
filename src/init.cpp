@@ -10,7 +10,7 @@
 #include "init.h"
 #include "util.h"
 #include "ui_interface.h"
-#include "checkpoints.h"
+#include "checkpointsync.h"
 #include "key.h"
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -30,7 +30,7 @@ CWallet* pwalletMain;
 CClientUIInterface uiInterface;
 unsigned int nNodeLifespan;
 std::string strWalletFileName;
-enum Checkpoints::CPMode CheckpointsMode;
+enum CPMode CheckpointsMode;
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -471,17 +471,17 @@ bool AppInit2()
 
 	nNodeLifespan = GetArg("-addrlifespan", 7);
 	
-	CheckpointsMode = Checkpoints::STRICT; 
+	CheckpointsMode = STRICT; 
     std::string strCpMode = GetArg("-cppolicy", "strict"); 
  
     if(strCpMode == "strict") 
-        CheckpointsMode = Checkpoints::STRICT; 
+        CheckpointsMode = STRICT; 
  
     if(strCpMode == "advisory") 
-        CheckpointsMode = Checkpoints::ADVISORY; 
+        CheckpointsMode = ADVISORY; 
  
     if(strCpMode == "permissive") 
-        CheckpointsMode = Checkpoints::PERMISSIVE; 
+        CheckpointsMode = PERMISSIVE; 
 
     if (mapArgs.count("-bind")) {
         // when specifying an explicit binding address, you want to listen on it
@@ -813,7 +813,7 @@ bool AppInit2()
 
     if (mapArgs.count("-checkpointkey")) // checkpoint master priv key
     {
-        if (!Checkpoints::SetCheckpointPrivKey(GetArg("-checkpointkey", "")))
+        if (!SetCheckpointPrivKey(GetArg("-checkpointkey", "")))
             InitError(_("Unable to sign checkpoint, wrong checkpointkey?\n"));
     }
 
