@@ -2,6 +2,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "base58.h"
+
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
@@ -88,4 +90,47 @@ std::string EncodeBase58(const unsigned char* pbegin, const unsigned char* pend)
     while (it != b58.end())
         str += pszBase58[*(it++)];
     return str;
+}
+
+void CBitcoinSecret::SetKey(const CKey& vchSecret)
+{
+    assert(vchSecret.IsValid());
+    SetData(128 + (fTestNet ? CBitcoinAddress::PUBKEY_ADDRESS_TEST : CBitcoinAddress::PUBKEY_ADDRESS), vchSecret.begin(), vchSecret.size());
+    if (vchSecret.IsCompressed())
+        vchData.push_back(1);
+}
+
+CKey CBitcoinSecret::GetKey()
+{
+    CKey ret;
+    ret.Set(&vchData[0], &vchData[32], vchData.size() > 32 && vchData[32] == 1);
+    return ret;
+}
+
+bool CBitcoinSecret::IsValid() const
+{
+    bool fExpectTestNet = false;
+    switch(nVersion)
+    {
+        case (128 + CBitcoinAddress::PUBKEY_ADDRESS):
+            break;
+
+        case (128 + CBitcoinAddress::PUBKEY_ADDRESS_TEST):
+            fExpectTestNet = true;
+                break;
+
+        default:
+            return false;
+    }
+    return fExpectTestNet == fTestNet && (vchData.size() == 32 || (vchData.size() == 33 && vchData[32] == 1));
+}
+
+bool CBitcoinSecret::SetString(const char* pszSecret)
+{
+    return CBase58Data::SetString(pszSecret) && IsValid();
+}
+
+bool CBitcoinSecret::SetString(const std::string& strSecret)
+{
+    return SetString(strSecret.c_str());
 }
