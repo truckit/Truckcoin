@@ -4,8 +4,6 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <boost/assign/list_of.hpp> // for 'map_list_of()'
-
 #include "checkpoints.h"
 #include "checkpointsync.h"
 
@@ -13,7 +11,7 @@
 #include "txdb.h"
 #include "main.h"
 #include "uint256.h"
-#include "base58.h"
+//#include "base58.h"
 
 // sync-checkpoint master key
 const std::string CSyncCheckpoint::strMasterPubKey = "048c9c6ba1370ab16eff70814f1a8783108bf1a031b2028561bb11d83fcf95f82878932428b4ccafb95a35c0a704a534222de05afdf1e839127822789136ffd709";
@@ -137,7 +135,8 @@ bool AcceptPendingSyncCheckpoint()
 }
 
 /* Checkpoint master: selects a block for checkpointing according to the policy */
-uint256 AutoSelectSyncCheckpoint() {
+uint256 AutoSelectSyncCheckpoint()
+{
     /* No immediate checkpointing on either PoW or PoS blocks,
     * select by depth in the main chain rather than block time */
     const CBlockIndex *pindex = pindexBest;
@@ -147,31 +146,18 @@ uint256 AutoSelectSyncCheckpoint() {
 }
 
 // Check against synchronized checkpoint
+// Use fast & non-full check
 bool CheckSyncCheckpoint(const uint256& hashBlock, const CBlockIndex* pindexPrev)
 {
-    if (fTestNet) return true; // Testnet has no checkpoints
-    int nHeight = pindexPrev->nHeight + 1;
+    // Testnet has no checkpoints
+    if (fTestNet) 
+        return true;
 
     LOCK(cs_hashSyncCheckpoint);
-    // sync-checkpoint should always be accepted block
-    assert(mapBlockIndex.count(hashSyncCheckpoint));
-    const CBlockIndex* pindexSync = mapBlockIndex[hashSyncCheckpoint];
-
-    if (nHeight > pindexSync->nHeight)
-    {
-        // trace back to same height as sync-checkpoint
-        const CBlockIndex* pindex = pindexPrev;
-        while (pindex->nHeight > pindexSync->nHeight)
-            if (!(pindex = pindex->pprev))
-                return error("CheckSyncCheckpoint: pprev null - block index structure failure");
-        if (pindex->nHeight < pindexSync->nHeight || pindex->GetBlockHash() != hashSyncCheckpoint)
-            return false; // only descendant of sync-checkpoint can pass check
-    }
-    if (nHeight == pindexSync->nHeight && hashBlock != hashSyncCheckpoint)
-        return false; // same height with sync-checkpoint
-    if (nHeight < pindexSync->nHeight && !mapBlockIndex.count(hashBlock))
-        return false; // lower height than sync-checkpoint
-    return true;
+    int nHeight = pindexPrev->nHeight + 1;
+    assert(mapBlockIndex.count(hashSyncCheckpoint));        
+    CBlockIndex* pcheckpoint = Checkpoints::GetLastCheckpoint(mapBlockIndex);
+    return !(pcheckpoint && nHeight < pcheckpoint->nHeight);
 }
 
 bool WantedByPendingSyncCheckpoint(uint256 hashBlock)
