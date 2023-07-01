@@ -3,6 +3,50 @@
 // Copyright (c) 2013-2023 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
+//
+// The synchronized checkpoint system is first developed by Sunny King for
+// ppcoin network in 2012, giving cryptocurrency developers a tool to gain
+// additional network protection against 51% attack.
+//
+// Primecoin also adopts this security mechanism, and the enforcement of
+// checkpoints is explicitly granted by user, thus granting only temporary
+// consensual central control to developer at the threats of 51% attack.
+//
+// Concepts
+//
+// In the network there can be a privileged node known as 'checkpoint master'.
+// This node can send out checkpoint messages signed by the checkpoint master
+// key. Each checkpoint is a block hash, representing a block on the blockchain
+// that the network should reach consensus on.
+//
+// Besides verifying signatures of checkpoint messages, each node also verifies
+// the consistency of the checkpoints. If a conflicting checkpoint is received,
+// it means either the checkpoint master key is compromised, or there is an
+// operator mistake. In this situation the node would discard the conflicting
+// checkpoint message and display a warning message. This precaution controls
+// the damage to network caused by operator mistake or compromised key.
+//
+// Operations
+//
+// Checkpoint master key can be established by using the 'makekeypair' command
+// The public key in source code should then be updated and private key kept
+// in a safe place.
+//
+// Any node can be turned into checkpoint master by setting the 'checkpointkey'
+// configuration parameter with the private key of the checkpoint master key.
+// Operator should exercise caution such that at any moment there is at most
+// one node operating as checkpoint master. When switching master node, the
+// recommended procedure is to shutdown the master node and restart as
+// regular node, note down the current checkpoint by 'getcheckpoint', then
+// compare to the checkpoint at the new node to be upgraded to master node.
+// When the checkpoint on both nodes match then it is safe to switch the new
+// node to checkpoint master.
+//
+// The configuration parameter 'checkpointdepth' specifies how many blocks
+// should the checkpoints lag behind the latest block in auto checkpoint mode.
+// A depth of 6 is the default auto checkpoint policy and offers the greatest
+// protection against 51% attack.
+//
 
 #include "checkpoints.h"
 #include "checkpointsync.h"
@@ -39,13 +83,19 @@ CBlockIndex* GetLastSyncCheckpoint()
 // only descendant of current sync-checkpoint is allowed
 bool ValidateSyncCheckpoint(uint256 hashCheckpoint)
 {
-    if (!mapBlockIndex.count(hashSyncCheckpoint))
-        return error("ValidateSyncCheckpoint: block index missing for current sync-checkpoint %s", hashSyncCheckpoint.ToString().c_str());
-    if (!mapBlockIndex.count(hashCheckpoint))
-        return error("ValidateSyncCheckpoint: block index missing for received sync-checkpoint %s", hashCheckpoint.ToString().c_str());
+    CBlockIndex* pindexSyncCheckpoint = nullptr;
+    CBlockIndex* pindexCheckpointRecv = nullptr;
 
-    CBlockIndex* pindexSyncCheckpoint = mapBlockIndex[hashSyncCheckpoint];
-    CBlockIndex* pindexCheckpointRecv = mapBlockIndex[hashCheckpoint];
+    {
+        LOCK2(cs_main, cs_hashSyncCheckpoint);
+        if (!mapBlockIndex.count(hashSyncCheckpoint))
+            return error("ValidateSyncCheckpoint: block index missing for current sync-checkpoint %s", hashSyncCheckpoint.ToString().c_str());
+        if (!mapBlockIndex.count(hashCheckpoint))
+            return error("ValidateSyncCheckpoint: block index missing for received sync-checkpoint %s", hashCheckpoint.ToString().c_str());
+
+        pindexSyncCheckpoint = mapBlockIndex[hashSyncCheckpoint];
+        pindexCheckpointRecv = mapBlockIndex[hashCheckpoint];
+    }
 
     if (pindexCheckpointRecv->nHeight <= pindexSyncCheckpoint->nHeight)
     {
@@ -59,7 +109,8 @@ bool ValidateSyncCheckpoint(uint256 hashCheckpoint)
         if (pindex->GetBlockHash() != hashCheckpoint)
         {
             hashInvalidCheckpoint = hashCheckpoint;
-            return error("ValidateSyncCheckpoint: new sync-checkpoint %s is conflicting with current sync-checkpoint %s", hashCheckpoint.ToString().c_str(), hashSyncCheckpoint.ToString().c_str());
+            LOCK(cs_hashSyncCheckpoint);
+            return error("ValidateSyncCheckpoint: new sync-checkpoint %s is conflicting with current sync-checkpoint %s", hashCheckpoint.ToString().c_str(), hashSyncCheckpoint.ToString().c_str());// sync-checkpoint master key
         }
         return false; // ignore older checkpoint
     }
@@ -71,10 +122,14 @@ bool ValidateSyncCheckpoint(uint256 hashCheckpoint)
     while (pindex->nHeight > pindexSyncCheckpoint->nHeight)
         if (!(pindex = pindex->pprev))
             return error("ValidateSyncCheckpoint: pprev2 null - block index structure failure");
-    if (pindex->GetBlockHash() != hashSyncCheckpoint)
+
     {
-        hashInvalidCheckpoint = hashCheckpoint;
-        return error("ValidateSyncCheckpoint: new sync-checkpoint %s is not a descendant of current sync-checkpoint %s", hashCheckpoint.ToString().c_str(), hashSyncCheckpoint.ToString().c_str());
+        LOCK(cs_hashSyncCheckpoint);
+        if (pindex->GetBlockHash() != hashSyncCheckpoint)
+        {
+            hashInvalidCheckpoint = hashCheckpoint;
+            return error("ValidateSyncCheckpoint: new sync-checkpoint %s is not a descendant of current sync-checkpoint %s", hashCheckpoint.ToString().c_str(), hashSyncCheckpoint.ToString().c_str());
+        }
     }
     return true;
 }
@@ -82,9 +137,7 @@ bool ValidateSyncCheckpoint(uint256 hashCheckpoint)
 bool WriteSyncCheckpoint(const uint256& hashCheckpoint)
 {
     if (!pblocktree->WriteSyncCheckpoint(hashCheckpoint))
-    {
         return error("WriteSyncCheckpoint(): failed to write to txdb sync checkpoint %s", hashCheckpoint.ToString().c_str());
-    }
     if (!pblocktree->Sync())
         return error("WriteSyncCheckpoint(): failed to commit to txdb sync checkpoint %s", hashCheckpoint.ToString().c_str());
 
@@ -94,45 +147,54 @@ bool WriteSyncCheckpoint(const uint256& hashCheckpoint)
 
 bool AcceptPendingSyncCheckpoint()
 {
-    LOCK(cs_hashSyncCheckpoint);
-    if (hashPendingCheckpoint != 0 && mapBlockIndex.count(hashPendingCheckpoint))
     {
-        if (!ValidateSyncCheckpoint(hashPendingCheckpoint))
-        {
-            hashPendingCheckpoint = 0;
-            checkpointMessagePending.SetNull();
+        LOCK2(cs_main, cs_hashSyncCheckpoint);
+        bool havePendingCheckpoint = hashPendingCheckpoint != uint256() && mapBlockIndex.count(hashPendingCheckpoint);
+        if (!havePendingCheckpoint)
             return false;
-        }
+    }
 
-        CBlockIndex* pindexCheckpoint = mapBlockIndex[hashPendingCheckpoint];
-        if (!pindexCheckpoint->IsInMainChain())
-        {
-            CBlock block;
-            if (!block.ReadFromDisk(pindexCheckpoint))
-                    return error("AcceptPendingSyncCheckpoint: ReadFromDisk failed for sync checkpoint %s", hashPendingCheckpoint.ToString().c_str());
-            if (!SetBestChain(pindexCheckpoint))
-            {
-                hashInvalidCheckpoint = hashPendingCheckpoint;
-                return error("AcceptPendingSyncCheckpoint: SetBestChain failed for sync checkpoint %s", hashPendingCheckpoint.ToString().c_str());
-            }
-        }
+    uint256 hashPendingCheckpointTmp;
+    {
+        LOCK(cs_hashSyncCheckpoint);
+        hashPendingCheckpointTmp = hashPendingCheckpoint;
+    }
 
-        if (!WriteSyncCheckpoint(hashPendingCheckpoint))
+    if (!ValidateSyncCheckpoint(hashPendingCheckpointTmp))
+    {
+        LOCK(cs_hashSyncCheckpoint);
+        hashPendingCheckpoint = uint256();
+        checkpointMessagePending.SetNull();
+        return false;
+    }
+
+    {
+        LOCK2(cs_main, cs_hashSyncCheckpoint);
+        if (!mapBlockIndex[hashPendingCheckpoint]->IsInMainChain())
+            return false;
+    }
+
+    {
+        LOCK(cs_hashSyncCheckpoint);
+        if (!WriteSyncCheckpoint(hashPendingCheckpoint)) {
             return error("AcceptPendingSyncCheckpoint(): failed to write sync checkpoint %s", hashPendingCheckpoint.ToString().c_str());
-        hashPendingCheckpoint = 0;
+        }
+
+        hashPendingCheckpoint = uint256();
         checkpointMessage = checkpointMessagePending;
         checkpointMessagePending.SetNull();
-        printf("AcceptPendingSyncCheckpoint : sync-checkpoint at %s\n", hashSyncCheckpoint.ToString().c_str());
+
         // relay the checkpoint
         if (!checkpointMessage.IsNull())
         {
             for (CNode* pnode : vNodes)
                 checkpointMessage.RelayTo(pnode);
         }
-        return true;
     }
-    return false;
+
+    return true;
 }
+
 
 /* Checkpoint master: selects a block for checkpointing according to the policy */
 uint256 AutoSelectSyncCheckpoint()
@@ -336,7 +398,7 @@ bool CSyncCheckpoint::CheckSignature()
 
     // Now unserialize the data
     CDataStream sMsg(vchMsg, SER_NETWORK, PROTOCOL_VERSION);
-    sMsg >> *(CUnsignedSyncCheckpoint*)this;
+    sMsg >> *static_cast<CUnsignedSyncCheckpoint*>(this);
     return true;
 }
 
