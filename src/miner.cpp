@@ -295,8 +295,9 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
             nTxSigOps += tx.GetP2SHSigOpCount(viewTemp);
             if (nBlockSigOps + nTxSigOps >= MAX_BLOCK_SIGOPS)
                 continue;
-            
-            if (!tx.CheckInputs(viewTemp, true, SCRIPT_VERIFY_P2SH))
+
+            CValidationState state;
+            if (!tx.CheckInputs(state, viewTemp, true, SCRIPT_VERIFY_P2SH))
                 continue;
             
 /*
@@ -413,7 +414,8 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
         }
 
         // Process this block the same as if we had received it from another node
-        if (!ProcessBlock(NULL, pblock))
+        CValidationState state;
+        if (!ProcessBlock(state, NULL, pblock))
             return error("CheckWork : ProcessBlock, block not accepted");
     }
 
@@ -429,7 +431,8 @@ bool CheckStake(CBlock* pblock, CWallet& wallet)
         return error("CheckStake() : %s is not a proof-of-stake block", hashBlock.GetHex().c_str());
 
     // verify hash target and signature of coinstake tx
-    if (!CheckProofOfStake(pblock->vtx[1], pblock->nBits, proofHash, hashTarget))
+    CValidationState state;
+    if (!CheckProofOfStake(state, pblock->vtx[1], pblock->nBits, proofHash, hashTarget))
         return error("CheckStake() : proof-of-stake checking failed");
 
     //// debug print
@@ -450,7 +453,8 @@ bool CheckStake(CBlock* pblock, CWallet& wallet)
         }
 
         // Process this block the same as if we had received it from another node
-        if (!ProcessBlock(NULL, pblock))
+        CValidationState state;
+        if (!ProcessBlock(state, NULL, pblock))
             return error("CheckStake() : ProcessBlock, block not accepted");
     }
 

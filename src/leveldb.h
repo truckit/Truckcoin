@@ -11,6 +11,14 @@
 
 #include <boost/filesystem/path.hpp>
 
+class leveldb_error : public std::runtime_error
+{
+public:
+    leveldb_error(const std::string &msg) : std::runtime_error(msg) {}
+};
+
+void HandleError(const leveldb::Status &status);
+
 // Batch of changes queued to be written to a CLevelDB
 class CLevelDBBatch
 {
@@ -20,7 +28,9 @@ private:
     leveldb::WriteBatch batch;
 
 public:
-    template<typename K, typename V> void Write(const K& key, const V& value) {
+    template<typename K, typename V>
+    void Write(const K& key, const V& value)
+    {
         CDataStream ssKey(SER_DISK, CLIENT_VERSION);
         ssKey.reserve(ssKey.GetSerializeSize(key));
         ssKey << key;
@@ -34,7 +44,9 @@ public:
         batch.Put(slKey, slValue);
     }
 
-    template<typename K> void Erase(const K& key) {
+    template<typename K>
+    void Erase(const K& key)
+    {
         CDataStream ssKey(SER_DISK, CLIENT_VERSION);
         ssKey.reserve(ssKey.GetSerializeSize(key));
         ssKey << key;
@@ -72,7 +84,9 @@ public:
     CLevelDB(const boost::filesystem::path &path, int64_t nCacheSize, bool fMemory = false, bool fWipe = false);
     ~CLevelDB();
 
-    template<typename K, typename V> bool Read(const K& key, V& value) {
+    template<typename K, typename V>
+    bool Read(const K& key, V& value)
+    {
         CDataStream ssKey(SER_DISK, CLIENT_VERSION);
         ssKey.reserve(ssKey.GetSerializeSize(key));
         ssKey << key;
@@ -84,6 +98,7 @@ public:
             if (status.IsNotFound())
                 return false;
             printf("LevelDB read failure: %s\n", status.ToString().c_str());
+            HandleError(status);
         }
         try {
             CDataStream ssValue(strValue.data(), strValue.data() + strValue.size(), SER_DISK, CLIENT_VERSION);
@@ -94,13 +109,17 @@ public:
         return true;
     }
 
-    template<typename K, typename V> bool Write(const K& key, const V& value, bool fSync = false) {
+    template<typename K, typename V>
+    bool Write(const K& key, const V& value, bool fSync = false)
+    {
         CLevelDBBatch batch;
         batch.Write(key, value);
         return WriteBatch(batch, fSync);
     }
 
-    template<typename K> bool Exists(const K& key) {
+    template<typename K>
+    bool Exists(const K& key)
+    {
         CDataStream ssKey(SER_DISK, CLIENT_VERSION);
         ssKey.reserve(ssKey.GetSerializeSize(key));
         ssKey << key;
@@ -112,11 +131,14 @@ public:
             if (status.IsNotFound())
                 return false;
             printf("LevelDB read failure: %s\n", status.ToString().c_str());
+            HandleError(status);
         }
         return true;
     }
 
-    template<typename K> bool Erase(const K& key, bool fSync = false) {
+    template<typename K>
+    bool Erase(const K& key, bool fSync = false)
+    {
         CLevelDBBatch batch;
         batch.Erase(key);
         return WriteBatch(batch, fSync);

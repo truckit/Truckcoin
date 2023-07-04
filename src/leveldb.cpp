@@ -12,6 +12,19 @@
 
 #include <boost/filesystem.hpp>
 
+void HandleError(const leveldb::Status &status)
+{
+    if (status.ok())
+        return;
+    if (status.IsCorruption())
+        throw leveldb_error("Database corrupted");
+    if (status.IsIOError())
+        throw leveldb_error("Database I/O error");
+    if (status.IsNotFound())
+        throw leveldb_error("Database entry missing");
+    throw leveldb_error("Unknown database error");
+}
+
 static leveldb::Options GetOptions(int64_t nCacheSize) {
     leveldb::Options options;
     options.block_cache = leveldb::NewLRUCache(nCacheSize / 2);
@@ -57,10 +70,12 @@ CLevelDB::~CLevelDB() {
     options.env = NULL;
 }
 
-bool CLevelDB::WriteBatch(CLevelDBBatch &batch, bool fSync) {
+bool CLevelDB::WriteBatch(CLevelDBBatch &batch, bool fSync)
+{
     leveldb::Status status = pdb->Write(fSync ? syncoptions : writeoptions, &batch.batch);
     if (!status.ok()) {
         printf("LevelDB write failure: %s\n", status.ToString().c_str());
+        HandleError(status);
         return false;
     }
     return true;
