@@ -434,7 +434,7 @@ bool CheckProofOfStake(CValidationState &state, const CTransaction& tx, unsigned
 
     // Read block and scan it to find txPrev
     CBlock block;
-    if (block.ReadFromDisk(pindex)) {
+    if (ReadBlockFromDisk(block, pindex)) {
         nTxPos = GetSerializeSize(CBlock(), SER_DISK, CLIENT_VERSION) - (2 * GetSizeOfCompactSize(0)) + GetSizeOfCompactSize(block.vtx.size());
         for (const CTransaction &tx : block.vtx) {
             if (tx.GetHash() == txin.prevout.hash) {

@@ -245,7 +245,7 @@ bool ResetSyncCheckpoint()
         // checkpoint block accepted but not yet in main chain
         printf("ResetSyncCheckpoint: SetBestChain to hardened checkpoint %s\n", hash.ToString().c_str());
         CBlock block;
-        if (!block.ReadFromDisk(mapBlockIndex[hash]))
+        if (!ReadBlockFromDisk(block, mapBlockIndex[hash]))
             return error("ResetSyncCheckpoint: ReadFromDisk failed for hardened checkpoint %s", hash.ToString().c_str());
         CValidationState state;
         if (!SetBestChain(state, mapBlockIndex[hash]))
@@ -435,7 +435,7 @@ bool CSyncCheckpoint::ProcessSyncCheckpoint(CNode* pfrom)
     {
         // checkpoint chain received but not yet main chain
         CBlock block;
-        if (!block.ReadFromDisk(pindexCheckpoint))
+        if (!ReadBlockFromDisk(block, pindexCheckpoint))
             return error("ProcessSyncCheckpoint: ReadFromDisk failed for sync checkpoint %s", hashCheckpoint.ToString().c_str());
         CValidationState state;
         if (!SetBestChain(state, pindexCheckpoint))

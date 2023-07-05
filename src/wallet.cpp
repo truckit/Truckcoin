@@ -805,7 +805,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
         while (pindex)
         {
             CBlock block;
-            block.ReadFromDisk(pindex);
+            ReadBlockFromDisk(block, pindex);
             for (CTransaction& tx : block.vtx)
             {
                 if (AddToWalletIfInvolvingMe(tx.GetHash(), tx, &block, fUpdate))
@@ -1615,7 +1615,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
             LOCK2(cs_main, cs_wallet);
             CBlockIndex *pindex = FindBlockByHeight(coins.nHeight);
 
-            if (!block.ReadFromDisk(pindex))
+            if (!ReadBlockFromDisk(block, pindex))
                 continue;
 
             for (const CTransaction &tx : block.vtx) {
