@@ -2214,26 +2214,26 @@ bool CBlock::GetCoinAge(uint64_t& nCoinAge) const
     return true;
 }
 
-bool CBlock::AddToBlockIndex(CValidationState &state, const CDiskBlockPos &pos)
+bool AddToBlockIndex(CBlock& block, CValidationState& state, const CDiskBlockPos& pos)
 {
     // Check for duplicate
-    uint256 hash = GetHash();
+    uint256 hash = block.GetHash();
     if (mapBlockIndex.count(hash))
         return state.Invalid(error("AddToBlockIndex() : %s already exists", hash.ToString().substr(0,20).c_str()));
 
     // Construct new block index object
-    CBlockIndex* pindexNew = new CBlockIndex(*this);
+    CBlockIndex* pindexNew = new CBlockIndex(block);
     assert(pindexNew);
     map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.insert(make_pair(hash, pindexNew)).first;
     pindexNew->phashBlock = &((*mi).first);
-    map<uint256, CBlockIndex*>::iterator miPrev = mapBlockIndex.find(hashPrevBlock);
+    map<uint256, CBlockIndex*>::iterator miPrev = mapBlockIndex.find(block.hashPrevBlock);
     if (miPrev != mapBlockIndex.end())
     {
         pindexNew->pprev = (*miPrev).second;
         pindexNew->nHeight = pindexNew->pprev->nHeight + 1;
     }
 
-    pindexNew->nTx = vtx.size();
+    pindexNew->nTx = block.vtx.size();
     pindexNew->nChainTrust = (pindexNew->pprev ? pindexNew->pprev->nChainTrust : 0) + pindexNew->GetBlockTrust();
     pindexNew->nChainTx = (pindexNew->pprev ? pindexNew->pprev->nChainTx : 0) + pindexNew->nTx;
     pindexNew->nFile = pos.nFile;
@@ -2242,7 +2242,7 @@ bool CBlock::AddToBlockIndex(CValidationState &state, const CDiskBlockPos &pos)
     pindexNew->nStatus = BLOCK_VALID_TRANSACTIONS | BLOCK_HAVE_DATA;
     
     // Compute stake entropy bit for stake modifier
-    if (!pindexNew->SetStakeEntropyBit(GetStakeEntropyBit(pindexNew->nHeight)))
+    if (!pindexNew->SetStakeEntropyBit(block.GetStakeEntropyBit(pindexNew->nHeight)))
         return error("AddToBlockIndex() : SetStakeEntropyBit() failed");
 
     // Record proof-of-stake hash value
@@ -2281,7 +2281,7 @@ bool CBlock::AddToBlockIndex(CValidationState &state, const CDiskBlockPos &pos)
         // Notify UI to display prev block's coinbase if it was ours
         static uint256 hashPrevBestCoinBase;
         UpdatedTransaction(hashPrevBestCoinBase);
-        hashPrevBestCoinBase = GetTxHash(0);
+        hashPrevBestCoinBase = block.GetTxHash(0);
     }
 
     if (!pblocktree->Flush())
@@ -2535,7 +2535,7 @@ bool CBlock::AcceptBlock(CValidationState &state, CDiskBlockPos *dbp)
         if (dbp == NULL)
             if (!WriteBlockToDisk(*this, blockPos))
                 return state.Abort(_("Failed to write block"));
-        if (!AddToBlockIndex(state, blockPos))
+        if (!AddToBlockIndex(*this, state, blockPos))
             return error("AcceptBlock() : AddToBlockIndex failed");
     } catch(std::runtime_error &e) {
         return state.Abort(_("System error: ") + e.what());
@@ -3264,7 +3264,7 @@ bool InitBlockIndex() {
                 return error("AcceptBlock() : FindBlockPos failed");
             if (!WriteBlockToDisk(block, blockPos))
                 return error("LoadBlockIndex() : writing genesis block to disk failed");
-            if (!block.AddToBlockIndex(state, blockPos))
+            if (!AddToBlockIndex(block, state, blockPos))
                 return error("LoadBlockIndex() : genesis block not accepted");
         } catch(std::runtime_error &e) {
             return error("LoadBlockIndex() : failed to initialize block database: %s", e.what());

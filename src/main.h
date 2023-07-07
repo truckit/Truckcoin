@@ -1592,8 +1592,6 @@ public:
         printf("\n");
     }
     
-    // Add this block to the block index, and if necessary, switch the active block chain to this
-    bool AddToBlockIndex(CValidationState &state, const CDiskBlockPos &pos);
     // Context-independent validity checks
     bool CheckBlock(CValidationState &state, bool fCheckPOW=true, bool fCheckMerkleRoot=true, bool fCheckSig=false) const;
     // Store block on disk
@@ -1631,6 +1629,9 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
 
 // Apply the effects of this block (with given index) on the UTXO set represented by coins
 bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& coins, bool fJustCheck = false);
+
+// Add this block to the block index, and if necessary, switch the active block chain to this
+bool AddToBlockIndex(CBlock& block, CValidationState& state, const CDiskBlockPos& pos);
 
 class CBlockFileInfo
 {
