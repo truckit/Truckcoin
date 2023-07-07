@@ -1592,9 +1592,6 @@ public:
         printf("\n");
     }
     
-    // Store block on disk
-    // if dbp is provided, the file is known to already reside on disk
-    bool AcceptBlock(CValidationState &state, CDiskBlockPos *dbp = NULL);
     // Get total coinage consumed
     bool GetCoinAge(uint64_t& nCoinAge) const;
     // Generate proof-of-stake block signature
@@ -1633,6 +1630,10 @@ bool AddToBlockIndex(CBlock& block, CValidationState& state, const CDiskBlockPos
 
 // Context-independent validity checks
 bool CheckBlock(const CBlock& block, CValidationState &state, bool fCheckPOW=true, bool fCheckMerkleRoot=true, bool fCheckSig=false);
+
+// Store block on disk
+// if dbp is provided, the file is known to already reside on disk
+bool AcceptBlock(CBlock& block, CValidationState& state, CDiskBlockPos* dbp = NULL);
 
 class CBlockFileInfo
 {
