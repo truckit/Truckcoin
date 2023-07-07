@@ -1680,7 +1680,7 @@ bool CTransaction::CheckInputs(CValidationState &state, CCoinsViewCache &inputs,
     return true;
 }
 
-bool CBlock::DisconnectBlock(CValidationState &state, CBlockIndex *pindex, CCoinsViewCache &view, bool *pfClean)
+bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& view, bool* pfClean)
 {
     if(pindex != view.GetBestBlock())
       return(error("DisconnectBlock() : block %s initial synchronisation failed",
@@ -1698,16 +1698,16 @@ bool CBlock::DisconnectBlock(CValidationState &state, CBlockIndex *pindex, CCoin
     if (!blockUndo.ReadFromDisk(pos, pindex->pprev->GetBlockHash()))
         return error("DisconnectBlock() : failure reading undo data");
 
-    if (blockUndo.vtxundo.size() + 1 != vtx.size())
+    if (blockUndo.vtxundo.size() + 1 != block.vtx.size())
         return error("DisconnectBlock() : block and undo data inconsistent");
 
     // undo transactions in reverse order
-    for (int i = vtx.size() - 1; i >= 0; i--) {
-        const CTransaction &tx = vtx[i];
+    for (int i = block.vtx.size() - 1; i >= 0; i--) {
+        const CTransaction &tx = block.vtx[i];
         uint256 hash = tx.GetHash();
         
         // don't check coinbase coins for proof-of-stake block
-        if(IsProofOfStake() && tx.IsCoinBase())
+        if(block.IsProofOfStake() && tx.IsCoinBase())
             continue;
         
         // check that all outputs are available
@@ -1764,8 +1764,8 @@ bool CBlock::DisconnectBlock(CValidationState &state, CBlockIndex *pindex, CCoin
     view.SetBestBlock(pindex->pprev);
 
     // ppcoin: clean up wallet after disconnecting coinstake
-    for(CTransaction& tx : vtx)
-        SyncWithWallets(tx.GetHash(), tx, this, false, false);
+    for(CTransaction& tx : block.vtx)
+        SyncWithWallets(tx.GetHash(), tx, &block, false, false);
 
     if (pfClean) {
         *pfClean = fClean;
@@ -2024,7 +2024,7 @@ bool SetBestChain(CValidationState &state, CBlockIndex* pindexNew)
         if (!ReadBlockFromDisk(block, pindex))
             return state.Abort(_("Failed to read block"));
         CCoinsViewCache viewTemp(view, true);
-        if (!block.DisconnectBlock(state, pindex, view))
+        if (!DisconnectBlock(block, state, pindex, view))
             return error("SetBestBlock() : DisconnectBlock %s failed", pindex->GetBlockHash().ToString().substr(0,20).c_str());
 
         // Queue memory transactions to resurrect
@@ -3125,7 +3125,7 @@ bool VerifyDB() {
         // check level 3: check for inconsistencies during memory-only disconnect of tip blocks
         if (nCheckLevel >= 3 && pindex == pindexState && (coins.GetCacheSize() + pcoinsTip->GetCacheSize()) <= 2*nCoinCacheSize + 32000) {
             bool fClean = true;
-            if (!block.DisconnectBlock(state, pindex, coins, &fClean))
+            if (!DisconnectBlock(block, state, pindex, coins, &fClean))
                 return error("VerifyDB() : *** irrecoverable inconsistency in block data at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString().c_str());
             pindexState = pindex->pprev;
             if (!fClean) {
