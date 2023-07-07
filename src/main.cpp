@@ -1813,10 +1813,10 @@ void ThreadScriptCheckQuit() {
     scriptcheckqueue.Quit();
 }
 
-bool CBlock::ConnectBlock(CValidationState &state, CBlockIndex* pindex, CCoinsViewCache &view, bool fJustCheck)
+bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& view, bool fJustCheck)
 {
     // Check it again in case a previous version let a bad block in
-    if (!CheckBlock(state, !fJustCheck, !fJustCheck))
+    if (!block.CheckBlock(state, !fJustCheck, !fJustCheck))
         return false;
     
     // verify that the view's current state corresponds to the previous block
@@ -1824,7 +1824,7 @@ bool CBlock::ConnectBlock(CValidationState &state, CBlockIndex* pindex, CCoinsVi
 
     // Special case for the genesis block, skipping connection of its transactions
     // (its coinbase is unspendable)
-    if (GetHash() == hashGenesisBlock) {
+    if (block.GetHash() == hashGenesisBlock) {
         view.SetBestBlock(pindex);
         pindexGenesisBlock = pindex;
         return true;
@@ -1845,8 +1845,8 @@ bool CBlock::ConnectBlock(CValidationState &state, CBlockIndex* pindex, CCoinsVi
     // two in the chain that violate it. This prevents exploiting the issue against nodes in their
     // initial block download.
 
-        for (unsigned int i=0; i<vtx.size(); i++) {
-            uint256 hash = GetTxHash(i);
+        for (unsigned int i = 0; i < block.vtx.size(); i++) {
+            uint256 hash = block.GetTxHash(i);
             if (view.HaveCoins(hash) && !view.GetCoins(hash).IsPruned())
                 return state.DoS(100, error("ConnectBlock() : tried to overwrite transaction"));
         }
@@ -1866,12 +1866,12 @@ bool CBlock::ConnectBlock(CValidationState &state, CBlockIndex* pindex, CCoinsVi
     int64_t nValueOut = 0;
     int nInputs = 0;
     unsigned int nSigOps = 0;
-    CDiskTxPos pos(pindex->GetBlockPos(), GetSizeOfCompactSize(vtx.size()));
+    CDiskTxPos pos(pindex->GetBlockPos(), GetSizeOfCompactSize(block.vtx.size()));
     std::vector<std::pair<uint256, CDiskTxPos> > vPos;
-    vPos.reserve(vtx.size());
-    for (unsigned int i=0; i<vtx.size(); i++)
+    vPos.reserve(block.vtx.size());
+    for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
-        const CTransaction &tx = vtx[i];
+        const CTransaction &tx = block.vtx[i];
         nInputs += tx.vin.size();
         nSigOps += tx.GetLegacySigOpCount();
         if (nSigOps > MAX_BLOCK_SIGOPS)
@@ -1902,22 +1902,22 @@ bool CBlock::ConnectBlock(CValidationState &state, CBlockIndex* pindex, CCoinsVi
                 nFees += nTxValueIn - nTxValueOut;
 
             std::vector<CScriptCheck> vChecks;
-            if (!tx.CheckInputs(state, view, fScriptChecks, flags, nScriptCheckThreads ? &vChecks : NULL, this))
+            if (!tx.CheckInputs(state, view, fScriptChecks, flags, nScriptCheckThreads ? &vChecks : NULL, &block))
                 return false;
             control.Add(vChecks);
         }
 
         // don't create coinbase coins for proof-of-stake block
-        if(IsProofOfStake() && tx.IsCoinBase())
+        if(block.IsProofOfStake() && tx.IsCoinBase())
             continue;        
 
         CTxUndo txundo;
-        if (!tx.UpdateCoins(state, view, txundo, pindex->nHeight, pindex->nTime, GetTxHash(i)))
+        if (!tx.UpdateCoins(state, view, txundo, pindex->nHeight, pindex->nTime, block.GetTxHash(i)))
             return error("ConnectBlock() : UpdateInputs failed");
         if (!tx.IsCoinBase())
             blockundo.vtxundo.push_back(txundo);
 
-        vPos.push_back(std::make_pair(GetTxHash(i), pos));
+        vPos.push_back(std::make_pair(block.GetTxHash(i), pos));
         pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
     }
 
@@ -1974,8 +1974,8 @@ bool CBlock::ConnectBlock(CValidationState &state, CBlockIndex* pindex, CCoinsVi
         printf("ConnectBlock() : destroy=%s nFees=%" PRId64 "\n", FormatMoney(nFees).c_str(), nFees);
 
     // Watch for transactions paying to me
-    for (unsigned int i=0; i<vtx.size(); i++)
-        SyncWithWallets(GetTxHash(i), vtx[i], this, true);
+    for (unsigned int i = 0; i < block.vtx.size(); i++)
+        SyncWithWallets(block.GetTxHash(i), block.vtx[i], &block, true);
 
     return true;
 }
@@ -2039,7 +2039,7 @@ bool SetBestChain(CValidationState &state, CBlockIndex* pindexNew)
         CBlock block;
         if (!ReadBlockFromDisk(block, pindex))
             return state.Abort(_("Failed to read block"));
-        if (!block.ConnectBlock(state, pindex, view)) {
+        if (!ConnectBlock(block, state, pindex, view)) {
             if (state.IsInvalid()) {
                 InvalidChainFound(pindexNew);
                 InvalidBlockFound(pindex);
@@ -3146,7 +3146,7 @@ bool VerifyDB() {
              CBlock block;
              if (!ReadBlockFromDisk(block, pindex))
                  return error("VerifyDB() : *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString().c_str());
-             if (!block.ConnectBlock(state, pindex, coins))
+             if (!ConnectBlock(block, state, pindex, coins))
                  return error("VerifyDB() : *** found unconnectable block at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString().c_str());
         }
     }
