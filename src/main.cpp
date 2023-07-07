@@ -1664,13 +1664,19 @@ bool CTransaction::CheckInputs(CValidationState &state, CCoinsViewCache &inputs,
                 if (pvChecks) {
                     pvChecks->push_back(CScriptCheck());
                     check.swap(pvChecks->back());
-                } else if (!check())
+                } else if (!check()) {
+                    if (flags & SCRIPT_VERIFY_STRICTENC) {
+                        // For now, check whether the failure was caused by non-canonical
+                        // encodings or not; if so, don't trigger DoS protection.
+                        CScriptCheck check(coins, *this, i, flags & (~SCRIPT_VERIFY_STRICTENC), 0);
+                        if (check())
+                            return state.Invalid();
+                    }
                     return state.DoS(100,false);
+                }
             }
         }
-        
     }
-
     return true;
 }
 
@@ -1858,6 +1864,7 @@ bool CBlock::ConnectBlock(CValidationState &state, CBlockIndex* pindex, CCoinsVi
     int64_t nFees = 0;
     int64_t nValueIn = 0;
     int64_t nValueOut = 0;
+    int nInputs = 0;
     unsigned int nSigOps = 0;
     CDiskTxPos pos(pindex->GetBlockPos(), GetSizeOfCompactSize(vtx.size()));
     std::vector<std::pair<uint256, CDiskTxPos> > vPos;
@@ -1865,6 +1872,7 @@ bool CBlock::ConnectBlock(CValidationState &state, CBlockIndex* pindex, CCoinsVi
     for (unsigned int i=0; i<vtx.size(); i++)
     {
         const CTransaction &tx = vtx[i];
+        nInputs += tx.vin.size();
         nSigOps += tx.GetLegacySigOpCount();
         if (nSigOps > MAX_BLOCK_SIGOPS)
             return state.DoS(100, error("ConnectBlock() : too many sigops"));
@@ -2106,11 +2114,11 @@ bool SetBestChain(CValidationState &state, CBlockIndex* pindexNew)
     nTransactionsUpdated++;
 
 //    printf("SetBestChain: new best=%s  height=%d  log2_trust=%.8g  tx=%lu  date=%s\n",
-    printf("SetBestChain: new best=%s  height=%d  date=%s\n",
+    printf("SetBestChain: new best=%s  height=%d  tx=%lu  date=%s\n",
       hashBestChain.ToString().substr(0,20).c_str(), 
       nBestHeight,
 //      log(nBestChainTrust.getdouble())/log(2.0),
-//      (unsigned long)pindexNew->nChainTx,
+      (unsigned long)pindexNew->nChainTx,
       DateTimeStrFormat("%d/%m/%Y %H:%M:%S", pindexBest->GetBlockTime()).c_str());
 
     printf("Stake checkpoint: %x\n", pindexBest->nStakeModifierChecksum);
@@ -3895,8 +3903,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                 printf("  getblocks stopping at %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
                 // ppcoin: tell downloading node about the latest block if it's
                 // without risk being rejected due to stake connection check
-                if((hashStop != hashBestChain) &&
-                  ((pindex->GetBlockTime() + nStakeMinAge) > pindexBest->GetBlockTime()))
+                if((hashStop != hashBestChain) && ((pindex->GetBlockTime() + nStakeMinAge) > pindexBest->GetBlockTime()))
                   pfrom->PushInventory(CInv(MSG_BLOCK, hashBestChain));
                 break;
             }

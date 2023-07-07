@@ -2133,6 +2133,114 @@ int64_t CWallet::GetOldestKeyPoolTime()
     return keypool.nTime;
 }
 
+// check 'spent' consistency between wallet and txindex 
+// fix wallet spent state according to txindex 
+// remove orphan Coinbase and Coinstake 
+void CWallet::FixSpentCoins(int& nMismatchFound, int64_t& nBalanceInQuestion, int& nOrphansFound, bool fCheckOnly)
+{
+    nMismatchFound = 0;
+    nBalanceInQuestion = 0;
+    nOrphansFound = 0;
+
+    LOCK(cs_wallet);
+    vector<CWalletTx*> vCoins;
+    vCoins.reserve(mapWallet.size());
+    for (map<uint256, CWalletTx>::iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
+        vCoins.push_back(&(*it).second);
+
+    CCoinsViewCache &view = *pcoinsTip;
+    for (CWalletTx* pcoin : vCoins)
+    {
+        uint256 hash = pcoin->GetHash();
+
+        // presstab HyperStake
+        // This finds and deletes transactions that were never accepted by the network
+        // needs to be located above the readtxindex code or else it will not be triggered
+        if(!pcoin->IsConfirmed() && (GetTime() - pcoin->GetTxTime()) > (60*10)) //give the tx 10 minutes before considering it failed
+        {
+            nOrphansFound++;
+            if (!fCheckOnly)
+            {
+                EraseFromWallet(hash);
+                NotifyTransactionChanged(this, hash, CT_DELETED);
+            }
+            printf("FixSpentCoins %s rejected transaction %s\n", fCheckOnly ? "found" : "removed", hash.ToString().c_str());
+            continue;
+        }
+
+        // Find the corresponding transaction index
+        CCoins coins;
+
+        bool fNotFound = view.GetCoins(pcoin->GetHash(), coins);
+
+        for (unsigned int n=0; n < pcoin->vout.size(); n++)
+        {
+            bool fUpdated = false;
+            if (!fNotFound && IsMine(pcoin->vout[n]) && pcoin->IsSpent(n) && coins.IsAvailable(n) && (GetTime() - pcoin->GetTxTime()) > (60*10))
+            {
+                printf("FixSpentCoins found lost coin %sTRK %s[%d], %s\n",
+                    FormatMoney(pcoin->vout[n].nValue).c_str(), hash.ToString().c_str(), n, fCheckOnly? "repair not attempted" : "repairing");
+                nMismatchFound++;
+                nBalanceInQuestion += pcoin->vout[n].nValue;
+                if (!fCheckOnly)
+                {
+                    fUpdated = true;
+                    pcoin->MarkUnspent(n);
+                    pcoin->WriteToDisk();
+                }
+            }
+            else if (!fNotFound && IsMine(pcoin->vout[n]) && !pcoin->IsSpent(n) && coins.IsAvailable(n))
+            {
+                printf("FixSpentCoins found spent coin %sTRK %s[%d], %s\n",
+                    FormatMoney(pcoin->vout[n].nValue).c_str(), hash.ToString().c_str(), n, fCheckOnly? "repair not attempted" : "repairing");
+                nMismatchFound++;
+                nBalanceInQuestion += pcoin->vout[n].nValue;
+                if (!fCheckOnly)
+                {
+                    fUpdated = true;
+                    pcoin->MarkSpent(n);
+                    pcoin->WriteToDisk();
+                }
+            }
+            if (fUpdated)
+            NotifyTransactionChanged(this, hash, CT_UPDATED);
+        }
+        
+        if((pcoin->IsCoinBase() || pcoin->IsCoinStake()) && pcoin->GetDepthInMainChain() <= 0)
+           { 
+             nOrphansFound++;
+           if (!fCheckOnly)
+           {
+             //EraseFromWallet(hash);
+             NotifyTransactionChanged(this, hash, CT_DELETED);
+     } 
+           printf("FixSpentCoins %s orphaned generation tx %s\n", fCheckOnly ? "found" : "removed", hash.ToString().c_str());
+        }
+     }
+}
+
+// disable transaction (only for coinstake)
+void CWallet::DisableTransaction(const CTransaction &tx)
+{
+    if (!tx.IsCoinStake() || !IsFromMe(tx))
+        return; // only disconnecting coinstake requires marking input unspent
+
+    LOCK(cs_wallet);
+    for (const CTxIn& txin : tx.vin)
+    {
+        map<uint256, CWalletTx>::iterator mi = mapWallet.find(txin.prevout.hash);
+        if (mi != mapWallet.end())
+        {
+            CWalletTx& prev = (*mi).second;
+            if (txin.prevout.n < prev.vout.size() && IsMine(prev.vout[txin.prevout.n]))
+            {
+                prev.MarkUnspent(txin.prevout.n);
+                prev.WriteToDisk();
+            }
+        }
+    }
+}
+
 std::map<CTxDestination, int64_t> CWallet::GetAddressBalances()
 {
     map<CTxDestination, int64_t> balances;
@@ -2254,114 +2362,6 @@ set< set<CTxDestination> > CWallet::GetAddressGroupings()
     }
 
     return ret;
-}
-
-// check 'spent' consistency between wallet and txindex 
-// fix wallet spent state according to txindex 
-// remove orphan Coinbase and Coinstake 
-void CWallet::FixSpentCoins(int& nMismatchFound, int64_t& nBalanceInQuestion, int& nOrphansFound, bool fCheckOnly)
-{
-    nMismatchFound = 0;
-    nBalanceInQuestion = 0;
-    nOrphansFound = 0;
-
-    LOCK(cs_wallet);
-    vector<CWalletTx*> vCoins;
-    vCoins.reserve(mapWallet.size());
-    for (map<uint256, CWalletTx>::iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
-        vCoins.push_back(&(*it).second);
-
-    CCoinsViewCache &view = *pcoinsTip;
-    for (CWalletTx* pcoin : vCoins)
-    {
-        uint256 hash = pcoin->GetHash();
-
-        // presstab HyperStake
-        // This finds and deletes transactions that were never accepted by the network
-        // needs to be located above the readtxindex code or else it will not be triggered
-        if(!pcoin->IsConfirmed() && (GetTime() - pcoin->GetTxTime()) > (60*10)) //give the tx 10 minutes before considering it failed
-        {
-            nOrphansFound++;
-            if (!fCheckOnly)
-            {
-                EraseFromWallet(hash);
-                NotifyTransactionChanged(this, hash, CT_DELETED);
-            }
-            printf("FixSpentCoins %s rejected transaction %s\n", fCheckOnly ? "found" : "removed", hash.ToString().c_str());
-            continue;
-        }
-
-        // Find the corresponding transaction index
-        CCoins coins;
-
-        bool fNotFound = view.GetCoins(pcoin->GetHash(), coins);
-
-        for (unsigned int n=0; n < pcoin->vout.size(); n++)
-        {
-            bool fUpdated = false;
-            if (!fNotFound && IsMine(pcoin->vout[n]) && pcoin->IsSpent(n) && coins.IsAvailable(n) && (GetTime() - pcoin->GetTxTime()) > (60*10))
-            {
-                printf("FixSpentCoins found lost coin %sTRK %s[%d], %s\n",
-                    FormatMoney(pcoin->vout[n].nValue).c_str(), hash.ToString().c_str(), n, fCheckOnly? "repair not attempted" : "repairing");
-                nMismatchFound++;
-                nBalanceInQuestion += pcoin->vout[n].nValue;
-                if (!fCheckOnly)
-                {
-                    fUpdated = true;
-                    pcoin->MarkUnspent(n);
-                    pcoin->WriteToDisk();
-                }
-            }
-            else if (!fNotFound && IsMine(pcoin->vout[n]) && !pcoin->IsSpent(n) && coins.IsAvailable(n))
-            {
-                printf("FixSpentCoins found spent coin %sTRK %s[%d], %s\n",
-                    FormatMoney(pcoin->vout[n].nValue).c_str(), hash.ToString().c_str(), n, fCheckOnly? "repair not attempted" : "repairing");
-                nMismatchFound++;
-                nBalanceInQuestion += pcoin->vout[n].nValue;
-                if (!fCheckOnly)
-                {
-                    fUpdated = true;
-                    pcoin->MarkSpent(n);
-                    pcoin->WriteToDisk();
-                }
-            }
-            if (fUpdated)
-            NotifyTransactionChanged(this, hash, CT_UPDATED);
-        }
-        
-        if((pcoin->IsCoinBase() || pcoin->IsCoinStake()) && pcoin->GetDepthInMainChain() <= 0)
-           { 
-             nOrphansFound++;
-           if (!fCheckOnly)
-           {
-             //EraseFromWallet(hash);
-             NotifyTransactionChanged(this, hash, CT_DELETED);
-     } 
-           printf("FixSpentCoins %s orphaned generation tx %s\n", fCheckOnly ? "found" : "removed", hash.ToString().c_str());
-        }
-     }
-}
-
-// disable transaction (only for coinstake)
-void CWallet::DisableTransaction(const CTransaction &tx)
-{
-    if (!tx.IsCoinStake() || !IsFromMe(tx))
-        return; // only disconnecting coinstake requires marking input unspent
-
-    LOCK(cs_wallet);
-    for (const CTxIn& txin : tx.vin)
-    {
-        map<uint256, CWalletTx>::iterator mi = mapWallet.find(txin.prevout.hash);
-        if (mi != mapWallet.end())
-        {
-            CWalletTx& prev = (*mi).second;
-            if (txin.prevout.n < prev.vout.size() && IsMine(prev.vout[txin.prevout.n]))
-            {
-                prev.MarkUnspent(txin.prevout.n);
-                prev.WriteToDisk();
-            }
-        }
-    }
 }
 
 CPubKey CReserveKey::GetReservedKey()
