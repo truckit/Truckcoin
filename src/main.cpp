@@ -1816,7 +1816,7 @@ void ThreadScriptCheckQuit() {
 bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& view, bool fJustCheck)
 {
     // Check it again in case a previous version let a bad block in
-    if (!block.CheckBlock(state, !fJustCheck, !fJustCheck))
+    if (!CheckBlock(block, state, !fJustCheck, !fJustCheck))
         return false;
     
     // verify that the view's current state corresponds to the previous block
@@ -2385,77 +2385,77 @@ bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigne
     return true;
 }
 
-bool CBlock::CheckBlock(CValidationState &state, bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) const
+bool CheckBlock(const CBlock& block, CValidationState &state, bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig)
 {
     // These are checks that are independent of context
     // that can be verified before saving an orphan block.
     // Size limits
-    if (vtx.empty() || vtx.size() > MAX_BLOCK_SIZE || ::GetSerializeSize(*this, SER_NETWORK, PROTOCOL_VERSION) > MAX_BLOCK_SIZE)
+    if (block.vtx.empty() || block.vtx.size() > MAX_BLOCK_SIZE || ::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION) > MAX_BLOCK_SIZE)
         return state.DoS(100, error("CheckBlock() : size limits failed"));
 
     // Check proof of work matches claimed amount
-    if (fCheckPOW && IsProofOfWork() && !CheckProofOfWork(GetHash(), nBits))
+    if (fCheckPOW && block.IsProofOfWork() && !CheckProofOfWork(block.GetHash(), block.nBits))
         return state.DoS(50, error("CheckBlock() : proof of work failed"));
 
     // Check timestamp
-    if (GetBlockTime() > FutureDrift(GetAdjustedTime()))
+    if (block.GetBlockTime() > FutureDrift(GetAdjustedTime()))
         return state.Invalid(error("CheckBlock() : block timestamp too far in the future"));
 
     // First transaction must be coinbase, the rest must not be
-    if (vtx.empty() || !vtx[0].IsCoinBase())
+    if (block.vtx.empty() || !block.vtx[0].IsCoinBase())
         return state.DoS(100, error("CheckBlock() : first tx is not coinbase"));
-    for (unsigned int i = 1; i < vtx.size(); i++)
-        if (vtx[i].IsCoinBase())
+    for (unsigned int i = 1; i < block.vtx.size(); i++)
+        if (block.vtx[i].IsCoinBase())
             return state.DoS(100, error("CheckBlock() : more than one coinbase"));
 
     // only the second transaction can be the optional coinstake
-    for (unsigned int i = 2; i < vtx.size(); i++)
-        if (vtx[i].IsCoinStake())
+    for (unsigned int i = 2; i < block.vtx.size(); i++)
+        if (block.vtx[i].IsCoinStake())
             return state.DoS(100, error("CheckBlock() : coinstake in wrong position"));
 
     // coinbase output should be empty if proof-of-stake block
-    if (IsProofOfStake() && (vtx[0].vout.size() != 1 || !vtx[0].vout[0].IsEmpty()))
+    if (block.IsProofOfStake() && (block.vtx[0].vout.size() != 1 || !block.vtx[0].vout[0].IsEmpty()))
         return state.DoS(100, error("CheckBlock() : coinbase output not empty for proof-of-stake block"));
 
     // Check coinbase timestamp (don't check truckcoin genesis block because of weird timestamp)
-    if ((GetHash() != hashGenesisBlock) && (GetBlockTime() > FutureDrift((int64_t)vtx[0].nTime)))
+    if ((block.GetHash() != hashGenesisBlock) && (block.GetBlockTime() > FutureDrift((int64_t)block.vtx[0].nTime)))
         return state.DoS(50, error("CheckBlock() : coinbase timestamp is too early"));
 
     // Check coinstake timestamp
-    if (IsProofOfStake() && !CheckCoinStakeTimestamp(GetBlockTime(), (int64_t)vtx[1].nTime))
-        return state.DoS(50, error("CheckBlock() : coinstake timestamp violation nTimeBlock=%" PRId64 " nTimeTx=%u", GetBlockTime(), vtx[1].nTime));
+    if (block.IsProofOfStake() && !CheckCoinStakeTimestamp(block.GetBlockTime(), (int64_t)block.vtx[1].nTime))
+        return state.DoS(50, error("CheckBlock() : coinstake timestamp violation nTimeBlock=%" PRId64 " nTimeTx=%u", block.GetBlockTime(), block.vtx[1].nTime));
 
     // Check proof-of-stake block signature 
-    if (IsProofOfStake() && fCheckSig && !CheckBlockSignature()) 
+    if (block.IsProofOfStake() && fCheckSig && !block.CheckBlockSignature()) 
     return state.DoS(100, error("CheckBlock() : bad proof-of-stake block signature")); 
 
     // Check transactions
-    for (const CTransaction& tx : vtx)
+    for (const CTransaction& tx : block.vtx)
     {
         if (!tx.CheckTransaction(state))
             return error("CheckBlock() : CheckTransaction failed");
 
         // Check transaction timestamp
-        if (GetBlockTime() < (int64_t)tx.nTime)
+        if (block.GetBlockTime() < (int64_t)tx.nTime)
             return state.DoS(50, error("CheckBlock() : block timestamp earlier than transaction timestamp"));
     }
 
     // Build the merkle tree already. We need it anyway later, and it makes the
     // block cache the transaction hashes, which means they don't need to be
     // recalculated many times during this block's validation.
-    BuildMerkleTree();
+    block.BuildMerkleTree();
 
     // Check for duplicate txids. This is caught by ConnectInputs(),
     // but catching it earlier avoids a potential DoS attack:
     set<uint256> uniqueTx;
-    for (unsigned int i=0; i<vtx.size(); i++) {
-        uniqueTx.insert(GetTxHash(i));
+    for (unsigned int i = 0; i < block.vtx.size(); i++) {
+        uniqueTx.insert(block.GetTxHash(i));
     }
-    if (uniqueTx.size() != vtx.size())
+    if (uniqueTx.size() != block.vtx.size())
         return state.DoS(100, error("CheckBlock() : duplicate transaction"));
 
     unsigned int nSigOps = 0;
-    for (const CTransaction& tx : vtx)
+    for (const CTransaction& tx : block.vtx)
     {
         nSigOps += tx.GetLegacySigOpCount();
     }
@@ -2463,7 +2463,7 @@ bool CBlock::CheckBlock(CValidationState &state, bool fCheckPOW, bool fCheckMerk
         return state.DoS(100, error("CheckBlock() : out-of-bounds SigOpCount"));
 
     // Check merkle root
-    if (fCheckMerkleRoot && hashMerkleRoot != BuildMerkleTree())
+    if (fCheckMerkleRoot && block.hashMerkleRoot != block.BuildMerkleTree())
         return state.DoS(100, error("CheckBlock() : hashMerkleRoot mismatch"));
 
     return true;
@@ -2607,7 +2607,7 @@ bool ProcessBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, CDiskBl
         return error("ProcessBlock() : duplicate proof-of-stake (%s, %d) for block %s", pblock->GetProofOfStake().first.ToString().c_str(), pblock->GetProofOfStake().second, hash.ToString().c_str());
 
     // Preliminary checks
-    if (!pblock->CheckBlock(state))
+    if (!CheckBlock(*pblock, state))
         return error("ProcessBlock() : CheckBlock FAILED");
 
     // ppcoin: verify hash target and signature of coinstake tx
@@ -3111,7 +3111,7 @@ bool VerifyDB() {
         if (!ReadBlockFromDisk(block, pindex))
             return error("VerifyDB() : *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString().c_str());
         // check level 1: verify block validity
-        if (nCheckLevel >= 1 && !block.CheckBlock(state))
+        if (nCheckLevel >= 1 && !CheckBlock(block, state))
             return error("VerifyDB() : *** found bad block at %d, hash=%s\n", pindex->nHeight, pindex->GetBlockHash().ToString().c_str());
         // check level 2: verify undo validity
         if (nCheckLevel >= 2 && pindex) {

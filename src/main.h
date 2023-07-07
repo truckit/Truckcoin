@@ -1592,8 +1592,6 @@ public:
         printf("\n");
     }
     
-    // Context-independent validity checks
-    bool CheckBlock(CValidationState &state, bool fCheckPOW=true, bool fCheckMerkleRoot=true, bool fCheckSig=false) const;
     // Store block on disk
     // if dbp is provided, the file is known to already reside on disk
     bool AcceptBlock(CValidationState &state, CDiskBlockPos *dbp = NULL);
@@ -1632,6 +1630,9 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
 
 // Add this block to the block index, and if necessary, switch the active block chain to this
 bool AddToBlockIndex(CBlock& block, CValidationState& state, const CDiskBlockPos& pos);
+
+// Context-independent validity checks
+bool CheckBlock(const CBlock& block, CValidationState &state, bool fCheckPOW=true, bool fCheckMerkleRoot=true, bool fCheckSig=false);
 
 class CBlockFileInfo
 {
