@@ -666,11 +666,11 @@ bool CTxMemPool::accept(CValidationState &state, CTransaction &tx, bool fCheckIn
 
     // Coinbase is only valid in a block, not as a loose transaction
     if (tx.IsCoinBase())
-        return state.DoS(100, error("CTxMemPool::accept() : coinbase as individual tx"));
+        return tx.DoS(100, error("CTxMemPool::accept() : coinbase as individual tx"));
 
     // Coinstake is also only valid in a block, not as a loose transaction
     if (tx.IsCoinStake())
-        return state.DoS(100, error("CTxMemPool::accept() : coinstake as individual tx"));
+        return tx.DoS(100, error("CTxMemPool::accept() : coinstake as individual tx"));
 
     // Rather not work on nonstandard transactions (unless -testnet)
     string strNonStd;

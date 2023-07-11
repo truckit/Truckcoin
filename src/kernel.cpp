@@ -428,7 +428,7 @@ bool CheckProofOfStake(CValidationState &state, const CTransaction& tx, unsigned
     CCoinsViewCache &view = *pcoinsTip;
 
     if (!view.GetCoins(txin.prevout.hash, coins))
-        return state.DoS(1, error("CheckProofOfStake() : INFO: read coins for txPrev failed"));  // previous transaction not in main chain, may occur during initial download
+        return tx.DoS(1, error("CheckProofOfStake() : INFO: read coins for txPrev failed"));  // previous transaction not in main chain, may occur during initial download
 
     CBlockIndex* pindex = FindBlockByHeight(coins.nHeight);
 
@@ -449,12 +449,12 @@ bool CheckProofOfStake(CValidationState &state, const CTransaction& tx, unsigned
         
     // Verify signature
     if (!VerifySignature(coins, tx, 0, SCRIPT_VERIFY_P2SH, 0))
-        return state.DoS(100, error("CheckProofOfStake() : VerifySignature failed on coinstake %s", tx.GetHash().ToString().c_str()));
+        return tx.DoS(100, error("CheckProofOfStake() : VerifySignature failed on coinstake %s", tx.GetHash().ToString().c_str()));
 
     unsigned int nInterval = 0;
     unsigned int nTxTime = tx.nTime;
     if (!CheckStakeKernelHash(nBits, block, nTxPos, txPrev, txin.prevout, nTxTime, nInterval, true, hashProofOfStake, fDebug))
-        return state.DoS(1, error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str())); // may occur during initial download or if behind on block chain sync
+        return tx.DoS(1, error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str())); // may occur during initial download or if behind on block chain sync
 
     return true;
 }
