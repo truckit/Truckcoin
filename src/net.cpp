@@ -775,10 +775,11 @@ void ThreadSocketHandler(void* parg)
     printf("ThreadSocketHandler exited\n");
 }
 
+static list<CNode*> vNodesDisconnected;
+
 void ThreadSocketHandler2(void* parg)
 {
     printf("ThreadSocketHandler started\n");
-    list<CNode*> vNodesDisconnected;
     unsigned int nPrevNodeCount = 0;
 
     while (true)
@@ -2041,6 +2042,7 @@ bool StopNode()
         MilliSleep(20);
     MilliSleep(50);
     DumpAddresses();
+
     return true;
 }
 
@@ -2060,6 +2062,18 @@ public:
             if (hListenSocket != INVALID_SOCKET)
                 if (closesocket(hListenSocket) == SOCKET_ERROR)
                     printf("closesocket(hListenSocket) failed with error %d\n", WSAGetLastError());
+
+        // clean up some globals (to help leak detection)
+        for (CNode *pnode : vNodes)
+            delete pnode;
+        for (CNode *pnode : vNodesDisconnected)
+            delete pnode;
+        vNodes.clear();
+        vNodesDisconnected.clear();
+        delete semOutbound;
+        semOutbound = NULL;
+        delete pnodeLocalHost;
+        pnodeLocalHost = NULL;
 
 #ifdef WIN32
         // Shutdown Windows Sockets
