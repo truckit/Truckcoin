@@ -3,12 +3,13 @@
 // Copyright (c) 2013-2019 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#include "init.h"
 #include "txdb.h"
 #include "walletdb.h"
 #include "bitcoinrpc.h"
 #include "net.h"
 #include "miner.h"
-#include "init.h"
 #include "util.h"
 #include "ui_interface.h"
 #include "checkpointsync.h"
@@ -83,6 +84,7 @@ void Shutdown()
     nTransactionsUpdated++;
     StopRPCThreads();
     bitdb.Flush(false);
+    GenerateBitcoins(false, NULL);
     StopNode();
     {
         LOCK(cs_main);
@@ -684,6 +686,8 @@ bool AppInit2(boost::thread_group& threadGroup)
     } 
 
     // ********************************************************* Step 6: network initialization
+
+    RegisterNodeSignals(GetNodeSignals());
 
     int nSocksVersion = GetArg("-socks", 5);
 

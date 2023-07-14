@@ -20,6 +20,7 @@
 #include "addrman.h"
 #include "hash.h"
 #include "bloom.h"
+#include <boost/signals2/signal.hpp>
 
 class CRequestTracker;
 class CNode;
@@ -42,6 +43,15 @@ bool BindListenPort(const CService &bindAddr, std::string& strError=REF(std::str
 void StartNode(boost::thread_group& threadGroup);
 bool StopNode();
 void SocketSendData(CNode *pnode);
+
+// Signals for message handling
+struct CNodeSignals
+{
+    boost::signals2::signal<bool (CNode*)> ProcessMessages;
+    boost::signals2::signal<bool (CNode*, bool)> SendMessages;
+};
+
+CNodeSignals& GetNodeSignals();
 
 enum
 {
