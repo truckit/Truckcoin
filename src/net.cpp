@@ -363,7 +363,7 @@ bool GetMyExternalIP(CNetAddr& ipRet)
         //  <?php echo $_SERVER["REMOTE_ADDR"]; ?>
         if (nHost == 1)
         {
-            addrConnect = CService("216.146.43.71",80); // checkip.dyndns.org
+            addrConnect = CService("132.226.247.73",80); // checkip.dyndns.org
 
             if (nLookup == 1)
             {
@@ -382,7 +382,7 @@ bool GetMyExternalIP(CNetAddr& ipRet)
         }
         else if (nHost == 2)
         {
-            addrConnect = CService("108.61.29.222", 80); // ip.truckcoin.net
+            addrConnect = CService("45.83.27.82", 80); // ip.truckcoin.net
 
             if (nLookup == 1)
             {
