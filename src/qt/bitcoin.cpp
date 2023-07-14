@@ -11,6 +11,7 @@
 #include "winshutdownmonitor.h"
 
 #include "init.h"
+#include "util.h"
 #include "ui_interface.h"
 #include "qtipcserver.h"
 
@@ -222,9 +223,10 @@ int main(int argc, char *argv[])
         if (GUIUtil::GetStartOnSystemStartup())
             GUIUtil::SetStartOnSystemStartup(true);
 
+        boost::thread_group threadGroup;
         BitcoinGUI window;
         guiref = &window;
-        if(AppInit2())
+        if(AppInit2(threadGroup))
         {
             {
                 // Put this in a block, so that the Model objects are cleaned up before
@@ -240,7 +242,7 @@ int main(int argc, char *argv[])
 
                 window.setClientModel(&clientModel);
                 window.setWalletModel(&walletModel);
-				
+
 #if defined(Q_OS_WIN) && QT_VERSION >= 0x050000
                 app.installNativeEventFilter(new WinShutdownMonitor());
 #endif
@@ -257,7 +259,7 @@ int main(int argc, char *argv[])
 
                 // Place this here as guiref has to be defined if we don't want to lose URIs
                 ipcInit(argc, argv);
-				
+
 #if defined(Q_OS_WIN) && QT_VERSION >= 0x050000
                 WinShutdownMonitor::registerShutdownBlockReason(QObject::tr("Truckcoin shutting down. Please wait..."), (HWND)window.getMainWinId()); 
 #endif
@@ -270,7 +272,9 @@ int main(int argc, char *argv[])
                 guiref = 0;
             }
             // Shutdown the core and its threads, but don't exit Truckcoin-Qt here
-            Shutdown(NULL);
+            threadGroup.interrupt_all();
+            threadGroup.join_all();
+            Shutdown();
         }
         else
         {

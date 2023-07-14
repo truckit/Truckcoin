@@ -498,8 +498,10 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
         }
         pcursor->close();
     }
-    catch (...)
-    {
+    catch (boost::thread_interrupted) {
+        throw;
+    }
+    catch (...) {
         result = DB_CORRUPT;
     }
 
@@ -536,12 +538,11 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
     return result;
 }
 
-void ThreadFlushWalletDB(void* parg)
+void ThreadFlushWalletDB(const string& strFile)
 {
     // Make this thread recognisable as the wallet flushing thread
     RenameThread("truckcoin-wallet");
 
-    const string& strFile = ((const string*)parg)[0];
     static bool fOneThread;
     if (fOneThread)
         return;
@@ -552,7 +553,7 @@ void ThreadFlushWalletDB(void* parg)
     unsigned int nLastSeen = nWalletDBUpdated;
     unsigned int nLastFlushed = nWalletDBUpdated;
     int64_t nLastWalletUpdate = GetTime();
-    while (!fShutdown)
+    while (true)
     {
         MilliSleep(500);
 
@@ -576,8 +577,9 @@ void ThreadFlushWalletDB(void* parg)
                     mi++;
                 }
 
-                if (nRefCount == 0 && !fShutdown)
+                if (nRefCount == 0)
                 {
+                    boost::this_thread::interruption_point();
                     map<string, int>::iterator mi = bitdb.mapFileUseCount.find(strFile);
                     if (mi != bitdb.mapFileUseCount.end())
                     {
@@ -602,7 +604,7 @@ bool BackupWallet(const CWallet& wallet, const string& strDest)
 {
     if (!wallet.fFileBacked)
         return false;
-    while (!fShutdown)
+    while (true)
     {
         {
             LOCK(bitdb.cs_db);
@@ -724,7 +726,7 @@ bool DumpWallet(CWallet* pwallet, const string& strDest)
 
   if (!pwallet->fFileBacked)
       return false;
-  while (!fShutdown)
+  while (true)
   {
       // Populate maps
       std::map<CKeyID, int64_t> mapKeyBirth;
@@ -782,7 +784,7 @@ bool ImportWallet(CWallet *pwallet, const string& strLocation)
 
    if (!pwallet->fFileBacked)
        return false;
-   while (!fShutdown)
+   while (true)
    {
       // open inputfile as stream
       ifstream file;

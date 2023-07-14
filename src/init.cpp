@@ -7,6 +7,7 @@
 #include "walletdb.h"
 #include "bitcoinrpc.h"
 #include "net.h"
+#include "miner.h"
 #include "init.h"
 #include "util.h"
 #include "ui_interface.h"
@@ -37,86 +38,81 @@ enum CPMode CheckpointsMode;
 // Shutdown
 //
 
-void ExitTimeout(void* parg)
-{
-#ifdef WIN32
-    MilliSleep(5000);
-    ExitProcess(0);
-#endif
-}
+//
+// Thread management and startup/shutdown:
+//
+// The network-processing threads are all part of a thread group
+// created by AppInit() or the Qt main() function.
+//
+// A clean exit happens when StartShutdown() or the SIGTERM
+// signal handler sets fRequestShutdown, which triggers
+// the DetectShutdownThread(), which interrupts the main thread group.
+// DetectShutdownThread() then exits, which causes AppInit() to
+// continue (it .joins the shutdown thread).
+// Shutdown() is then
+// called to clean up database connections, and stop other
+// threads that should only be stopped after the main network-processing
+// threads have exited.
+//
+// Note that if running -daemon the parent process returns from AppInit2
+// before adding any threads to the threadGroup, so .join_all() returns
+// immediately and the parent exits from main().
+//
+// Shutdown for Qt is very similar, only it uses a QTimer to detect
+// fRequestShutdown getting set (either by RPC stop or SIGTERM)
+// and then does the normal Qt shutdown thing.
+//
+
+volatile bool fRequestShutdown = false;
 
 void StartShutdown()
 {
-#ifdef QT_GUI
-    // ensure we leave the Qt main loop for a clean GUI exit (Shutdown() is called in bitcoin.cpp afterwards)
-    uiInterface.QueueShutdown();
-#else
-    // Without UI, Shutdown() can simply be started in a new thread
-    NewThread(Shutdown, NULL);
-#endif
+    fRequestShutdown = true;
 }
 
 static CCoinsViewDB *pcoinsdbview;
-
 static boost::scoped_ptr<ECCVerifyHandle> globalVerifyHandle;
 
-void Shutdown(void* parg)
+void Shutdown()
 {
     static CCriticalSection cs_Shutdown;
-    static bool fTaken;
+    TRY_LOCK(cs_Shutdown, lockShutdown);
+    if (!lockShutdown) return;
 
-    // Make this thread recognisable as the shutdown thread
     RenameThread("truckcoin-shutoff");
-
-    bool fFirstThread = false;
+    nTransactionsUpdated++;
+    StopRPCThreads();
+    bitdb.Flush(false);
+    StopNode();
     {
-        TRY_LOCK(cs_Shutdown, lockShutdown);
-        if (lockShutdown)
-        {
-            fFirstThread = !fTaken;
-            fTaken = true;
-        }
-    }
-    static bool fExit;
-    if (fFirstThread)
-    {
-        fShutdown = true;
-        fRequestShutdown = true;
-        nTransactionsUpdated++;
-        bitdb.Flush(false);
-        {
-            LOCK(cs_main);
-            ThreadScriptCheckQuit();
-        }
-        StopNode();
-        {
-            LOCK(cs_main);
-            pcoinsTip->Flush();
+        LOCK(cs_main);
+        if (pblocktree)
             pblocktree->Flush();
-            delete pcoinsTip;
-            delete pcoinsdbview;
-        }
-        bitdb.Flush(true);
-        boost::filesystem::remove(GetPidFile());
-        UnregisterWallet(pwalletMain);
-        delete pwalletMain;
-        globalVerifyHandle.reset();
-        ECC_Stop();
-        NewThread(ExitTimeout, NULL);
-        MilliSleep(50);
-        printf("Truckcoin exited\n\n");
-        fExit = true;
-#ifndef QT_GUI
-        // ensure non-UI client gets exited here, but let Truckcoin-Qt reach 'return 0;' in bitcoin.cpp
-        exit(0);
-#endif
+        if (pcoinsTip)
+            pcoinsTip->Flush();
+        delete pcoinsTip; pcoinsTip = NULL;
+        delete pcoinsdbview; pcoinsdbview = NULL;
+        delete pblocktree; pblocktree = NULL;
     }
-    else
+    bitdb.Flush(true);
+    boost::filesystem::remove(GetPidFile());
+    UnregisterWallet(pwalletMain);
+    delete pwalletMain;
+    globalVerifyHandle.reset();
+    ECC_Stop();
+}
+
+//
+// Signal handlers are very limited in what they are allowed to do, so:
+//
+void DetectShutdownThread(boost::thread_group* threadGroup)
+{
+    // Tell the main threads to shutdown.
+    while (!fRequestShutdown)
     {
-        while (!fExit)
-            MilliSleep(500);
-        MilliSleep(100);
-        ExitThread(0);
+        MilliSleep(200);
+        if (fRequestShutdown)
+            threadGroup->interrupt_all();
     }
 }
 
@@ -130,10 +126,6 @@ void HandleSIGHUP(int)
     fReopenDebugLog = true;
 }
 
-
-
-
-
 //////////////////////////////////////////////////////////////////////////////
 //
 // Start
@@ -141,6 +133,9 @@ void HandleSIGHUP(int)
 #if !defined(QT_GUI)
 bool AppInit(int argc, char* argv[])
 {
+    boost::thread_group threadGroup;
+    boost::thread* detectShutdownThread = NULL;
+
     bool fRet = false;
     try
     {
@@ -152,7 +147,7 @@ bool AppInit(int argc, char* argv[])
         if (!boost::filesystem::is_directory(GetDataDir(false)))
         {
             fprintf(stderr, "Error: Specified directory does not exist\n");
-            Shutdown(NULL);
+            Shutdown();
         }
         ReadConfigFile(mapArgs, mapMultiArgs);
 
@@ -182,16 +177,52 @@ bool AppInit(int argc, char* argv[])
             int ret = CommandLineRPC(argc, argv);
             exit(ret);
         }
+#if !defined(WIN32)
+        fDaemon = GetBoolArg("-daemon");
+        if (fDaemon)
+        {
+            // Daemonize
+            pid_t pid = fork();
+            if (pid < 0)
+            {
+                fprintf(stderr, "Error: fork() returned %d errno %d\n", pid, errno);
+                return false;
+            }
+            if (pid > 0) // Parent process, pid is child process id
+            {
+                CreatePidFile(GetPidFile(), pid);
+                return true;
+            }
+            // Child process falls through to rest of initialization
 
-        fRet = AppInit2();
+            pid_t sid = setsid();
+            if (sid < 0)
+                fprintf(stderr, "Error: setsid() returned %d errno %d\n", sid, errno);
+        }
+#endif
+
+        detectShutdownThread = new boost::thread(boost::bind(&DetectShutdownThread, &threadGroup));
+        fRet = AppInit2(threadGroup);
     }
     catch (std::exception& e) {
         PrintExceptionContinue(&e, "AppInit()");
     } catch (...) {
         PrintExceptionContinue(NULL, "AppInit()");
     }
-    if (!fRet)
-        Shutdown(NULL);
+    if (!fRet) {
+      if (detectShutdownThread)
+        detectShutdownThread->interrupt();
+      threadGroup.interrupt_all();
+    }
+
+    if (detectShutdownThread)
+    {
+        detectShutdownThread->join();
+        delete detectShutdownThread;
+        detectShutdownThread = NULL;
+    }
+    Shutdown();
+
     return fRet;
 }
 
@@ -200,7 +231,7 @@ int main(int argc, char* argv[])
 {
     bool fRet = false;
 
-    // Connect bitcoind signal handlers
+    // Connect truckcoind signal handlers
     noui_connect();
 
     fRet = AppInit(argc, argv);
@@ -208,7 +239,7 @@ int main(int argc, char* argv[])
     if (fRet && fDaemon)
         return 0;
 
-    return 1;
+    return (fRet ? 0 : 1);
 }
 #endif
 
@@ -297,6 +328,7 @@ std::string HelpMessage()
         "  -rpcport=<port>        " + _("Listen for JSON-RPC connections on <port> (default: 18776 or testnet: 28776)") + "\n" +
         "  -rpcallowip=<ip>       " + _("Allow JSON-RPC connections from specified IP address") + "\n" +
         "  -rpcconnect=<ip>       " + _("Send commands to node running on <ip> (default: 127.0.0.1)") + "\n" +
+        "  -rpcthreads=<n>        " + _("Use this many threads to service RPC calls (default: 4)") + "\n" +
         "  -blocknotify=<cmd>     " + _("Execute command when the best block changes (%s in cmd is replaced by block hash)") + "\n" +
         "  -walletnotify=<cmd>    " + _("Execute command when a wallet transaction changes (%s in cmd is replaced by TxID)") + "\n" +
         "  -upgradewallet         " + _("Upgrade wallet to latest format") + "\n" +
@@ -338,22 +370,15 @@ struct CImportingNow
     }
 };
 
-struct CImportData {
-    std::vector<boost::filesystem::path> vFiles;
-};
-
-void ThreadImport(void *data) {
-    CImportData *import = reinterpret_cast<CImportData*>(data);
-
+void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
+{
     RenameThread("truckcoin-loadblk");
-
-    vnThreadsRunning[THREAD_IMPORT]++;
 
     // -reindex
     if (fReindex) {
         CImportingNow imp;
         int nFile = 0;
-        while (!fRequestShutdown) {
+        while (true) {
             CDiskBlockPos pos(nFile, 0);
             FILE *file = OpenBlockFile(pos, true);
             if (!file)
@@ -362,18 +387,16 @@ void ThreadImport(void *data) {
             LoadExternalBlockFile(file, &pos);
             nFile++;
         }
-        if (!fRequestShutdown) {
-            pblocktree->WriteReindexing(false);
-            fReindex = false;
-            printf("Reindexing finished\n");
-            // To avoid ending up in a situation without genesis block, re-try initializing (no-op if reindexing worked):
-            InitBlockIndex();
-        }
+        pblocktree->WriteReindexing(false);
+        fReindex = false;
+        printf("Reindexing finished\n");
+        // To avoid ending up in a situation without genesis block, re-try initializing (no-op if reindexing worked):
+        InitBlockIndex();
     }
 
     // hardcoded $DATADIR/bootstrap.dat
     boost::filesystem::path pathBootstrap = GetDataDir() / "bootstrap.dat";
-    if (boost::filesystem::exists(pathBootstrap) && !fRequestShutdown) {
+    if (boost::filesystem::exists(pathBootstrap)) {
         FILE *file = fopen(pathBootstrap.string().c_str(), "rb");
         if (file) {
             CImportingNow imp;
@@ -385,9 +408,7 @@ void ThreadImport(void *data) {
     }
 
     // -loadblock=
-    for (boost::filesystem::path &path : import->vFiles) {
-        if (fRequestShutdown)
-            break;
+    for (boost::filesystem::path &path : vImportFiles) {
         FILE *file = fopen(path.string().c_str(), "rb");
         if (file) {
             CImportingNow imp;
@@ -395,10 +416,6 @@ void ThreadImport(void *data) {
             LoadExternalBlockFile(file);
         }
     }
-
-    delete import;
-
-    vnThreadsRunning[THREAD_IMPORT]--;
 }
 
 /** Sanity checks
@@ -420,7 +437,7 @@ bool InitSanityCheck(void)
 /** Initialize truckcoin.
  *  @pre Parameters should be parsed and config file should be read.
  */
-bool AppInit2()
+bool AppInit2(boost::thread_group& threadGroup)
 {
     // ********************************************************* Step 1: setup
 #ifdef _MSC_VER
@@ -466,9 +483,9 @@ bool AppInit2()
 
     // ********************************************************* Step 2: parameter interactions
 
-	nNodeLifespan = GetArg("-addrlifespan", 7);
-	
-	CheckpointsMode = STRICT; 
+    nNodeLifespan = GetArg("-addrlifespan", 7);
+
+    CheckpointsMode = STRICT; 
     std::string strCpMode = GetArg("-cppolicy", "strict"); 
  
     if(strCpMode == "strict") 
@@ -532,12 +549,6 @@ bool AppInit2()
     else
         fDebugNet = GetBoolArg("-debugnet");
 
-#if !defined(WIN32) && !defined(QT_GUI)
-    fDaemon = GetBoolArg("-daemon");
-#else
-    fDaemon = false;
-#endif
-
     if (fDaemon)
         fServer = true;
     else
@@ -599,29 +610,7 @@ bool AppInit2()
     if (file) fclose(file);
     static boost::interprocess::file_lock lock(pathLockFile.string().c_str());
     if (!lock.try_lock())
-        return InitError(strprintf(_("Cannot obtain a lock on data directory %s.  Truckcoin is probably already running."), strDataDir.c_str()));
-
-#if !defined(WIN32) && !defined(QT_GUI)
-    if (fDaemon)
-    {
-        // Daemonize
-        pid_t pid = fork();
-        if (pid < 0)
-        {
-            fprintf(stderr, "Error: fork() returned %d errno %d\n", pid, errno);
-            return false;
-        }
-        if (pid > 0)
-        {
-            CreatePidFile(GetPidFile(), pid);
-            return true;
-        }
-
-        pid_t sid = setsid();
-        if (sid < 0)
-            fprintf(stderr, "Error: setsid() returned %d errno %d\n", sid, errno);
-    }
-#endif
+        return InitError(strprintf(_("Cannot obtain a lock on data directory %s. Truckcoin is probably already running."), strDataDir.c_str()));
 
     if (GetBoolArg("-shrinkdebugfile", !fDebug))
         ShrinkDebugFile();
@@ -643,7 +632,7 @@ bool AppInit2()
     if (nScriptCheckThreads) {
         printf("Using %u threads for script verification\n", nScriptCheckThreads);
         for (int i=0; i<nScriptCheckThreads-1; i++)
-            NewThread(ThreadScriptCheck, NULL);
+            threadGroup.create_thread(&ThreadScriptCheck);
     }
 
     int64_t nStart;
@@ -758,9 +747,6 @@ bool AppInit2()
     fListen = GetBoolArg("-listen", true);
     fDiscover = GetBoolArg("-discover", true);
     fNameLookup = GetBoolArg("-dns", true);
-#ifdef USE_UPNP
-    fUseUPnP = GetBoolArg("-upnp", USE_UPNP);
-#endif
 
     bool fBound = false;
     if (fListen)
@@ -1043,14 +1029,14 @@ bool AppInit2()
     if (!ConnectBestBlock(state))
         strErrors << "Failed to connect best block";
     
-    CImportData *pimport = new CImportData();
+    std::vector<boost::filesystem::path> vImportFiles;
 
     if (mapArgs.count("-loadblock"))
     {
         for (string strFile : mapMultiArgs["-loadblock"])
-            pimport->vFiles.push_back(strFile);
+            vImportFiles.push_back(strFile);
     }
-    NewThread(ThreadImport, pimport);
+    threadGroup.create_thread(boost::bind(&ThreadImport, vImportFiles));
 
     // ********************************************************* Step 10: load peers
 
@@ -1079,11 +1065,14 @@ bool AppInit2()
     printf("mapWallet.size() = %lu\n",       pwalletMain->mapWallet.size());
     printf("mapAddressBook.size() = %lu\n",  pwalletMain->mapAddressBook.size());
 
-    if (!NewThread(StartNode, NULL))
-        InitError(_("Error: could not start node"));
+    StartNode(threadGroup);
 
     if (fServer)
-        NewThread(ThreadRPCServer, NULL);
+        StartRPCThreads();
+
+    // Generate coins in the background
+    if (pwalletMain)
+    GenerateBitcoins(GetBoolArg("-gen", false), pwalletMain);
 
     // ********************************************************* Step 12: finished
 
@@ -1093,15 +1082,19 @@ bool AppInit2()
     if (!strErrors.str().empty())
         return InitError(strErrors.str());
 
-     // Add wallet transactions that aren't already in a block to mapTransactions
-    pwalletMain->ReacceptWalletTransactions();
+    if (pwalletMain) {
+        // Add wallet transactions that aren't already in a block to mapTransactions
+        pwalletMain->ReacceptWalletTransactions();
 
-#if !defined(QT_GUI)
-    // Loop until process is exit()ed from shutdown() function,
-    // called from ThreadRPCServer thread when a "stop" command is received.
-    while (1)
-        MilliSleep(5000);
-#endif
+        // Run a thread to flush wallet periodically
+        threadGroup.create_thread(boost::bind(&ThreadFlushWalletDB, boost::ref(pwalletMain->strWalletFile)));
 
-    return true;
+        if (GetBoolArg("-staking", true))
+            // ppcoin:mint proof-of-stake blocks in the background
+            MintStake(threadGroup, pwalletMain);
+        else
+            printf("Staking disabled\n");
+        }
+        
+    return !fRequestShutdown;
 }

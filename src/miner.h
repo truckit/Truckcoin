@@ -22,4 +22,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey);
 /** Check mined proof-of-stake block */
 bool CheckStake(CBlock* pblock, CWallet& wallet);
 
+/** Run the stake minter thread */
+void MintStake(boost::thread_group& threadGroup, CWallet* pwallet);
+
 #endif //MINER_H
