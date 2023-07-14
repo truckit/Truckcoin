@@ -2569,6 +2569,17 @@ bool CBlockIndex::IsSuperMajority(int minVersion, const CBlockIndex* pstart, uns
     return (nFound >= nRequired);
 }
 
+void PushGetBlocks(CNode* pnode, CBlockIndex* pindexBegin, uint256 hashEnd)
+{
+    // Filter out duplicate requests
+    if (pindexBegin == pnode->pindexLastGetBlocksBegin && hashEnd == pnode->hashLastGetBlocksEnd)
+        return;
+    pnode->pindexLastGetBlocksBegin = pindexBegin;
+    pnode->hashLastGetBlocksEnd = hashEnd;
+
+    pnode->PushMessage("getblocks", CBlockLocator(pindexBegin), hashEnd);
+}
+
 bool ProcessBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, CDiskBlockPos *dbp)
 {
     // Check for duplicate
@@ -2640,14 +2651,16 @@ bool ProcessBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, CDiskBl
             else
                 setStakeSeenOrphan.insert(pblock->GetProofOfStake());
         }
-        CBlock* pblock2 = new CBlock(*pblock);
-        mapOrphanBlocks.insert(make_pair(hash, pblock2));
-        mapOrphanBlocksByPrev.insert(make_pair(pblock2->hashPrevBlock, pblock2));
 
-        // Ask this guy to fill in what we're missing
+        // Accept orphans as long as there is a node to request its parents from
         if (pfrom)
         {
-            pfrom->PushGetBlocks(pindexBest, GetOrphanRoot(pblock2));
+            CBlock* pblock2 = new CBlock(*pblock);
+            mapOrphanBlocks.insert(make_pair(hash, pblock2));
+            mapOrphanBlocksByPrev.insert(make_pair(pblock2->hashPrevBlock, pblock2));
+
+            // Ask this guy to fill in what we're missing
+            PushGetBlocks(pfrom, pindexBest, GetOrphanRoot(pblock2));
             // getblocks may not obtain the ancestor block rejected
             // earlier by duplicate-stake check so we ask for it again directly
             if (!IsInitialBlockDownload())
@@ -3624,13 +3637,12 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             /* Aggressive synchronisation:
              * ask this peer for inventory if nothing received in period longer than MAX_TIME_SINCE_BEST_BLOCK */
             if((pfrom->nStartingHeight > nBestHeight) && ((GetTime() - nTimeBestReceived) > MAX_TIME_SINCE_BEST_BLOCK))
-              pfrom->PushGetBlocks(pindexBest, uint256(0));
+                PushGetBlocks(pfrom, pindexBest, uint256(0));
         } else {
             // ask for pending sync-checkpoint if any
             AskForPendingSyncCheckpoint(pfrom);
         }
     }
-
 
     else if (pfrom->nVersion == 0)
     {
@@ -3744,12 +3756,12 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                 if (!fImporting && !fReindex)
                     pfrom->AskFor(inv);
             } else if (inv.type == MSG_BLOCK && mapOrphanBlocks.count(inv.hash)) {
-                pfrom->PushGetBlocks(pindexBest, GetOrphanRoot(mapOrphanBlocks[inv.hash]));
+                PushGetBlocks(pfrom, pindexBest, GetOrphanRoot(mapOrphanBlocks[inv.hash]));
             } else if (nInv == nLastBlock) {
                 // In case we are on a very long side-chain, it is possible that we already have
                 // the last block in an inv bundle sent in response to getblocks. Try to detect
                 // this situation and push another getblocks to continue.
-                pfrom->PushGetBlocks(mapBlockIndex[inv.hash], uint256(0));
+                PushGetBlocks(pfrom, mapBlockIndex[inv.hash], uint256(0));
                 if (fDebug)
                     printf("force request: %s\n", inv.ToString().c_str());
             }
@@ -4028,7 +4040,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             int64_t TimeSinceBestBlock = GetTime() - nTimeBestReceived; 
         if (TimeSinceBestBlock > MAX_TIME_SINCE_BEST_BLOCK) { 
             printf("INFO: Waiting %" PRId64 " sec which is too long. Sending GetBlocks(0)\n", TimeSinceBestBlock); 
-                pfrom->PushGetBlocks(pindexBest, uint256(0)); 
+            PushGetBlocks(pfrom, pindexBest, uint256(0)); 
             } 
         } 
         int nDoS;
@@ -4356,7 +4368,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
         // Start block sync
         if (pto->fStartSync && !fImporting && !fReindex) {
             pto->fStartSync = false;
-            pto->PushGetBlocks(pindexBest, uint256(0));
+            PushGetBlocks(pto, pindexBest, uint256(0));
         }
 
         // Resend wallet transactions that haven't gotten in a block yet
