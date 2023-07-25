@@ -85,7 +85,7 @@ public:
     ~CLevelDB();
 
     template<typename K, typename V>
-    bool Read(const K& key, V& value)
+    bool Read(const K& key, V& value) const
     {
         CDataStream ssKey(SER_DISK, CLIENT_VERSION);
         ssKey.reserve(ssKey.GetSerializeSize(key));
@@ -118,7 +118,7 @@ public:
     }
 
     template<typename K>
-    bool Exists(const K& key)
+    bool Exists(const K& key) const
     {
         CDataStream ssKey(SER_DISK, CLIENT_VERSION);
         ssKey.reserve(ssKey.GetSerializeSize(key));
