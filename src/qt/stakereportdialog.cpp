@@ -102,9 +102,9 @@ void StakeReportDialog::updateDisplayUnit(int)
 void StakeReportDialog::updateStakeReportTimer()
 {
     static int lastBest = 0 ;
-    if (lastBest != nBestHeight)
+    if (lastBest != chainActive.Height())
     {
-        lastBest = nBestHeight;
+        lastBest = chainActive.Height();
         StakeReportDialog::updateStakeReport(false);
     }
 }
@@ -219,9 +219,9 @@ void StakeReportDialog::updateStakeReport(bool fImmediate=false)
     string sRefreshType = disablereportupdate ? "Manual refresh" : "Auto refresh";
 
     string strCurr_block_info = strprintf("%s  -  %s : %6d @ %s\nhash %s\n",
-           sRefreshType.c_str(), "Current Block", nBestHeight,
-           HalfDate(pindexBest->GetBlockTime(), "hh:mm:ss").toStdString().c_str(),
-           hashBestChain.GetHex().c_str());
+           sRefreshType.c_str(), "Current Block", chainActive.Height(),
+           HalfDate(chainActive.Tip()->GetBlockTime(), "hh:mm:ss").toStdString().c_str(),
+           chainActive.Tip()->GetBlockHash().GetHex().c_str());
 
     ui->L_CurrentBlock->setText(strCurr_block_info.c_str() );
 

@@ -25,7 +25,6 @@
 class CRequestTracker;
 class CNode;
 class CBlockIndex;
-extern int nBestHeight;
 
 inline unsigned int ReceiveFloodSize() { return 1000*GetArg("-maxreceivebuffer", 5*1000); }
 inline unsigned int SendBufferSize() { return 1000*GetArg("-maxsendbuffer", 1*1000); }
@@ -47,6 +46,7 @@ void SocketSendData(CNode *pnode);
 // Signals for message handling
 struct CNodeSignals
 {
+    boost::signals2::signal<int ()> GetHeight;
     boost::signals2::signal<bool (CNode*)> ProcessMessages;
     boost::signals2::signal<bool (CNode*, bool)> SendMessages;
 };

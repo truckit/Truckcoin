@@ -264,7 +264,7 @@ static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t& nStakeModifi
     // loop to find the stake modifier later by a selection interval
     while (nStakeModifierTime < pindexFrom->GetBlockTime() + nStakeModifierSelectionInterval)
     {
-        if (!pindex->GetNextInMainChain())
+        if (!chainActive.Next(pindex))
         {   // reached best block; may happen if node is behind on block chain
             if (fPrintProofOfStake || (pindex->GetBlockTime() + nStakeMinAge - nStakeModifierSelectionInterval > GetAdjustedTime()))
                 return error("GetKernelStakeModifier() : reached best block %s at height %d from block %s",
@@ -272,7 +272,7 @@ static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t& nStakeModifi
             else
                 return false;
         }
-        pindex = pindex->GetNextInMainChain();
+        pindex = chainActive.Next(pindex);
         if (pindex->GeneratedStakeModifier())
         {
             nStakeModifierHeight = pindex->nHeight;
@@ -408,7 +408,7 @@ bool CheckStakeKernelHash(unsigned int nBits, const CBlock& blockFrom, unsigned 
         }
      }
 
-    mapHashedBlocks[nBestHeight] = GetTime(); //store a time stamp of when we last hashed on this block
+    mapHashedBlocks[chainActive.Height()] = GetTime(); //store a time stamp of when we last hashed on this block
     return fSuccess;
  }
 
@@ -430,7 +430,7 @@ bool CheckProofOfStake(CValidationState &state, const CTransaction& tx, unsigned
     if (!view.GetCoins(txin.prevout.hash, coins))
         return tx.DoS(1, error("CheckProofOfStake() : INFO: read coins for txPrev failed"));  // previous transaction not in main chain, may occur during initial download
 
-    CBlockIndex* pindex = FindBlockByHeight(coins.nHeight);
+    CBlockIndex* pindex = chainActive[coins.nHeight];
 
     // Read block and scan it to find txPrev
     CBlock block;

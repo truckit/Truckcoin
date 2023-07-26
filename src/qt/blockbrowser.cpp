@@ -21,15 +21,15 @@ const CBlockIndex* getBlockIndex(int64_t height)
 
 std::string getBlockHash(int64_t Height)
 {
-    if(Height > pindexBest->nHeight) { return ""; }
+    if(Height > chainActive.Height()) { return ""; }
     if(Height < 0) { return ""; }
     int64_t desiredheight;
     desiredheight = Height;
-    if (desiredheight < 0 || desiredheight > nBestHeight)
+    if (desiredheight < 0 || desiredheight > chainActive.Height())
         return 0;
 
     CBlock block;
-    CBlockIndex* pblockindex = mapBlockIndex[hashBestChain];
+    CBlockIndex* pblockindex = mapBlockIndex[chainActive.Tip()->GetBlockHash()];
     while (pblockindex->nHeight > desiredheight)
         pblockindex = pblockindex->pprev;
     return  pblockindex->GetBlockHash().GetHex(); // pblockindex->phashBlock->GetHex();
@@ -244,10 +244,10 @@ void BlockBrowser::updateExplorer(bool block)
     if(block)
     {
         int64_t height = ui->heightBox->value(); 
-        if (height > pindexBest->nHeight) 
+        if (height > chainActive.Height()) 
         { 
-            ui->heightBox->setValue(pindexBest->nHeight); 
-            height = pindexBest->nHeight; 
+            ui->heightBox->setValue(chainActive.Height()); 
+            height = chainActive.Height(); 
         } 
  
         const CBlockIndex* pindex = getBlockIndex(height);
@@ -297,7 +297,7 @@ void BlockBrowser::updateExplorer(bool block)
      { 
          CBlockIndex* pblockindex = mapBlockIndex[hashBlock]; 
          if (!pblockindex) 
-             ui->heightBox->setValue(nBestHeight); 
+             ui->heightBox->setValue(chainActive.Height()); 
          else 
              ui->heightBox->setValue(pblockindex->nHeight); 
          updateExplorer(true); 

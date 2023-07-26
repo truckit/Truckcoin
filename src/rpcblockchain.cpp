@@ -20,10 +20,10 @@ double GetDifficulty(const CBlockIndex* blockindex)
     // minimum difficulty = 1.0.
     if (blockindex == NULL)
     {
-        if (pindexBest == NULL)
+        if (chainActive.Tip() == NULL)
             return 1.0;
         else
-            blockindex = GetLastBlockIndex(pindexBest, false);
+            blockindex = GetLastBlockIndex(chainActive.Tip(), false);
     }
 
     int nShift = (blockindex->nBits >> 24) & 0xff;
@@ -51,7 +51,7 @@ double GetPoSKernelPS(const CBlockIndex* blockindex)
     double dStakeKernelsTriedAvg = 0;
     int nStakesHandled = 0, nStakesTime = 0;
 
-    const CBlockIndex* pindex = pindexBest;
+    const CBlockIndex* pindex = chainActive.Tip();
     const CBlockIndex* pindexPrevStake = NULL;
 
     if (blockindex != NULL)
@@ -78,9 +78,9 @@ double GetPoWMHashPS(const CBlockIndex* blockindex)
     int nPoWInterval = 72;
     int64_t nTargetSpacingWorkMin = 1, nTargetSpacingWork = 1;
 
-    CBlockIndex* pindex = pindexGenesisBlock;
-    CBlockIndex* pindexPrevWork = pindexGenesisBlock;
-    const CBlockIndex* pindexStop = pindexBest;
+    CBlockIndex* pindex = chainActive.Genesis();
+    CBlockIndex* pindexPrevWork = chainActive.Genesis();
+    const CBlockIndex* pindexStop = chainActive.Tip();
 
     if (blockindex != NULL)
         pindexStop = blockindex;
@@ -95,7 +95,7 @@ double GetPoWMHashPS(const CBlockIndex* blockindex)
             pindexPrevWork = pindex;
         }
 
-        pindex = pindex->GetNextInMainChain();
+        pindex = chainActive.Next(pindex);
     }
 
     return GetDifficulty(pindexPrevWork) * 4294.967296 / nTargetSpacingWork;
@@ -121,7 +121,7 @@ Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fPri
 
     if (blockindex->pprev)
         result.push_back(Pair("previousblockhash", blockindex->pprev->GetBlockHash().GetHex()));
-    CBlockIndex *pnext = blockindex->GetNextInMainChain();
+    CBlockIndex *pnext = chainActive.Next(blockindex);
     if (pnext)
         result.push_back(Pair("nextblockhash", pnext->GetBlockHash().GetHex()));
 
@@ -160,7 +160,7 @@ Value getblockcount(const Array& params, bool fHelp)
             "getblockcount\n"
             "Returns the number of blocks in the longest block chain.");
 
-    return nBestHeight;
+    return chainActive.Height();
 }
 
 
@@ -173,7 +173,7 @@ Value getdifficulty(const Array& params, bool fHelp)
 
     Object obj;
     obj.push_back(Pair("proof-of-work",        GetDifficulty()));
-    obj.push_back(Pair("proof-of-stake",       GetDifficulty(GetLastBlockIndex(pindexBest, true))));
+    obj.push_back(Pair("proof-of-stake",       GetDifficulty(GetLastBlockIndex(chainActive.Tip(), true))));
     obj.push_back(Pair("search-interval",      (int)nLastCoinStakeSearchInterval));
     return obj;
 }
@@ -217,10 +217,10 @@ Value getblockhash(const Array& params, bool fHelp)
             "Returns hash of block in best-block-chain at <index>.");
 
     int nHeight = params[0].get_int();
-    if (nHeight < 0 || nHeight > nBestHeight)
+    if (nHeight < 0 || nHeight > chainActive.Height())
         throw runtime_error("Block number out of range.");
 
-    CBlockIndex* pblockindex = FindBlockByHeight(nHeight);
+    CBlockIndex* pblockindex = chainActive[nHeight];
     return pblockindex->phashBlock->GetHex();
 }
 
@@ -254,11 +254,11 @@ Value getblockbynumber(const Array& params, bool fHelp)
             "Returns details of a block with given block-number.");
 
     int nHeight = params[0].get_int();
-    if (nHeight < 0 || nHeight > nBestHeight)
+    if (nHeight < 0 || nHeight > chainActive.Height())
         throw runtime_error("Block number out of range.");
 
     CBlock block;
-    CBlockIndex* pblockindex = mapBlockIndex[hashBestChain];
+    CBlockIndex* pblockindex = mapBlockIndex[chainActive.Tip()->GetBlockHash()];
     while (pblockindex->nHeight > nHeight)
         pblockindex = pblockindex->pprev;
 

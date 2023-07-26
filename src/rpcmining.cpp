@@ -71,40 +71,40 @@ Value getmininginfo(const Array& params, bool fHelp)
 
     Object obj;
     obj.push_back(Pair("pos_enabled",  fStaking));
-    obj.push_back(Pair("blocks",        (int)nBestHeight));
+    obj.push_back(Pair("blocks",        (int)chainActive.Height()));
     obj.push_back(Pair("currentblocksize",(uint64_t)nLastBlockSize));
     obj.push_back(Pair("currentblocktx",(uint64_t)nLastBlockTx));
 //    obj.push_back(Pair("PoW difficulty",    (double)GetDifficulty()));
-    obj.push_back(Pair("difficulty", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
+    obj.push_back(Pair("difficulty", GetDifficulty(GetLastBlockIndex(chainActive.Tip(), true))));
     obj.push_back(Pair("errors",        GetWarnings("statusbar")));
     obj.push_back(Pair("generate",      GetBoolArg("-gen")));
     obj.push_back(Pair("genproclimit",  (int)GetArg("-genproclimit", -1)));
 //    obj.push_back(Pair("hashespersec",  gethashespersec(params, false)));
 //    obj.push_back(Pair("networkhashps", getnetworkhashps(params, false)));
     obj.push_back(Pair("pooledtx",      (uint64_t)mempool.size()));
-    obj.push_back(Pair("stakereward", (uint64_t)GetProofOfStakeReward(0, GetLastBlockIndex(pindexBest, true)->nBits, GetTime(), pindexBest->nHeight, true)));
+    obj.push_back(Pair("stakereward", (uint64_t)GetProofOfStakeReward(0, GetLastBlockIndex(chainActive.Tip(), true)->nBits, GetTime(), chainActive.Height(), true)));
     obj.push_back(Pair("testnet",       fTestNet));
     return obj;
 }
 
 // Return average network hashes per second based on last number of blocks.
 Value GetNetworkHashPS(int lookup) {
-    if (pindexBest == NULL)
+    if (chainActive.Tip() == NULL)
         return 0;
 
     // If lookup is -1, then use blocks since last difficulty change.
     if (lookup <= 0)
-        lookup = pindexBest->nHeight % 2016 + 1;
+        lookup = chainActive.Height() % 2016 + 1;
 
     // If lookup is larger than chain, then set it to chain length.
-    if (lookup > pindexBest->nHeight)
-        lookup = pindexBest->nHeight;
+    if (lookup > chainActive.Height())
+        lookup = chainActive.Height();
 
-    CBlockIndex* pindexPrev = pindexBest;
+    CBlockIndex* pindexPrev = chainActive.Tip();
     for (int i = 0; i < lookup; i++)
         pindexPrev = pindexPrev->pprev;
 
-    double timeDiff = pindexBest->GetBlockTime() - pindexPrev->GetBlockTime();
+    double timeDiff = chainActive.Tip()->GetBlockTime() - pindexPrev->GetBlockTime();
     double timePerBlock = timeDiff / lookup;
 
     return (int64_t)(((double)GetDifficulty() * pow(2.0, 32)) / timePerBlock);
@@ -174,7 +174,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
     static CBlockIndex* pindexPrev;
     static int64_t nStart;
     static CBlock* pblock;
-    if (pindexPrev != pindexBest ||
+    if (pindexPrev != chainActive.Tip() ||
         (nTransactionsUpdated != nTransactionsUpdatedLast && GetTime() - nStart > 5))
     {
         // Clear pindexPrev so future calls make a new block, despite any failures from here on
@@ -182,7 +182,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
 
         // Store the pindexBest used before CreateNewBlock, to avoid races
         nTransactionsUpdatedLast = nTransactionsUpdated;
-        CBlockIndex* pindexPrevNew = pindexBest;
+        CBlockIndex* pindexPrevNew = chainActive.Tip();
         nStart = GetTime();
 
         // Create new block

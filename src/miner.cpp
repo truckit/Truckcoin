@@ -126,7 +126,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
 
     // if coinstake available add coinstake tx
     static int64_t nLastCoinStakeSearchTime = GetAdjustedTime();  // only initialized at startup
-    CBlockIndex* pindexPrev = pindexBest;
+    CBlockIndex* pindexPrev = chainActive.Tip();
 
     if (fProofOfStake)  // attempt to find a coinstake
     {
@@ -401,7 +401,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
     // Found a solution
     {
         LOCK(cs_main);
-        if (pblock->hashPrevBlock != hashBestChain)
+        if (pblock->hashPrevBlock != chainActive.Tip()->GetBlockHash())
             return error("CheckWork : generated block is stale");
 
         // Remove key from key pool
@@ -443,7 +443,7 @@ bool CheckStake(CBlock* pblock, CWallet& wallet)
     // Found a solution
     {
         LOCK(cs_main);
-        if (pblock->hashPrevBlock != hashBestChain)
+        if (pblock->hashPrevBlock != chainActive.Tip()->GetBlockHash())
             return error("CheckStake() : generated block is stale");
 
         // Track how many getdata requests this block gets
@@ -479,7 +479,7 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
 
     while (fGenerateBitcoins || (fProofOfStake && fStaking))
     {
-        while (vNodes.empty() || IsInitialBlockDownload() || vNodes.size() < 2 || nBestHeight < GetNumBlocksOfPeers() || pwallet->IsLocked() || !fMintableCoins)
+        while (vNodes.empty() || IsInitialBlockDownload() || vNodes.size() < 2 || chainActive.Height() < GetNumBlocksOfPeers() || pwallet->IsLocked() || !fMintableCoins)
         {
             nLastCoinStakeSearchInterval = 0;
             MilliSleep(1000);
@@ -495,9 +495,9 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
                 return;
         }
 
-        if(mapHashedBlocks.count(nBestHeight)) //search our map of hashed blocks, see if bestblock has been hashed yet
+        if(mapHashedBlocks.count(chainActive.Height())) //search our map of hashed blocks, see if bestblock has been hashed yet
         {
-            if(GetTime() - mapHashedBlocks[nBestHeight] < min((int)(pwallet->nHashDrift  * 0.5), 180)) // wait half of the nHashDrift with max wait of 3 minutes
+            if(GetTime() - mapHashedBlocks[chainActive.Height()] < min((int)(pwallet->nHashDrift  * 0.5), 180)) // wait half of the nHashDrift with max wait of 3 minutes
             {
                 MilliSleep(2500); // 2.5 second sleep
                 continue;
@@ -508,7 +508,7 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
         // Create new block
         //
         unsigned int nTransactionsUpdatedLast = nTransactionsUpdated;
-        CBlockIndex* pindexPrev = pindexBest;
+        CBlockIndex* pindexPrev = chainActive.Tip();
 
         std::unique_ptr<CBlock> pblock(CreateNewBlock(pwallet, fProofOfStake));
         if (!pblock.get())
@@ -608,7 +608,7 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
                 break;
             if (nTransactionsUpdated != nTransactionsUpdatedLast && GetTime() - nStart > 60)
                 break;
-            if (pindexPrev != pindexBest)
+            if (pindexPrev != chainActive.Tip())
                 break;
 
             // Update nTime every few seconds

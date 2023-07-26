@@ -536,6 +536,8 @@ void CNode::Cleanup()
 
 void CNode::PushVersion()
 {
+    int nBestHeight = g_signals.GetHeight().get_value_or(0);
+
     /// when NTP implemented, change to just nTime = GetAdjustedTime()
     int64_t nTime = (fInbound ? GetAdjustedTime() : GetTime());
     CAddress addrYou = (addr.IsRoutable() && !IsProxy(addr) ? addr : CAddress(CService("0.0.0.0",0)));
@@ -1458,6 +1460,8 @@ void static StartSync(const vector<CNode*> &vNodes) {
     // as an optimization - they are checked again in SendMessages.
     if (fImporting || fReindex)
         return;
+
+    int nBestHeight = g_signals.GetHeight().get_value_or(0);
 
     // Iterate over all nodes
     for (CNode* pnode : vNodes) {

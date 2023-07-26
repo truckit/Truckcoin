@@ -39,7 +39,7 @@ int ClientModel::getNumConnections() const
 
 int ClientModel::getNumBlocks() const
 {
-    return nBestHeight;
+    return chainActive.Height();
 }
 
 int ClientModel::getNumBlocksAtStartup()
@@ -60,8 +60,8 @@ quint64 ClientModel::getTotalBytesSent() const
 
 QDateTime ClientModel::getLastBlockDate() const
 {
-    if (pindexBest)
-        return QDateTime::fromTime_t(pindexBest->GetBlockTime());
+    if (chainActive.Tip())
+        return QDateTime::fromTime_t(chainActive.Tip()->GetBlockTime());
     else
         return QDateTime::fromTime_t(1401331380); // Genesis block's time
 }
@@ -115,12 +115,12 @@ double ClientModel::GetDifficulty() const
     // Floating point number that is a multiple of the minimum difficulty,
     // minimum difficulty = 1.0.
 
-    if (pindexBest == NULL)
+    if (chainActive.Tip() == NULL)
         return 1.0;
-    int nShift = (pindexBest->nBits >> 24) & 0xff;
+    int nShift = (chainActive.Tip()->nBits >> 24) & 0xff;
 
     double dDiff =
-        (double)0x0000ffff / (double)(pindexBest->nBits & 0x00ffffff);
+        (double)0x0000ffff / (double)(chainActive.Tip()->nBits & 0x00ffffff);
 
     while (nShift < 29)
     {

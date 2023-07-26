@@ -1006,9 +1006,9 @@ bool AppInit2(boost::thread_group& threadGroup)
 
     RegisterWallet(pwalletMain);
 
-    CBlockIndex *pindexRescan = pindexBest;
+    CBlockIndex *pindexRescan = chainActive.Tip();
     if (GetBoolArg("-rescan"))
-        pindexRescan = pindexGenesisBlock;
+        pindexRescan = chainActive.Genesis();
     else
     {
         CWalletDB walletdb(strWalletFileName);
@@ -1016,10 +1016,10 @@ bool AppInit2(boost::thread_group& threadGroup)
         if (walletdb.ReadBestBlock(locator))
             pindexRescan = locator.GetBlockIndex();
     }
-    if (pindexBest && pindexBest != pindexRescan && pindexRescan && pindexBest->nHeight > pindexRescan->nHeight)
+    if (chainActive.Tip() && chainActive.Tip() != pindexRescan && pindexRescan && chainActive.Height() > pindexRescan->nHeight)
     {
         uiInterface.InitMessage(_("Rescanning..."));
-        printf("Rescanning last %i blocks (from block %i)...\n", pindexBest->nHeight - pindexRescan->nHeight, pindexRescan->nHeight);
+        printf("Rescanning last %i blocks (from block %i)...\n", chainActive.Height() - pindexRescan->nHeight, pindexRescan->nHeight);
         nStart = GetTimeMillis();
         pwalletMain->ScanForWalletTransactions(pindexRescan, true);
         printf(" rescan      %15" PRId64 "ms\n", GetTimeMillis() - nStart);
@@ -1064,7 +1064,7 @@ bool AppInit2(boost::thread_group& threadGroup)
 
     //// debug print
     printf("mapBlockIndex.size() = %lu\n",   mapBlockIndex.size());
-    printf("nBestHeight = %d\n",            nBestHeight);
+    printf("nBestHeight = %d\n",             chainActive.Height());
     printf("setKeyPool.size() = %lu\n",      pwalletMain->setKeyPool.size());
     printf("mapWallet.size() = %lu\n",       pwalletMain->mapWallet.size());
     printf("mapAddressBook.size() = %lu\n",  pwalletMain->mapAddressBook.size());

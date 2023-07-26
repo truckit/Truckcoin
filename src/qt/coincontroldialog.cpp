@@ -751,13 +751,13 @@ void CoinControlDialog::updateView()
         uint64_t nTxWeight = 0;
         uint64_t nDisplayWeight = 0;
         uint64_t nTxWeightSum = 0;
-        GetLastBlockIndex(pindexBest, false);
-        int64_t nBestHeight = pindexBest->nHeight;
+        GetLastBlockIndex(chainActive.Tip(), false);
+        int64_t nBestHeight = chainActive.Height();
 
         for (const COutput& out : coins.second)
         {
             int64_t nHeight = nBestHeight - out.nDepth;
-            CBlockIndex* pindex = FindBlockByHeight(nHeight);
+            CBlockIndex* pindex = chainActive[nHeight];
 
             int nInputSize = 148; // 180 if uncompressed public key
             nSum += out.tx->vout[out.i].nValue;
