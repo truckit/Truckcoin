@@ -214,7 +214,7 @@ double BlockBrowser::getTxFees(std::string txid)
     if (!tx.CheckInputs(state, view, true, SCRIPT_VERIFY_P2SH))
         return convertCoins(MIN_TX_FEE);
 
-    int64_t nTxFees = tx.GetValueIn(view)-tx.GetValueOut();
+    int64_t nTxFees = tx.GetValueIn(view)-GetValueOut(tx);
 
     if(tx.IsCoinStake() || tx.IsCoinBase()) {
         ui->feesLabel->setText(QString("Reward:"));

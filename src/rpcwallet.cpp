@@ -456,7 +456,7 @@ Value getreceivedbyaddress(const Array& params, bool fHelp)
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it)
     {
         const CWalletTx& wtx = (*it).second;
-        if (wtx.IsCoinBase() || wtx.IsCoinStake() || !wtx.IsFinal())
+        if (wtx.IsCoinBase() || wtx.IsCoinStake() || !IsFinalTx(wtx))
             continue;
 
         for (const CTxOut& txout : wtx.vout)
@@ -502,7 +502,7 @@ Value getreceivedbyaccount(const Array& params, bool fHelp)
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it)
     {
         const CWalletTx& wtx = (*it).second;
-        if (wtx.IsCoinBase() || wtx.IsCoinStake() || !wtx.IsFinal())
+        if (wtx.IsCoinBase() || wtx.IsCoinStake() || !IsFinalTx(wtx))
             continue;
 
         for (const CTxOut& txout : wtx.vout)
@@ -526,7 +526,7 @@ int64_t GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMi
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it)
     {
         const CWalletTx& wtx = (*it).second;
-        if (!wtx.IsFinal())
+        if (!IsFinalTx(wtx))
             continue;
 
         int64_t nGeneratedImmature, nGeneratedMature, nReceived, nSent, nFee;
@@ -578,7 +578,7 @@ Value getbalance(const Array& params, bool fHelp)
         for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it)
         {
             const CWalletTx& wtx = (*it).second;
-            if (!wtx.IsFinal())
+            if (!IsFinalTx(wtx))
                 continue;
 
             int64_t allGeneratedImmature, allGeneratedMature, allFee;
@@ -882,7 +882,7 @@ Value ListReceived(const Array& params, bool fByAccounts)
     {
         const CWalletTx& wtx = (*it).second;
 
-        if (wtx.IsCoinBase() || wtx.IsCoinStake() || !wtx.IsFinal())
+        if (wtx.IsCoinBase() || wtx.IsCoinStake() || !IsFinalTx(wtx))
             continue;
 
         int nDepth = wtx.GetDepthInMainChain();
@@ -1162,7 +1162,7 @@ Value listaccounts(const Array& params, bool fHelp)
     {
         const CWalletTx& wtx = (*it).second;
 
-        if(!wtx.IsFinal())
+        if(!IsFinalTx(wtx))
             continue;
 
         int64_t nGeneratedImmature, nGeneratedMature, nFee;
@@ -1302,7 +1302,7 @@ Value getstaketx(const Array& params, bool fHelp)
                 entry.push_back(Pair("Days To Stake", dDaysToStake));  
  
                 int64_t nDebit = wtx.GetDebit(); 
-                int64_t nFee = (wtx.IsFromMe() ? wtx.GetValueOut() - nDebit : 0); 
+                int64_t nFee = (wtx.IsFromMe() ? GetValueOut(wtx) - nDebit : 0); 
 
                 int64_t nGeneratedImmature, nGeneratedMature, nFee2; 
                 string strSentAccount; 
@@ -1345,7 +1345,7 @@ Value gettransaction(const Array& params, bool fHelp)
         int64_t nCredit = wtx.GetCredit();
         int64_t nDebit = wtx.GetDebit();
         int64_t nNet = nCredit - nDebit;
-        int64_t nFee = (wtx.IsFromMe() ? wtx.GetValueOut() - nDebit : 0);
+        int64_t nFee = (wtx.IsFromMe() ? GetValueOut(wtx) - nDebit : 0);
 
         entry.push_back(Pair("amount", ValueFromAmount(nNet - nFee)));
         if (wtx.IsFromMe())

@@ -168,7 +168,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
         for (map<uint256, CTransaction>::iterator mi = mempool.mapTx.begin(); mi != mempool.mapTx.end(); ++mi)
         {
             CTransaction& tx = (*mi).second;
-            if (tx.IsCoinBase() || tx.IsCoinStake() || !tx.IsFinal())
+            if (tx.IsCoinBase() || tx.IsCoinStake() || !IsFinalTx(tx))
                 continue;
 
             COrphan* porphan = NULL;
@@ -221,7 +221,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
             // This is a more accurate fee-per-kilobyte than is used by the client code, because the
             // client code rounds up the size to the nearest 1K. That's good, because it gives an
             // incentive to create smaller transactions.
-            double dFeePerKb =  double(nTotalIn-tx.GetValueOut()) / (double(nTxSize)/1000.0);
+            double dFeePerKb =  double(nTotalIn-GetValueOut(tx)) / (double(nTxSize)/1000.0);
 
             if (porphan)
             {
@@ -288,7 +288,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
             if (!tx.HaveInputs(viewTemp))
                 continue;
 
-            int64_t nTxFees = tx.GetValueIn(viewTemp)-tx.GetValueOut();
+            int64_t nTxFees = tx.GetValueIn(viewTemp)-GetValueOut(tx);
             if (nTxFees < nMinFee)
                 continue;
 
@@ -438,7 +438,7 @@ bool CheckStake(CBlock* pblock, CWallet& wallet)
     //// debug print
     printf("CheckStake() : new proof-of-stake block found \n hash: %s \nproofhash: %s \ntarget: %s\n", hashBlock.GetHex().c_str(), proofHash.GetHex().c_str(), hashTarget.GetHex().c_str());
     pblock->print();
-    printf("out %s\n", FormatMoney(pblock->vtx[1].GetValueOut()).c_str());
+    printf("out %s\n", FormatMoney(GetValueOut(pblock->vtx[1])).c_str());
 
     // Found a solution
     {

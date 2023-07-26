@@ -477,20 +477,21 @@ unsigned int LimitOrphanTxSize(unsigned int nMaxOrphans)
     return nEvicted;
 }
 
-//////////////////////////////////////////////////////////////////////////////
-//
-// CTransaction
-//
-
-bool CTransaction::IsStandard(string& strReason) const
+bool IsStandardTx(const CTransaction& tx, string& reason)
 {
-    if (nVersion > CTransaction::CURRENT_VERSION)
+    if (tx.nVersion > CTransaction::CURRENT_VERSION)
     {
-        strReason = "version";
+        reason = "version";
         return false;
     }
 
-    for (const CTxIn& txin : vin)
+    if (!IsFinalTx(tx))
+    {
+        reason = "non-final";
+        return false;
+    }
+
+    for (const CTxIn& txin : tx.vin)
     {
         // Biggest 'standard' txin is a 15-of-15 P2SH multisig with compressed
         // keys. (remember the 520 byte limit on redeemScript size) That works
@@ -501,30 +502,30 @@ bool CTransaction::IsStandard(string& strReason) const
         // considered standard)
         if (txin.scriptSig.size() > 1650)
         {
-            strReason = "scriptsig-size";
+            reason = "scriptsig-size";
             return false;
         }
         if (!txin.scriptSig.IsPushOnly())
         {
-            strReason = "scriptsig-not-pushonly";
+            reason = "scriptsig-not-pushonly";
             return false;
         }
     }
 
     unsigned int nDataOut = 0;
     txnouttype whichType;
-    for (const CTxOut& txout : vout)
+    for (const CTxOut& txout : tx.vout)
     {
         if (!::IsStandard(txout.scriptPubKey, whichType))
         {
-            strReason = "scriptpubkey";
+            reason = "scriptpubkey";
             return false;
         }
         if (whichType == TX_NULL_DATA)
             nDataOut++;
         else if (txout.nValue == 0)
         {
-            strReason = "txout-value=0";
+            reason = "txout-value=0";
             return false;
         }
 
@@ -532,12 +533,49 @@ bool CTransaction::IsStandard(string& strReason) const
     // only one OP_RETURN txout is permitted
     if (nDataOut > 1)
     {
-        strReason = "multi-op-return";
+        reason = "multi-op-return";
         return false;
     }
 
     return true;
 }
+
+bool IsFinalTx(const CTransaction &tx, int nBlockHeight, int64_t nBlockTime)
+{
+    // Time based nLockTime implemented in 0.1.6
+    if (tx.nLockTime == 0)
+        return true;
+    if (nBlockHeight == 0)
+        nBlockHeight = nBestHeight;
+    if (nBlockTime == 0)
+        nBlockTime = GetAdjustedTime();
+    if ((int64_t)tx.nLockTime < ((int64_t)tx.nLockTime < LOCKTIME_THRESHOLD ? (int64_t)nBlockHeight : nBlockTime))
+        return true;
+    for (const CTxIn& txin : tx.vin)
+        if (!txin.IsFinal())
+            return false;
+    return true;
+}
+
+/** Amount of coins spent by this transaction.
+    @return sum of all outputs (note: does not include fees)
+*/
+int64_t GetValueOut(const CTransaction& tx)
+{
+    int64_t nValueOut = 0;
+    for (const CTxOut& txout : tx.vout)
+    {
+        nValueOut += txout.nValue;
+        if (!MoneyRange(txout.nValue) || !MoneyRange(nValueOut))
+            throw std::runtime_error("CTransaction::GetValueOut() : value out of range");
+    }
+    return nValueOut;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//
+// CTransaction
+//
 
 //
 // Check transaction inputs, and make sure any
@@ -780,9 +818,10 @@ bool CTxMemPool::accept(CValidationState &state, CTransaction &tx, bool fCheckIn
         return tx.DoS(100, error("CTxMemPool::accept() : coinstake as individual tx"));
 
     // Rather not work on nonstandard transactions (unless -testnet)
-    string strNonStd;
-    if (!fTestNet && !tx.IsStandard(strNonStd))
-        return error("CTxMemPool::accept() : nonstandard transaction (%s)", strNonStd.c_str());
+    string reason;
+    if (!fTestNet && !IsStandardTx(tx, reason))
+        return error("CTxMemPool::accept() : nonstandard transaction: %s",
+                     reason.c_str());
 
     // Is it already in the memory pool?
     uint256 hash = tx.GetHash();
@@ -806,7 +845,7 @@ bool CTxMemPool::accept(CValidationState &state, CTransaction &tx, bool fCheckIn
             if (i != 0)
                 return false;
             ptxOld = mapNextTx[outpoint].ptx;
-            if (ptxOld->IsFinal())
+            if (IsFinalTx(*ptxOld))
                 return false;
             if (!tx.IsNewerThan(*ptxOld))
                 return false;
@@ -868,7 +907,7 @@ bool CTxMemPool::accept(CValidationState &state, CTransaction &tx, bool fCheckIn
         // you should add code here to check that the transaction does a
         // reasonable number of ECDSA signature verifications.
 
-        int64_t nFees = tx.GetValueIn(view)-tx.GetValueOut();
+        int64_t nFees = tx.GetValueIn(view)-GetValueOut(tx);
         unsigned int nSize = ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);
 
         // Don't accept it if it can't get into a block
@@ -1719,18 +1758,18 @@ bool CTransaction::CheckInputs(CValidationState &state, CCoinsViewCache &inputs,
             if (!GetCoinAge(state, nCoinAge))
                 return state.Invalid(error("CheckInputs() : %s unable to get coin age for coinstake", GetHash().ToString().substr(0,10).c_str()));
 
-            int64_t nStakeReward = GetValueOut() - nValueIn;
+            int64_t nStakeReward = GetValueOut(*this) - nValueIn;
 
             if (nStakeReward > GetProofOfStakeReward(nCoinAge, pblock->nBits, nTime, false, false) - GetMinFee() + MIN_TX_FEE)
                 return state.DoS(100, error("CheckInputs() : %s stake reward exceeded", GetHash().ToString().substr(0,10).c_str()));
         }
         else
         {
-            if (nValueIn < GetValueOut())
+            if (nValueIn < GetValueOut(*this))
                 return state.DoS(100, error("CheckInputs() : %s value in < value out", GetHash().ToString().substr(0,10).c_str()));
 
             // Tally transaction fees
-            int64_t nTxFee = nValueIn - GetValueOut();
+            int64_t nTxFee = nValueIn - GetValueOut(*this);
             if (nTxFee < 0)
                 return state.DoS(100, error("CheckInputs() : %s nTxFee < 0", GetHash().ToString().substr(0,10).c_str()));
    
@@ -1969,7 +2008,7 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
             return state.DoS(100, error("ConnectBlock() : too many sigops"));
 
         if (tx.IsCoinBase())
-            nValueOut += tx.GetValueOut();
+            nValueOut += GetValueOut(tx);
         else
         {
         if (!tx.HaveInputs(view))
@@ -1983,7 +2022,7 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
                     return state.DoS(100, error("ConnectBlock() : too many sigops"));
 
             int64_t nTxValueIn  = tx.GetValueIn(view);
-            int64_t nTxValueOut = tx.GetValueOut();
+            int64_t nTxValueOut = GetValueOut(tx);
 
 
             nValueIn += nTxValueIn;
@@ -2587,7 +2626,7 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CDiskBlockPos* dbp)
 
     // Check that all transactions are finalized
     for (const CTransaction& tx : block.vtx)
-        if (!tx.IsFinal(nHeight, block.GetBlockTime()))
+        if (!IsFinalTx(tx, nHeight, block.GetBlockTime()))
             return state.DoS(10, error("AcceptBlock() : contains a non-final transaction"));
 
     // Check that the block chain matches the known block chain up to a checkpoint
