@@ -88,6 +88,7 @@ void Shutdown()
     StopNode();
     {
         LOCK(cs_main);
+        pwalletMain->SetBestChain(CBlockLocator(chainActive.Tip()));
         if (pblocktree)
             pblocktree->Flush();
         if (pcoinsTip)
@@ -999,6 +1000,8 @@ bool AppInit2(boost::thread_group& threadGroup)
         pwalletMain->SetDefaultKey(newDefaultKey);
         if (!pwalletMain->SetAddressBookName(pwalletMain->vchDefaultKey.GetID(), ""))
             strErrors << _("Cannot write default address") << "\n";
+
+        pwalletMain->SetBestChain(CBlockLocator(chainActive.Tip()));
     }
 
     printf("%s", strErrors.str().c_str());
