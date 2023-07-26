@@ -16,7 +16,7 @@
 
 class CAddress;
 class CAddrMan;
-class CBlockLocator;
+struct CBlockLocator;
 class CDiskBlockIndex;
 class CMasterKey;
 class COutPoint;

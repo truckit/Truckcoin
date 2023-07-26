@@ -88,7 +88,7 @@ void Shutdown()
     StopNode();
     {
         LOCK(cs_main);
-        pwalletMain->SetBestChain(CBlockLocator(chainActive.Tip()));
+        pwalletMain->SetBestChain(chainActive.GetLocator());
         if (pblocktree)
             pblocktree->Flush();
         if (pcoinsTip)
@@ -1001,7 +1001,7 @@ bool AppInit2(boost::thread_group& threadGroup)
         if (!pwalletMain->SetAddressBookName(pwalletMain->vchDefaultKey.GetID(), ""))
             strErrors << _("Cannot write default address") << "\n";
 
-        pwalletMain->SetBestChain(CBlockLocator(chainActive.Tip()));
+        pwalletMain->SetBestChain(chainActive.GetLocator());
     }
 
     printf("%s", strErrors.str().c_str());
@@ -1017,7 +1017,9 @@ bool AppInit2(boost::thread_group& threadGroup)
         CWalletDB walletdb(strWalletFileName);
         CBlockLocator locator;
         if (walletdb.ReadBestBlock(locator))
-            pindexRescan = locator.GetBlockIndex();
+            pindexRescan = chainActive.FindFork(locator);
+        else
+            pindexRescan = chainActive.Genesis();
     }
     if (chainActive.Tip() && chainActive.Tip() != pindexRescan && pindexRescan && chainActive.Height() > pindexRescan->nHeight)
     {
@@ -1026,6 +1028,8 @@ bool AppInit2(boost::thread_group& threadGroup)
         nStart = GetTimeMillis();
         pwalletMain->ScanForWalletTransactions(pindexRescan, true);
         printf(" rescan      %15" PRId64 "ms\n", GetTimeMillis() - nStart);
+        pwalletMain->SetBestChain(chainActive.GetLocator());
+        nWalletDBUpdated++;
     }
 
     // ********************************************************* Step 9: import blocks
