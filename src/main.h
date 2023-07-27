@@ -27,7 +27,6 @@ class CAddress;
 class CInv;
 class CRequestTracker;
 class CNode;
-class CBlockIndexTrustComparator;
 
 #define POW_CUTOFF_HEIGHT 21000
 
@@ -103,7 +102,6 @@ extern CScript COINBASE_FLAGS;
 
 extern CCriticalSection cs_main;
 extern std::map<uint256, CBlockIndex*> mapBlockIndex;
-extern std::set<CBlockIndex*, CBlockIndexTrustComparator> setBlockIndexValid;
 extern std::set<std::pair<COutPoint, unsigned int> > setStakeSeen;
 extern uint256 hashGenesisBlock;
 extern unsigned int nStakeMinAge;
@@ -1660,10 +1658,6 @@ public:
      }
 };
 
-extern CCriticalSection cs_LastBlockFile;
-extern CBlockFileInfo infoLastBlockFile;
-extern int nLastBlockFile;
-
 enum BlockStatus {
     BLOCK_VALID_UNKNOWN      =    0,
     BLOCK_VALID_HEADER       =    1, // parsed, version ok, hash satisfies claimed PoW, 1 <= vtx count <= max, timestamp not in future
@@ -1938,16 +1932,6 @@ public:
     void print() const
     {
         printf("%s\n", ToString().c_str());
-    }
-};
-
-struct CBlockIndexTrustComparator
-{
-    bool operator()(CBlockIndex *pa, CBlockIndex *pb) const {
-        if (pa->nChainTrust > pb->nChainTrust) return false;
-        if (pa->nChainTrust < pb->nChainTrust) return true;
-
-        return false; // identical blocks
     }
 };
 

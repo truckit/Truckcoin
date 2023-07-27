@@ -50,13 +50,11 @@ unsigned int nStakeTargetSpacing = 90; // 90 sec block spacing
 
 int64_t nChainStartTime = 1399495660;
 int nCoinbaseMaturity = 160;
-CBlockIndex *pindexBestInvalid;
 int64_t nTimeBestReceived = 0;
 int nScriptCheckThreads = 0;
 bool fImporting = false;
 bool fReindex = false;
 bool fTxIndex = true;
-set<CBlockIndex*, CBlockIndexTrustComparator> setBlockIndexValid; // may contain all CBlockIndex*'s that have validness >=BLOCK_VALID_TRANSACTIONS, and must contain those who aren't failed
 unsigned int nCoinCacheSize = 5000;
 
 CMedianFilter<int> cPeerBlockCounts(5, 0); // Amount of blocks that other nodes claim to have
@@ -81,6 +79,26 @@ int64_t nHPSTimerStart = 0;
 int64_t nTransactionFee = MIN_TX_FEE;
 int64_t nSplitThreshold = DEF_SPLIT_AMOUNT;
 extern enum CPMode CheckpointsMode;
+
+// Internal stuff
+namespace {
+struct CBlockIndexTrustComparator
+{
+    bool operator()(CBlockIndex *pa, CBlockIndex *pb) {
+        if (pa->nChainTrust > pb->nChainTrust) return false;
+        if (pa->nChainTrust < pb->nChainTrust) return true;
+
+        return false; // identical blocks
+    }
+};
+
+CBlockIndex *pindexBestInvalid;
+set<CBlockIndex*, CBlockIndexTrustComparator> setBlockIndexValid; // may contain all CBlockIndex*'s that have validness >=BLOCK_VALID_TRANSACTIONS, and must contain those who aren't failed
+
+CCriticalSection cs_LastBlockFile;
+CBlockFileInfo infoLastBlockFile;
+int nLastBlockFile = 0;
+} // anon namespace
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -3054,10 +3072,6 @@ bool CheckDiskSpace(uint64_t nAdditionalBytes)
         return AbortNode(_("Error: Disk space is low!"));
     return true;
 }
-
-CCriticalSection cs_LastBlockFile;
-CBlockFileInfo infoLastBlockFile;
-int nLastBlockFile = 0;
 
 FILE* OpenDiskFile(const CDiskBlockPos &pos, const char *prefix, bool fReadOnly)
 {
