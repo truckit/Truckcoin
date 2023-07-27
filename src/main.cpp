@@ -2072,6 +2072,68 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C
     return true;
 }
 
+bool static WriteChainState(CValidationState &state) {
+    if (!IsInitialBlockDownload() || pcoinsTip->GetCacheSize() > nCoinCacheSize) {
+        // Typical CCoins structures on disk are around 100 bytes in size.
+        // Pushing a new one to the database can cause it to be written
+        // twice (once in the log, and once in the tables). This is already
+        // an overestimation, as most will delete an existing entry or
+        // overwrite one. Still, use a conservative safety factor of 2.
+        if (!CheckDiskSpace(100 * 2 * 2 * pcoinsTip->GetCacheSize()))
+            return state.Error();
+        FlushBlockFile();
+        pblocktree->Sync();
+        if (!pcoinsTip->Flush())
+            return state.Abort(_("Failed to write to coin database"));
+    }
+    return true;
+}
+
+void static UpdateTip(CBlockIndex *pindexNew) {
+    chainActive.SetTip(pindexNew);
+
+    // Update best block in wallet (so we can detect restored wallets)
+    bool fIsInitialDownload = IsInitialBlockDownload();
+    if ((chainActive.Height() % 20160) == 0 || (!fIsInitialDownload && (chainActive.Height() % 144) == 0))
+        ::SetBestChain(chainActive.GetLocator());
+
+    // New best block
+    nTimeBestReceived = GetTime();
+    nTransactionsUpdated++;
+
+//    printf("UpdateTip: new best=%s  height=%d log2_trust=%.8g tx=%lu  date=%s\n",
+    printf("UpdateTip: new best=%s  height=%d tx=%lu  date=%s\n",
+      chainActive.Tip()->GetBlockHash().ToString().c_str(), chainActive.Height(),
+//      log(chainActive.Tip()->nChainTrust.getdouble())/log(2.0),
+      (unsigned long)chainActive.Tip()->nChainTx, DateTimeStrFormat("%d/%m/%Y %H:%M:%S", chainActive.Tip()->GetBlockTime()).c_str());
+
+    printf("Stake checkpoint: %x\n", chainActive.Tip()->nStakeModifierChecksum);
+
+    // Check the version of the last 100 blocks to see if we need to upgrade:
+    if (!fIsInitialDownload)
+    {
+        int nUpgraded = 0;
+        const CBlockIndex* pindex = chainActive.Tip();
+        for (int i = 0; i < 100 && pindex != NULL; i++)
+        {
+            if (pindex->nVersion > CBlock::CURRENT_VERSION)
+                ++nUpgraded;
+            pindex = pindex->pprev;
+        }
+        if (nUpgraded > 0)
+            printf("SetBestChain: %d of last 100 blocks above version %d\n", nUpgraded, (int)CBlock::CURRENT_VERSION);
+        if (nUpgraded > 100/2)
+            // strMiscWarning is read by GetWarnings(), called by Qt and the JSON-RPC code to warn the user:
+            strMiscWarning = _("Warning: This version is obsolete, upgrade required!");
+    }
+
+    std::string strCmd = GetArg("-blocknotify", "");
+
+    if (!fIsInitialDownload && !strCmd.empty())
+        // thread runs free
+        boost::thread t(runCommand, regex_replace(strCmd, static_cast<std::regex>("%s"), chainActive.Tip()->GetBlockHash().GetHex()));
+}
+
 bool SetBestChain(CValidationState &state, CBlockIndex* pindexNew)
 {
     // All modifications to the coin state will be done in this cache.
@@ -2147,27 +2209,8 @@ bool SetBestChain(CValidationState &state, CBlockIndex* pindexNew)
     // Flush changes to global coin state
     assert(view.Flush());
 
-    // Make sure it's successfully written to disk before changing memory structure
-    bool fIsInitialDownload = IsInitialBlockDownload();
-    if (!fIsInitialDownload || pcoinsTip->GetCacheSize() > nCoinCacheSize) {
-        // Typical CCoins structures on disk are around 100 bytes in size.
-        // Pushing a new one to the database can cause it to be written
-        // twice (once in the log, and once in the tables). This is already
-        // an overestimation, as most will delete an existing entry or
-        // overwrite one. Still, use a conservative safety factor of 2.
-        if (!CheckDiskSpace(100 * 2 * 2 * pcoinsTip->GetCacheSize()))
-            return state.Error();
-        FlushBlockFile();
-        pblocktree->Sync();
-        if (!pcoinsTip->Flush())
-            return state.Abort(_("Failed to write to coin database"));
-    }
-
-    // At this point, all changes have been done to the database.
-    // Proceed by updating the memory structures.
-
-    // Register new best chain
-    chainActive.SetTip(pindexNew);
+    if (!WriteChainState(state))
+        return false;
 
     // Resurrect memory transactions that were in the disconnected branch
     for (CTransaction& tx : vResurrect) {
@@ -2182,48 +2225,7 @@ bool SetBestChain(CValidationState &state, CBlockIndex* pindexNew)
         mempool.removeConflicts(tx);
     }
 
-    // Update best block in wallet (so we can detect restored wallets)
-    if ((pindexNew->nHeight % 20160) == 0 || (!fIsInitialDownload && (pindexNew->nHeight % 144) == 0))
-       ::SetBestChain(chainActive.GetLocator(pindexNew));
-
-    // New best block
-    nTimeBestReceived = GetTime();
-    nTransactionsUpdated++;
-
-//    printf("SetBestChain: new best=%s  height=%d  log2_trust=%.8g  tx=%lu  date=%s\n",
-    printf("SetBestChain: new best=%s  height=%d  tx=%lu  date=%s\n",
-      chainActive.Tip()->GetBlockHash().ToString().c_str(), 
-      chainActive.Height(),
-//      log(chainActive.Tip()->nChainTrust.getdouble())/log(2.0),
-      (unsigned long)pindexNew->nChainTx,
-      DateTimeStrFormat("%d/%m/%Y %H:%M:%S", chainActive.Tip()->GetBlockTime()).c_str());
-
-    printf("Stake checkpoint: %x\n", chainActive.Tip()->nStakeModifierChecksum);
-
-    // Check the version of the last 100 blocks to see if we need to upgrade:
-    if (!fIsInitialDownload)
-    {
-        int nUpgraded = 0;
-        const CBlockIndex* pindex = chainActive.Tip();
-        for (int i = 0; i < 100 && pindex != NULL; i++)
-        {
-            if (pindex->nVersion > CBlock::CURRENT_VERSION)
-                ++nUpgraded;
-            pindex = pindex->pprev;
-        }
-        if (nUpgraded > 0)
-            printf("SetBestChain: %d of last 100 blocks above version %d\n", nUpgraded, CBlock::CURRENT_VERSION);
-        if (nUpgraded > 100/2)
-            // strMiscWarning is read by GetWarnings(), called by Qt and the JSON-RPC code to warn the user:
-            strMiscWarning = _("Warning: This version is obsolete, upgrade required!");
-    }
-
-    std::string strCmd = GetArg("-blocknotify", "");
-
-    if (!fIsInitialDownload && !strCmd.empty())
-        // thread runs free
-        boost::thread t(runCommand, regex_replace(strCmd, static_cast<std::regex>("%s"), chainActive.Tip()->GetBlockHash().GetHex()));
-
+    UpdateTip(pindexNew);
     return true;
 }
 
