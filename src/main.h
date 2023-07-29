@@ -754,27 +754,27 @@ class CTxInUndo
 public:
     CTxOut txout;              // the txout data before being spent
     bool fCoinBase;            // if the outpoint was the last unspent: whether it belonged to a coinbase
-    bool fCoinStake;           // if the outpoint was the last unspent: whether it belonged to a coinstake
     unsigned int nHeight;      // if the outpoint was the last unspent: its height
     int nVersion;              // if the outpoint was the last unspent: its version
-    unsigned int nTime;        // if the outpoint was the last unspent: its timestamp
+    bool fCoinStake;           // ppcoin: if the outpoint was the last unspent: whether it belonged to a coinstake
+    unsigned int nTime;        // ppcoin: if the outpoint was the last unspent: its tx timestamp
     unsigned int nBlockTime;   // if the outpoint was the last unspent: its block timestamp
 
-    CTxInUndo() : txout(), fCoinBase(false), fCoinStake(false), nHeight(0), nVersion(0), nTime(0), nBlockTime(0) {}
-    CTxInUndo(const CTxOut &txoutIn, bool fCoinBaseIn = false, bool fCoinStakeIn = false, unsigned int nHeightIn = 0, int nVersionIn = 0, int nTimeIn = 0, int nBlockTimeIn = 0) : txout(txoutIn), fCoinBase(fCoinBaseIn), fCoinStake(fCoinStakeIn), nHeight(nHeightIn), nVersion(nVersionIn), nTime(nTimeIn), nBlockTime(nBlockTimeIn) { }
+    CTxInUndo() : txout(), fCoinBase(false), nHeight(0), nVersion(0), fCoinStake(false), nTime(0), nBlockTime(0) {}
+    CTxInUndo(const CTxOut &txoutIn, bool fCoinBaseIn = false, unsigned int nHeightIn = 0, int nVersionIn = 0, bool fCoinStakeIn = false, int nTimeIn = 0, int nBlockTimeIn = 0) : txout(txoutIn), fCoinBase(fCoinBaseIn), nHeight(nHeightIn), nVersion(nVersionIn), fCoinStake(fCoinStakeIn), nTime(nTimeIn), nBlockTime(nBlockTimeIn) { }
 
     unsigned int GetSerializeSize(int nType, int nVersion) const {
-        return ::GetSerializeSize(VARINT(nHeight*2+(fCoinBase ? 1 : 0)), nType, nVersion) +
-               ::GetSerializeSize(VARINT(nTime*2+(fCoinStake ? 1 : 0)), nType, nVersion) +
-               ::GetSerializeSize(VARINT(nBlockTime), nType, nVersion) +
+        return ::GetSerializeSize(VARINT(nHeight*4+(fCoinBase ? 1 : 0)+(fCoinStake ? 2 : 0)), nType, nVersion) +
+               ::GetSerializeSize(VARINT(nTime), nType, nVersion) +
                (nHeight > 0 ? ::GetSerializeSize(VARINT(this->nVersion), nType, nVersion) : 0) +
-               ::GetSerializeSize(CTxOutCompressor(REF(txout)), nType, nVersion);
+               ::GetSerializeSize(CTxOutCompressor(REF(txout)), nType, nVersion) +
+               ::GetSerializeSize(VARINT(nBlockTime), nType, nVersion);
     }
 
     template<typename Stream>
     void Serialize(Stream &s, int nType, int nVersion) const {
-        ::Serialize(s, VARINT(nHeight*2+(fCoinBase ? 1 : 0)), nType, nVersion);
-        ::Serialize(s, VARINT(nTime*2+(fCoinStake ? 1 : 0)), nType, nVersion);
+        ::Serialize(s, VARINT(nHeight*4+(fCoinBase ? 1 : 0)+(fCoinStake ? 2 : 0)), nType, nVersion);
+        ::Serialize(s, VARINT(nTime), nType, nVersion);
         ::Serialize(s, VARINT(nBlockTime), nType, nVersion);
         if (nHeight > 0)
             ::Serialize(s, VARINT(this->nVersion), nType, nVersion);
@@ -783,13 +783,12 @@ public:
 
     template<typename Stream>
     void Unserialize(Stream &s, int nType, int nVersion) {
-        unsigned int nCodeHeight = 0, nCodeTime = 0;
-        ::Unserialize(s, VARINT(nCodeHeight), nType, nVersion);
-        nHeight = nCodeHeight / 2;
-        fCoinBase = nCodeHeight & 1;
-        ::Unserialize(s, VARINT(nCodeTime), nType, nVersion);
-        nTime = nCodeTime / 2;
-        fCoinStake = nCodeTime & 1;
+        unsigned int nCode = 0;
+        ::Unserialize(s, VARINT(nCode), nType, nVersion);
+        nHeight = nCode / 4;
+        fCoinBase = nCode & 1;
+        fCoinStake = nCode & 2;
+        ::Unserialize(s, VARINT(nTime), nType, nVersion);
         ::Unserialize(s, VARINT(nBlockTime), nType, nVersion);
         if (nHeight > 0)
             ::Unserialize(s, VARINT(this->nVersion), nType, nVersion);
@@ -943,31 +942,31 @@ class CCoins
 public:
     // whether transaction is a coinbase
     bool fCoinBase;
-    
-    // whether transaction is a coinstake
-    bool fCoinStake;
 
     // unspent transaction outputs; spent outputs are .IsNull(); spent outputs at the end of the array are dropped
     std::vector<CTxOut> vout;
 
-    // at which height this transaction was included in the active blockchain
+    // at which height this transaction was included in the active block chain
     int nHeight;
 
     // version of the CTransaction; accesses to this value should probably check for nHeight as well,
     // as new tx version will probably only be introduced at certain heights
     int nVersion;
 
-    // transaction timestamp + coinstake flag
+    // ppcoin: whether transaction is a coinstake
+    bool fCoinStake;
+
+    // ppcoin: transaction timestamp
     unsigned int nTime;
 
     // block timestamp
     unsigned int nBlockTime;
 
-    // construct a CCoins from a CTransaction, at a given height/timestamp
-    CCoins(const CTransaction &tx, int nHeightIn, int nBlockTimeIn) : fCoinBase(tx.IsCoinBase()), fCoinStake(tx.IsCoinStake()), vout(tx.vout), nHeight(nHeightIn), nVersion(tx.nVersion), nTime(tx.nTime), nBlockTime(nBlockTimeIn) { }
+    // construct a CCoins from a CTransaction, at a given height
+    CCoins(const CTransaction &tx, int nHeightIn, int nBlockTimeIn) : fCoinBase(tx.IsCoinBase()), vout(tx.vout), nHeight(nHeightIn), nVersion(tx.nVersion), fCoinStake(tx.IsCoinStake()), nTime(tx.nTime), nBlockTime(nBlockTimeIn) { }
 
     // empty constructor
-    CCoins() : fCoinBase(false), fCoinStake(false), vout(0), nHeight(0), nVersion(0), nTime(0), nBlockTime(0) { }
+    CCoins() : fCoinBase(false), vout(0), nHeight(0), nVersion(0), fCoinStake(false), nTime(0), nBlockTime(0) { }
 
     // remove spent outputs at the end of vout
     void Cleanup() {
@@ -979,10 +978,10 @@ public:
 
     void swap(CCoins &to) {
         std::swap(to.fCoinBase, fCoinBase);
-        std::swap(to.fCoinStake, fCoinStake);
         to.vout.swap(vout);
         std::swap(to.nHeight, nHeight);
         std::swap(to.nVersion, nVersion);
+        std::swap(to.fCoinStake, fCoinStake);
         std::swap(to.nTime, nTime);
         std::swap(to.nBlockTime, nBlockTime);
     }
@@ -991,9 +990,10 @@ public:
     friend bool operator==(const CCoins &a, const CCoins &b) {
          return a.fCoinBase == b.fCoinBase &&
                 a.fCoinStake == b.fCoinStake &&
-                a.vout == b.vout &&
                 a.nHeight == b.nHeight &&
                 a.nVersion == b.nVersion &&
+                a.vout == b.vout &&
+                a.fCoinStake == b.fCoinStake &&
                 a.nTime == b.nTime &&
                 a.nBlockTime == b.nBlockTime;
     }
@@ -1037,7 +1037,7 @@ public:
         bool fFirst = vout.size() > 0 && !vout[0].IsNull();
         bool fSecond = vout.size() > 1 && !vout[1].IsNull();
         assert(fFirst || fSecond || nMaskCode);
-        unsigned int nCode = 8*(nMaskCode - (fFirst || fSecond ? 0 : 1)) + (fCoinBase ? 1 : 0) + (fFirst ? 2 : 0) + (fCoinStake ? 1 : 0) + (fSecond ? 4 : 0);
+        unsigned int nCode = 8*(nMaskCode - (fFirst || fSecond ? 0 : 1)) + (fCoinBase ? 1 : 0) + (fFirst ? 2 : 0) + (fSecond ? 4 : 0);
         // version
         nSize += ::GetSerializeSize(VARINT(this->nVersion), nType, nVersion);
         // size of header code
@@ -1050,8 +1050,11 @@ public:
                 nSize += ::GetSerializeSize(CTxOutCompressor(REF(vout[i])), nType, nVersion);
         // height
         nSize += ::GetSerializeSize(VARINT(nHeight), nType, nVersion);
-        // timestamp and coinstake flag
-        nSize += ::GetSerializeSize(VARINT(nTime*2+(fCoinStake ? 1 : 0)), nType, nVersion);
+        // ppcoin flags
+        unsigned int nFlag = fCoinStake? 1 : 0;
+        nSize += ::GetSerializeSize(VARINT(nFlag), nType, nVersion);
+        // ppcoin transaction timestamp
+        nSize += ::GetSerializeSize(VARINT(nTime), nType, nVersion);
         // block timestamp
         nSize += ::GetSerializeSize(VARINT(nBlockTime), nType, nVersion);
         return nSize;
@@ -1084,15 +1087,18 @@ public:
         }
         // coinbase height
         ::Serialize(s, VARINT(nHeight), nType, nVersion);
-        // transaction timestamp and coinstake flag
-        ::Serialize(s, VARINT(nTime*2+(fCoinStake ? 1 : 0)), nType, nVersion);
+        // ppcoin flags
+        unsigned int nFlag = fCoinStake? 1 : 0;
+        ::Serialize(s, VARINT(nFlag), nType, nVersion);
+        // ppcoin transaction timestamp
+        ::Serialize(s, VARINT(nTime), nType, nVersion);
         // block time
         ::Serialize(s, VARINT(nBlockTime), nType, nVersion);
     }
 
     template<typename Stream>
     void Unserialize(Stream &s, int nType, int nVersion) {
-        unsigned int nCode = 0, nCodeTime = 0;
+        unsigned int nCode = 0;
         // version
         ::Unserialize(s, VARINT(this->nVersion), nType, nVersion);
         // header code
@@ -1121,10 +1127,12 @@ public:
         }
         // coinbase height
         ::Unserialize(s, VARINT(nHeight), nType, nVersion);
-        // transaction timestamp
-        ::Unserialize(s, VARINT(nCodeTime), nType, nVersion);
-        nTime = nCodeTime / 2;
-        fCoinStake = nCodeTime & 1;
+        // ppcoin flags
+        unsigned int nFlag = 0;
+        ::Unserialize(s, VARINT(nFlag), nType, nVersion);
+        fCoinStake = nFlag & 1;
+        // ppcoin transaction timestamp
+        ::Unserialize(s, VARINT(nTime), nType, nVersion);
         // block timestamp
         ::Unserialize(s, VARINT(nBlockTime), nType, nVersion);
         Cleanup();
@@ -1140,11 +1148,11 @@ public:
         vout[out.n].SetNull();
         Cleanup();
         if (vout.size() == 0) {
-            undo.fCoinBase = fCoinBase;
-            undo.fCoinStake = fCoinStake;
             undo.nHeight = nHeight;
+            undo.fCoinBase = fCoinBase;
             undo.nVersion = this->nVersion;
-            undo.nTime = nTime;
+            undo.fCoinStake = fCoinStake;  // ppcoin
+            undo.nTime = nTime;            // ppcoin
             undo.nBlockTime = nBlockTime;
         }
         return true;
@@ -1402,8 +1410,7 @@ public:
         return (int64_t)nTime;
     }
 
-    void UpdateTime(const CBlockIndex* pindexPrev);
-    
+    void UpdateTime(const CBlockIndex* pindexPrev);   
 };
 
 class CBlock : public CBlockHeader
@@ -1444,9 +1451,7 @@ public:
         vMerkleTree.clear();
     }
 
-
-
-    // two types of block: proof-of-work or proof-of-stake
+    // ppcoin: two types of block: proof-of-work or proof-of-stake
     bool IsProofOfStake() const
     {
         return (vtx.size() > 1 && vtx[1].IsCoinStake());
@@ -1462,7 +1467,7 @@ public:
         return IsProofOfStake()? std::make_pair(vtx[1].vin[0].prevout, vtx[1].nTime) : std::make_pair(COutPoint(), (unsigned int)0);
     }
 
-    // get max transaction timestamp
+    // ppcoin: get max transaction timestamp
     int64_t GetMaxTransactionTime() const
     {
         int64_t maxTransactionTime = 0;
@@ -1558,7 +1563,7 @@ public:
         }
         printf("  vMerkleTree: ");
         for (unsigned int i = 0; i < vMerkleTree.size(); i++)
-            printf("%s ", vMerkleTree[i].ToString().substr(0,10).c_str());
+            printf("%s ", vMerkleTree[i].ToString().c_str());
         printf("\n");
     }
     
@@ -1722,7 +1727,6 @@ public:
 
     // Hash modifier for proof-of-stake kernel
     uint64_t nStakeModifier;
-
     // Checksum of index in-memory only
     unsigned int nStakeModifierChecksum;
     // Predecessor of coinstake transaction
@@ -2021,7 +2025,7 @@ public:
         str += CBlockIndex::ToString();
         str += strprintf("\n                hashBlock=%s, hashPrev=%s)",
             GetBlockHash().ToString().c_str(),
-            hashPrev.ToString().substr(0,20).c_str());
+            hashPrev.ToString().c_str());
         return str;
     }
 

@@ -427,8 +427,11 @@ bool CheckProofOfStake(CValidationState &state, const CTransaction& tx, unsigned
     CCoins coins;
     CCoinsViewCache &view = *pcoinsTip;
 
-    if (!view.GetCoins(txin.prevout.hash, coins))
-        return tx.DoS(1, error("CheckProofOfStake() : INFO: read coins for txPrev failed"));  // previous transaction not in main chain, may occur during initial download
+   /* May happen if the previous transaction isn't in the main chain yet */
+    if (!view.GetCoins(txin.prevout.hash, coins)) {
+        return(error("CheckProofOfStake() : cannot find a previous transaction output"));
+        return(false);
+    }
 
     CBlockIndex* pindex = chainActive[coins.nHeight];
 
