@@ -50,7 +50,7 @@
           <cursorShape>IBeamCursor</cursorShape>
          </property>
          <property name="text">
-          <string>&lt;b&gt;Truckcoin&lt;/b&gt; version</string>
+          <string>&lt;b&gt;Truckcoin Classic &lt;/b&gt;</string>
          </property>
          <property name="textInteractionFlags">
           <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
@@ -94,7 +94,7 @@
         <string>
 Copyright © 2009-2012 Bitcoin Developers&lt;br/&gt;
 Copyright © 2012 PPCoin Developers&lt;br/&gt;
-Copyright © 2014-2020 Truckcoin Developers&lt;br/&gt;&lt;br/&gt;
+Copyright © 2014-2024 Truckcoin Developers&lt;br/&gt;&lt;br/&gt;
 Website: &lt;a href=&quot;http://truckcoin.net&quot;&gt;truckcoin.net&lt;/a&gt;&lt;br/&gt;&lt;br/&gt;
 Explorers: &lt;a href=&quot;http://explorer.truckcoin.net/&quot;&gt;explorer.truckcoin.net&lt;/a&gt; &lt;a href=&quot;http://truckcoin.ovh/&quot;&gt;truckcoin.ovh&lt;/a&gt;
        </string>

@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Truckcoin - Debug window</string>
+   <string>Truckcoin Classic - Debug window</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
@@ -36,7 +36,7 @@
           </font>
          </property>
          <property name="text">
-          <string>Truckcoin Core</string>
+          <string>Truckcoin Classic</string>
          </property>
         </widget>
        </item>

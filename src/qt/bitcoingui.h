@@ -49,7 +49,7 @@ public:
         functionality.
     */
     void setWalletModel(WalletModel *walletModel);
-	
+
    /// Get window identifier of QMainWindow (BitcoinGUI) 
    WId getMainWinId() const; 
 
@@ -93,10 +93,10 @@ private:
     QAction *toggleHideAction;
     QAction *exportAction;
     QAction *encryptWalletAction;
-	QAction *unlockWalletforposAction;
-	QAction *unlockWalletAction;
-	QAction *lockWalletAction;
-	QAction *checkWalletAction; 
+    QAction *unlockWalletforposAction;
+    QAction *unlockWalletAction;
+    QAction *lockWalletAction;
+    QAction *checkWalletAction; 
     QAction *repairWalletAction; 
     QAction *backupWalletAction;
     QAction *dumpWalletAction;
@@ -112,7 +112,7 @@ private:
     Notificator *notificator;
     TransactionView *transactionView;
     RPCConsole *rpcConsole;
-	BlockBrowser *blockBrowser;
+    BlockBrowser *blockBrowser;
 
     QMovie *syncIconMovie;
 
@@ -131,7 +131,7 @@ private:
     void createTrayIcon();
     /** Create system tray menu (or setup the dock menu) */ 
     void createTrayIconMenu(); 
-	
+
     void updateStyle();
     void writeDefaultStyleSheet(const QString &qssPath);
 
@@ -151,9 +151,8 @@ public slots:
       @param[in] message   the displayed text
       @param[in] style        modality and style definitions (icon and used buttons - buttons only for message boxes)
                                      @see CClientUIInterface::MessageBoxFlags
-      @param[in] ret       pointer to a bool that will be modified to whether Ok was clicked (modal only)
   */
-   void message(const QString &title, const QString &message, unsigned int style, bool *ret = NULL);
+   void message(const QString &title, const QString &message, unsigned int style);
    
     /** Asks the user whether to pay the transaction fee or to cancel the transaction.
        It is currently not possible to pass a return value to another thread through
@@ -177,9 +176,9 @@ private slots:
     void gotoReceiveCoinsPage();
     /** Switch to send coins page */
     void gotoSendCoinsPage();
-	
-	/** Show block explorer page */
-	void gotoBlockBrowser(QString transactionId = "");
+
+    /** Show block explorer page */
+    void gotoBlockBrowser(QString transactionId = "");
 
     /** Show Sign/Verify Message dialog and switch to sign message tab */
     void gotoSignMessageTab(QString addr = "");
@@ -190,7 +189,7 @@ private slots:
     void optionsClicked();
     /** Show about dialog */
     void aboutClicked();
-	/** Allow user to unlock wallet from click */ 
+    /** Allow user to unlock wallet from click */ 
     void lockIconClicked(); 
 
 #ifndef Q_OS_MAC
@@ -219,9 +218,9 @@ private slots:
     void unlockWallet();
     /** Ask for passphrase to unlock wallet for the session to mint */ 
     void unlockWalletForMint(); 
-	/** Allow user to lock wallet */ 
+    /** Allow user to lock wallet */ 
     void lockWallet(); 
-	
+
     /** Enable/disable stake mining */
     void stakeMinerToggle(bool fInitial = false);
 
@@ -237,7 +236,7 @@ private slots:
     void updateMintingIcon();
     /** Update minting weight info */
     void updateMintingWeights();
-	
+
     void updateStyleSlot();
 };
 

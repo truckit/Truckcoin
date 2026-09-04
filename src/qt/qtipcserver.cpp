@@ -107,7 +107,8 @@ static void ipcThread2(void* pArg)
             MilliSleep(1000);
         }
 
-        boost::this_thread::interruption_point();
+        if (fShutdown)
+            break;
     }
 
     // Remove message queue

@@ -15,7 +15,6 @@
 using namespace std;
 using namespace boost;
 
-
 static uint64_t nAccountingEntryNumber = 0;
 
 //
@@ -224,8 +223,7 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
             ssKey >> hash;
             CWalletTx& wtx = pwallet->mapWallet[hash];
             ssValue >> wtx;
-            CValidationState state;
-            if (wtx.CheckTransaction(state) && (wtx.GetHash() == hash) && state.IsValid())
+            if (wtx.CheckTransaction() && (wtx.GetHash() == hash))
                 wtx.BindWallet(pwallet);
             else
             {
@@ -356,7 +354,7 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
         }
         else if (strType == "ckey")
         {
-		    wss.nCKeys++;
+            wss.nCKeys++;
             vector<unsigned char> vchPubKey;
             ssKey >> vchPubKey;
             vector<unsigned char> vchPrivKey;
@@ -391,11 +389,11 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
         {
             int64_t nIndex;
             ssKey >> nIndex;
-			CKeyPool keypool;
-			ssValue >> keypool;
+            CKeyPool keypool;
+            ssValue >> keypool;
             pwallet->setKeyPool.insert(nIndex);
-			
-			              // If no metadata exists yet, create a default with the pool key's
+
+            // If no metadata exists yet, create a default with the pool key's
             // creation time. Note that this may be overwritten by actually
             // stored metadata for that key later, which is fine.
             CKeyID keyid = keypool.vchPubKey.GetID();
@@ -498,10 +496,8 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
         }
         pcursor->close();
     }
-    catch (boost::thread_interrupted) {
-        throw;
-    }
-    catch (...) {
+    catch (...)
+    {
         result = DB_CORRUPT;
     }
 
@@ -538,11 +534,12 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
     return result;
 }
 
-void ThreadFlushWalletDB(const string& strFile)
+void ThreadFlushWalletDB(void* parg)
 {
     // Make this thread recognisable as the wallet flushing thread
     RenameThread("truckcoin-wallet");
 
+    const string& strFile = ((const string*)parg)[0];
     static bool fOneThread;
     if (fOneThread)
         return;
@@ -553,7 +550,7 @@ void ThreadFlushWalletDB(const string& strFile)
     unsigned int nLastSeen = nWalletDBUpdated;
     unsigned int nLastFlushed = nWalletDBUpdated;
     int64_t nLastWalletUpdate = GetTime();
-    while (true)
+    while (!fShutdown)
     {
         MilliSleep(500);
 
@@ -577,9 +574,8 @@ void ThreadFlushWalletDB(const string& strFile)
                     mi++;
                 }
 
-                if (nRefCount == 0)
+                if (nRefCount == 0 && !fShutdown)
                 {
-                    boost::this_thread::interruption_point();
                     map<string, int>::iterator mi = bitdb.mapFileUseCount.find(strFile);
                     if (mi != bitdb.mapFileUseCount.end())
                     {
@@ -604,7 +600,7 @@ bool BackupWallet(const CWallet& wallet, const string& strDest)
 {
     if (!wallet.fFileBacked)
         return false;
-    while (true)
+    while (!fShutdown)
     {
         {
             LOCK(bitdb.cs_db);
@@ -622,7 +618,9 @@ bool BackupWallet(const CWallet& wallet, const string& strDest)
                     pathDest /= wallet.strWalletFile;
 
                 try {
-#if BOOST_VERSION >= 104000
+#if BOOST_VERSION >= 107400
+                    boost::filesystem::copy_file(pathSrc, pathDest, boost::filesystem::copy_options::overwrite_existing);
+#elif BOOST_VERSION >= 104000
                     boost::filesystem::copy_file(pathSrc, pathDest, boost::filesystem::copy_option::overwrite_if_exists);
 #else
                     boost::filesystem::copy_file(pathSrc, pathDest);
@@ -726,7 +724,7 @@ bool DumpWallet(CWallet* pwallet, const string& strDest)
 
   if (!pwallet->fFileBacked)
       return false;
-  while (true)
+  while (!fShutdown)
   {
       // Populate maps
       std::map<CKeyID, int64_t> mapKeyBirth;
@@ -751,8 +749,8 @@ bool DumpWallet(CWallet* pwallet, const string& strDest)
       // produce output
       file << strprintf("# Wallet dump created by Truckcoin %s (%s)\n", CLIENT_BUILD.c_str(), CLIENT_DATE.c_str());
       file << strprintf("# * Created on %s\n", EncodeDumpTime(GetTime()).c_str());
-      file << strprintf("# * Best block at time of backup was %i (%s),\n", chainActive.Height(), chainActive.Tip()->GetBlockHash().ToString().c_str());
-      file << strprintf("# mined on %s\n", EncodeDumpTime(chainActive.Tip()->nTime).c_str());
+      file << strprintf("# * Best block at time of backup was %i (%s),\n", nBestHeight, hashBestChain.ToString().c_str());
+      file << strprintf("# mined on %s\n", EncodeDumpTime(pindexBest->nTime).c_str());
       file << "\n";
       for (std::vector<std::pair<int64_t, CKeyID> >::const_iterator it = vKeyBirth.begin(); it != vKeyBirth.end(); it++) {
           const CKeyID &keyid = it->second;
@@ -778,13 +776,12 @@ bool DumpWallet(CWallet* pwallet, const string& strDest)
    return false;
 }
 
-
 bool ImportWallet(CWallet *pwallet, const string& strLocation)
 {
 
    if (!pwallet->fFileBacked)
        return false;
-   while (true)
+   while (!fShutdown)
    {
       // open inputfile as stream
       ifstream file;
@@ -792,7 +789,7 @@ bool ImportWallet(CWallet *pwallet, const string& strLocation)
       if (!file.is_open())
           return false;
 
-      int64_t nTimeBegin = chainActive.Tip()->nTime;
+      int64_t nTimeBegin = pindexBest->nTime;
 
       bool fGood = true;
 
@@ -847,14 +844,14 @@ bool ImportWallet(CWallet *pwallet, const string& strLocation)
       file.close();
 
       // rescan block chain looking for coins from new keys
-      CBlockIndex *pindex = chainActive.Tip();
+      CBlockIndex *pindex = pindexBest;
       while (pindex && pindex->pprev && pindex->nTime > nTimeBegin - 7200)
           pindex = pindex->pprev;
 
       if (!pwallet->nTimeFirstKey || nTimeBegin < pwallet->nTimeFirstKey)
           pwallet->nTimeFirstKey = nTimeBegin;
 
-      printf("Rescanning last %i blocks\n", chainActive.Height() - pindex->nHeight + 1);
+      printf("Rescanning last %i blocks\n", pindexBest->nHeight - pindex->nHeight + 1);
       pwallet->ScanForWalletTransactions(pindex);
       pwallet->ReacceptWalletTransactions();
       pwallet->MarkDirty();

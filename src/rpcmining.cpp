@@ -6,6 +6,7 @@
 
 #include "main.h"
 #include "db.h"
+#include "txdb.h"
 #include "init.h"
 #include "miner.h"
 #include "bitcoinrpc.h"
@@ -71,40 +72,40 @@ Value getmininginfo(const Array& params, bool fHelp)
 
     Object obj;
     obj.push_back(Pair("pos_enabled",  fStaking));
-    obj.push_back(Pair("blocks",        (int)chainActive.Height()));
+    obj.push_back(Pair("blocks",        (int)nBestHeight));
     obj.push_back(Pair("currentblocksize",(uint64_t)nLastBlockSize));
     obj.push_back(Pair("currentblocktx",(uint64_t)nLastBlockTx));
 //    obj.push_back(Pair("PoW difficulty",    (double)GetDifficulty()));
-    obj.push_back(Pair("difficulty", GetDifficulty(GetLastBlockIndex(chainActive.Tip(), true))));
+    obj.push_back(Pair("difficulty", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
     obj.push_back(Pair("errors",        GetWarnings("statusbar")));
     obj.push_back(Pair("generate",      GetBoolArg("-gen")));
     obj.push_back(Pair("genproclimit",  (int)GetArg("-genproclimit", -1)));
 //    obj.push_back(Pair("hashespersec",  gethashespersec(params, false)));
 //    obj.push_back(Pair("networkhashps", getnetworkhashps(params, false)));
     obj.push_back(Pair("pooledtx",      (uint64_t)mempool.size()));
-    obj.push_back(Pair("stakereward", (uint64_t)GetProofOfStakeReward(0, GetLastBlockIndex(chainActive.Tip(), true)->nBits, GetTime(), chainActive.Height(), true)));
+    obj.push_back(Pair("stakereward", (uint64_t)GetProofOfStakeReward(0, GetLastBlockIndex(pindexBest, true)->nBits, GetTime(), pindexBest->nHeight, true)));
     obj.push_back(Pair("testnet",       fTestNet));
     return obj;
 }
 
 // Return average network hashes per second based on last number of blocks.
 Value GetNetworkHashPS(int lookup) {
-    if (chainActive.Tip() == NULL)
+    if (pindexBest == NULL)
         return 0;
 
     // If lookup is -1, then use blocks since last difficulty change.
     if (lookup <= 0)
-        lookup = chainActive.Height() % 2016 + 1;
+        lookup = pindexBest->nHeight % 2016 + 1;
 
     // If lookup is larger than chain, then set it to chain length.
-    if (lookup > chainActive.Height())
-        lookup = chainActive.Height();
+    if (lookup > pindexBest->nHeight)
+        lookup = pindexBest->nHeight;
 
-    CBlockIndex* pindexPrev = chainActive.Tip();
+    CBlockIndex* pindexPrev = pindexBest;
     for (int i = 0; i < lookup; i++)
         pindexPrev = pindexPrev->pprev;
 
-    double timeDiff = chainActive.Tip()->GetBlockTime() - pindexPrev->GetBlockTime();
+    double timeDiff = pindexBest->GetBlockTime() - pindexPrev->GetBlockTime();
     double timePerBlock = timeDiff / lookup;
 
     return (int64_t)(((double)GetDifficulty() * pow(2.0, 32)) / timePerBlock);
@@ -123,7 +124,7 @@ Value getnetworkhashps(const Array& params, bool fHelp)
 
 Value getblocktemplate(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() != 1)
+    if (fHelp || params.size() > 1)
         throw runtime_error(
             "getblocktemplate [params]\n"
             "Returns data needed to construct a block to work on:\n"
@@ -174,7 +175,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
     static CBlockIndex* pindexPrev;
     static int64_t nStart;
     static CBlock* pblock;
-    if (pindexPrev != chainActive.Tip() ||
+    if (pindexPrev != pindexBest ||
         (nTransactionsUpdated != nTransactionsUpdatedLast && GetTime() - nStart > 5))
     {
         // Clear pindexPrev so future calls make a new block, despite any failures from here on
@@ -182,7 +183,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
 
         // Store the pindexBest used before CreateNewBlock, to avoid races
         nTransactionsUpdatedLast = nTransactionsUpdated;
-        CBlockIndex* pindexPrevNew = chainActive.Tip();
+        CBlockIndex* pindexPrevNew = pindexBest;
         nStart = GetTime();
 
         // Create new block
@@ -206,7 +207,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
     Array transactions;
     map<uint256, int64_t> setTxIndex;
     int i = 0;
-    CCoinsViewCache &view = *pcoinsTip;
+    CTxDB txdb("r");
     for (CTransaction& tx : pblock->vtx)
     {
         uint256 txHash = tx.GetHash();
@@ -223,21 +224,25 @@ Value getblocktemplate(const Array& params, bool fHelp)
 
         entry.push_back(Pair("hash", txHash.GetHex()));
 
-        Array deps;
-        for (const CTxIn &in : tx.vin)
+        MapPrevTx mapInputs;
+        map<uint256, CTxIndex> mapUnused;
+        bool fInvalid = false;
+        if (tx.FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid))
         {
-            if (setTxIndex.count(in.prevout.hash))
-                deps.push_back(setTxIndex[in.prevout.hash]);
-        }
-        entry.push_back(Pair("depends", deps));
+            entry.push_back(Pair("fee", (int64_t)(tx.GetValueIn(mapInputs) - tx.GetValueOut())));
 
-        int64_t nSigOps = tx.GetLegacySigOpCount();
-        if (tx.HaveInputs(view))
-        {
-            entry.push_back(Pair("fee", (int64_t)(tx.GetValueIn(view) - GetValueOut(tx))));
-            nSigOps += tx.GetP2SHSigOpCount(view);
+            Array deps;
+            for (MapPrevTx::value_type& inp : mapInputs)
+            {
+                if (setTxIndex.count(inp.first))
+                    deps.push_back(setTxIndex[inp.first]);
+            }
+            entry.push_back(Pair("depends", deps));
+
+            int64_t nSigOps = tx.GetLegacySigOpCount();
+            nSigOps += tx.GetP2SHSigOpCount(mapInputs);
+            entry.push_back(Pair("sigops", nSigOps));
         }
-        entry.push_back(Pair("sigops", nSigOps));
 
         transactions.push_back(entry);
     }
@@ -285,19 +290,18 @@ Value submitblock(const Array& params, bool fHelp)
 
     vector<unsigned char> blockData(ParseHex(params[0].get_str()));
     CDataStream ssBlock(blockData, SER_NETWORK, PROTOCOL_VERSION);
-    CBlock pblock;
+    CBlock block;
     try {
-        ssBlock >> pblock;
+        ssBlock >> block;
     }
     catch (std::exception &e) {
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
     }
 
-    if (!pblock.SignBlock(*pwalletMain))
+    if (!block.SignBlock(*pwalletMain))
         throw JSONRPCError(-100, "Unable to sign block, wallet locked?");
 
-    CValidationState state;
-    bool fAccepted = ProcessBlock(state, NULL, &pblock);
+    bool fAccepted = ProcessBlock(NULL, &block);
     if (!fAccepted)
         return "rejected";
 
@@ -325,4 +329,3 @@ Value setstaking(const Array& params, bool fHelp) {
 //    return Value::null;
     return fStaking;
 }
-

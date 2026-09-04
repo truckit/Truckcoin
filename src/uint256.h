@@ -6,12 +6,13 @@
 #ifndef BITCOIN_UINT256_H
 #define BITCOIN_UINT256_H
 
-#include <assert.h>
-#include <stdint.h>
+#include <limits.h>
 #include <stdio.h>
-#include <string>
 #include <string.h>
+#include <inttypes.h>
+#include <string>
 #include <vector>
+#include <stdint.h>
 
 extern const signed char p_util_hexdigit[256]; // defined in util.cpp
 
@@ -201,7 +202,7 @@ public:
     {
         // prefix operator
         int i = 0;
-        while (--pn[i] == (uint32_t)-1 && i < WIDTH-1)
+        while (--pn[i] == -1 && i < WIDTH-1)
             i++;
         return *this;
     }
@@ -368,44 +369,29 @@ public:
         return sizeof(pn);
     }
 
-    uint64_t GetLow64() const
+    uint64_t Get64(int n=0) const
     {
-        assert(WIDTH >= 2);
-        return pn[0] | (uint64_t)pn[1] << 32;
+        return pn[2*n] | (uint64_t)pn[2*n+1] << 32;
     }
 
+//    unsigned int GetSerializeSize(int nType=0, int nVersion=PROTOCOL_VERSION) const
     unsigned int GetSerializeSize(int nType, int nVersion) const
     {
         return sizeof(pn);
     }
 
     template<typename Stream>
+//    void Serialize(Stream& s, int nType=0, int nVersion=PROTOCOL_VERSION) const
     void Serialize(Stream& s, int nType, int nVersion) const
     {
         s.write((char*)pn, sizeof(pn));
     }
 
     template<typename Stream>
+//    void Unserialize(Stream& s, int nType=0, int nVersion=PROTOCOL_VERSION)
     void Unserialize(Stream& s, int nType, int nVersion)
     {
         s.read((char*)pn, sizeof(pn));
-    }
-
-    // Temporary for migration to opaque uint160/256
-    uint64_t GetCheapHash() const
-    {
-        return GetLow64();
-    }
-    void SetNull()
-    {
-        memset(pn, 0, sizeof(pn));
-    }
-    bool IsNull() const
-    {
-        for (int i = 0; i < WIDTH; i++)
-            if (pn[i] != 0)
-                return false;
-        return true;
     }
 
     friend class uint160;
@@ -532,6 +518,11 @@ inline const uint160 operator&(const uint160& a, const uint160& b)      { return
 inline const uint160 operator|(const uint160& a, const uint160& b)      { return (base_uint160)a |  (base_uint160)b; }
 inline const uint160 operator+(const uint160& a, const uint160& b)      { return (base_uint160)a +  (base_uint160)b; }
 inline const uint160 operator-(const uint160& a, const uint160& b)      { return (base_uint160)a -  (base_uint160)b; }
+
+
+
+
+
 
 //////////////////////////////////////////////////////////////////////////////
 //

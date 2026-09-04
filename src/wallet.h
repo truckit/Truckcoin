@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2013-2019 The Truckcoin developers
+// Copyright (c) 2013-2024 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #ifndef BITCOIN_WALLET_H
@@ -34,7 +34,6 @@ enum WalletFeature
 
     FEATURE_LATEST = 60000
 };
-
 
 /** A key pool entry */
 class CKeyPool
@@ -98,6 +97,7 @@ public:
     unsigned int nMasterKeyMaxID;
 
     unsigned int nHashDrift;
+    int nStakeSetUpdateTime;
 
     CWallet()
     {
@@ -110,6 +110,7 @@ public:
         fWalletUnlockMintOnly = false;
         fSplitBlock = false;
         nHashDrift = 60;
+        nStakeSetUpdateTime = 300; // 5 minutes
     }
     CWallet(std::string strWalletFileIn)
     {
@@ -122,7 +123,8 @@ public:
         nOrderPosNext = 0;
         fWalletUnlockMintOnly = false;
         fSplitBlock = false;
-        nHashDrift = 60;		
+        nHashDrift = 60;
+        nStakeSetUpdateTime = 300; // 5 minutes
     }
 
     std::map<uint256, CWalletTx> mapWallet;
@@ -180,10 +182,11 @@ public:
 
     void MarkDirty();
     bool AddToWallet(const CWalletTx& wtxIn);
-    bool AddToWalletIfInvolvingMe(const uint256 &hash, const CTransaction& tx, const CBlock* pblock, bool fUpdate = false, bool fFindBlock = false);
+    bool AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlock* pblock, bool fUpdate = false, bool fFindBlock = false);
     bool EraseFromWallet(uint256 hash);
     void WalletUpdateSpent(const CTransaction& prevout);
     int ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate = false);
+    int ScanForWalletTransaction(const uint256& hashTx);
     void ReacceptWalletTransactions();
     void ResendWalletTransactions();
     int64_t GetBalance() const;
@@ -347,14 +350,14 @@ public:
 
     ~CReserveKey()
     {
-        ReturnKey();
+        if (!fShutdown)
+            ReturnKey();
     }
 
     void ReturnKey();
     CPubKey GetReservedKey();
     void KeepKey();
 };
-
 
 typedef std::map<std::string, std::string> mapValue_t;
 
@@ -369,14 +372,12 @@ static void ReadOrderPos(int64_t& nOrderPos, mapValue_t& mapValue)
     nOrderPos = atoi64(mapValue["n"].c_str());
 }
 
-
 static void WriteOrderPos(const int64_t& nOrderPos, mapValue_t& mapValue)
 {
     if (nOrderPos == -1)
         return;
     mapValue["n"] = i64tostr(nOrderPos);
 }
-
 
 /** A transaction with a bunch of additional info that only the owner cares about.
  * It includes any unrecorded transactions needed to link it back to the block chain.
@@ -627,7 +628,6 @@ public:
         return nCredit;
     }
 
-
     int64_t GetChange() const
     {
         if (fChangeCached)
@@ -651,7 +651,7 @@ public:
     bool IsConfirmed() const
     {
         // Quick answer in most cases
-        if (!IsFinalTx(*this))
+        if (!IsFinal())
             return false;
         if (GetDepthInMainChain() >= 1)
             return true;
@@ -668,7 +668,7 @@ public:
         {
             const CMerkleTx* ptx = vWorkQueue[i];
 
-            if (!IsFinalTx(*ptx))
+            if (!ptx->IsFinal())
                 return false;
             if (ptx->GetDepthInMainChain() >= 1)
                 continue;
@@ -696,14 +696,14 @@ public:
     int64_t GetTxTime() const;
     int GetRequestCount() const;
 
-    void AddSupportingTransactions();
+    void AddSupportingTransactions(CTxDB& txdb);
 
-    bool AcceptWalletTransaction(bool fCheckInputs=true);
+    bool AcceptWalletTransaction(CTxDB& txdb, bool fCheckInputs=true);
+    bool AcceptWalletTransaction();
+
+    void RelayWalletTransaction(CTxDB& txdb);
     void RelayWalletTransaction();
 };
-
-
-
 
 class COutput
 {
@@ -727,9 +727,6 @@ public:
         printf("%s\n", ToString().c_str());
     }
 };
-
-
-
 
 /** Private key that includes an expiration date in case it never gets used. */
 class CWalletKey
@@ -759,11 +756,6 @@ public:
     )
 };
 
-
-
-
-
-
 /** Account information.
  * Stored in wallet with key "acc"+string account name.
  */
@@ -789,8 +781,6 @@ public:
         READWRITE(vchPubKey);
     )
 };
-
-
 
 /** Internal transfers.
  * Database key is acentry<account><counter>.

@@ -76,10 +76,10 @@ void WalletModel::updateStatus()
 
 void WalletModel::pollBalanceChanged()
 {
-    if(chainActive.Height() != cachedNumBlocks)
+    if(nBestHeight != cachedNumBlocks)
     {
         // Balance and number of transactions might have changed
-        cachedNumBlocks = chainActive.Height();
+        cachedNumBlocks = nBestHeight;
         checkBalanceChanged();
     }
 }
@@ -285,7 +285,7 @@ bool WalletModel::setWalletLocked(bool locked, const SecureString &passPhrase, b
     if(locked)
     {
         // Lock
-		if(formint) 
+        if(formint) 
             wallet->fWalletUnlockMintOnly=false; 
         return wallet->Lock();
     }
@@ -396,13 +396,13 @@ void WalletModel::unsubscribeFromCoreSignals()
 WalletModel::UnlockContext WalletModel::requestUnlock()
 {
     bool was_locked = getEncryptionStatus() == Locked;
-	
-	    if ((!was_locked) && wallet->fWalletUnlockMintOnly) 
-	{ 
+
+        if ((!was_locked) && wallet->fWalletUnlockMintOnly) 
+    { 
         setWalletLocked(true); 
         was_locked = getEncryptionStatus() == Locked; 
     } 
-	
+
     if(was_locked)
     {
         // Request UI to unlock wallet

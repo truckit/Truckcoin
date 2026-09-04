@@ -39,7 +39,7 @@ int ClientModel::getNumConnections() const
 
 int ClientModel::getNumBlocks() const
 {
-    return chainActive.Height();
+    return nBestHeight;
 }
 
 int ClientModel::getNumBlocksAtStartup()
@@ -60,8 +60,8 @@ quint64 ClientModel::getTotalBytesSent() const
 
 QDateTime ClientModel::getLastBlockDate() const
 {
-    if (chainActive.Tip())
-        return QDateTime::fromTime_t(chainActive.Tip()->GetBlockTime());
+    if (pindexBest)
+        return QDateTime::fromTime_t(pindexBest->GetBlockTime());
     else
         return QDateTime::fromTime_t(1401331380); // Genesis block's time
 }
@@ -115,12 +115,12 @@ double ClientModel::GetDifficulty() const
     // Floating point number that is a multiple of the minimum difficulty,
     // minimum difficulty = 1.0.
 
-    if (chainActive.Tip() == NULL)
+    if (pindexBest == NULL)
         return 1.0;
-    int nShift = (chainActive.Tip()->nBits >> 24) & 0xff;
+    int nShift = (pindexBest->nBits >> 24) & 0xff;
 
     double dDiff =
-        (double)0x0000ffff / (double)(chainActive.Tip()->nBits & 0x00ffffff);
+        (double)0x0000ffff / (double)(pindexBest->nBits & 0x00ffffff);
 
     while (nShift < 29)
     {
@@ -145,15 +145,6 @@ bool ClientModel::isTestNet() const
 bool ClientModel::inInitialBlockDownload() const
 {
     return IsInitialBlockDownload();
-}
-
-enum BlockSource ClientModel::getBlockSource() const
-{
-    if (fReindex)
-        return BLOCK_SOURCE_REINDEX;
-    if (fImporting)
-        return BLOCK_SOURCE_DISK;
-    return BLOCK_SOURCE_NETWORK;
 }
 
 int ClientModel::getNumBlocksOfPeers() const

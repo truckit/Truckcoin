@@ -33,7 +33,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
 
     if (wtx.IsCoinStake())
     {
-        TransactionRecord txrCoinStake = TransactionRecord(hash, nTime, TransactionRecord::StakeMint, "", -nDebit, GetValueOut(wtx));
+        TransactionRecord txrCoinStake = TransactionRecord(hash, nTime, TransactionRecord::StakeMint, "", -nDebit, wtx.GetValueOut());
         CTxDestination address;
         if (ExtractDestination(wtx.vout[1].scriptPubKey, address))
         {
@@ -58,7 +58,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
                 sub.credit = txout.nValue;
                 if (ExtractDestination(txout.scriptPubKey, address) && IsMine(*wallet, address))
                 {
-                    // Received by Bitcoin Address
+                    // Received by Truckcoin Address
                     sub.type = TransactionRecord::RecvWithAddress;
                     sub.address = CBitcoinAddress(address).ToString();
                 }
@@ -106,7 +106,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
             //
             // Debit
             //
-            int64_t nTxFee = nDebit - GetValueOut(wtx);
+            int64_t nTxFee = nDebit - wtx.GetValueOut();
 
             for (unsigned int nOut = 0; nOut < wtx.vout.size(); nOut++)
             {
@@ -177,14 +177,14 @@ void TransactionRecord::updateStatus(const CWalletTx &wtx)
         idx);
     status.confirmed = wtx.IsConfirmed();
     status.depth = wtx.GetDepthInMainChain();
-    status.cur_num_blocks = chainActive.Height();
+    status.cur_num_blocks = nBestHeight;
 
-    if (!IsFinalTx(wtx))
+    if (!wtx.IsFinal())
     {
         if (wtx.nLockTime < LOCKTIME_THRESHOLD)
         {
             status.status = TransactionStatus::OpenUntilBlock;
-            status.open_for = chainActive.Height() - wtx.nLockTime;
+            status.open_for = nBestHeight - wtx.nLockTime;
         }
         else
         {
@@ -238,11 +238,10 @@ void TransactionRecord::updateStatus(const CWalletTx &wtx)
 
 bool TransactionRecord::statusUpdateNeeded()
 {
-    return status.cur_num_blocks != chainActive.Height();
+    return status.cur_num_blocks != nBestHeight;
 }
 
 std::string TransactionRecord::getTxID()
 {
     return hash.ToString() + strprintf("-%03d", idx);
 }
-

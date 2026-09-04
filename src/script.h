@@ -14,10 +14,9 @@
 #include "keystore.h"
 #include "util.h"
 
-class CCoins;
-class CTransaction;
-
 typedef std::vector<unsigned char> valtype;
+
+class CTransaction;
 
 class scriptnum_error : public std::runtime_error
 {
@@ -177,30 +176,6 @@ enum
     SIGHASH_ANYONECANPAY = 0x80,
 };
 
-/** Script verification flags */
-enum
-{
-    SCRIPT_VERIFY_NONE      = 0,
-
-    // Evaluate P2SH subscripts (softfork safe, BIP16).
-    SCRIPT_VERIFY_P2SH      = (1U << 0),
-
-    // Passing a non-strict-DER signature or one with undefined hashtype to a checksig operation causes script failure.
-    // Passing a pubkey that is not (0x04 + 64 bytes) or (0x02 or 0x03 + 32 bytes) to checksig causes that pubkey to be
-    // skipped (not softfork safe: this flag can widen the validity of OP_CHECKSIG OP_NOT).
-    SCRIPT_VERIFY_STRICTENC = (1U << 1),
-
-   // Passing a non-strict-DER signature to a checksig operation causes script failure (softfork safe, BIP62 rule 1)
-    SCRIPT_VERIFY_DERSIG    = (1U << 2),
-
-    // Passing a non-strict-DER signature or one with S > order/2 to a checksig operation causes script failure
-    // (softfork safe, BIP62 rule 5).
-    SCRIPT_VERIFY_LOW_S     = (1U << 3),
-    
-    // do not store results in signature cache (but do query it)
-    SCRIPT_VERIFY_NOCACHE   = (1U << 4),
-};
-
 enum txnouttype
 {
     TX_NONSTANDARD,
@@ -209,7 +184,6 @@ enum txnouttype
     TX_PUBKEYHASH,
     TX_SCRIPTHASH,
     TX_MULTISIG,
-    TX_NULL_DATA,
 };
 
 class CNoDestination {
@@ -366,7 +340,6 @@ enum opcodetype
 
 
     // template matching params
-    OP_SMALLDATA = 0xf9,
     OP_SMALLINTEGER = 0xfa,
     OP_PUBKEYS = 0xfb,
     OP_PUBKEYHASH = 0xfd,
@@ -376,6 +349,8 @@ enum opcodetype
 };
 
 const char* GetOpName(opcodetype opcode);
+
+
 
 inline std::string ValueString(const std::vector<unsigned char>& vch)
 {
@@ -441,7 +416,6 @@ public:
         return ret;
     }
 
-
     //explicit CScript(char b) is not portable.  Use 'signed char' or 'unsigned char'.
     CScript(int64_t b)        { operator<<(b); }
 
@@ -450,8 +424,6 @@ public:
     explicit CScript(const CScriptNum& b) { operator<<(b); }
     explicit CScript(const std::vector<unsigned char>& b) { operator<<(b); }
 
-
-    //CScript& operator<<(char b) is not portable.  Use 'signed char' or 'unsigned char'.
     CScript& operator<<(int64_t b) { return push_int64(b); }
 
     CScript& operator<<(opcodetype opcode)
@@ -524,6 +496,7 @@ public:
         assert(!"Warning: Pushing a CScript onto a CScript with << is probably not intended, use + to concatenate!");
         return *this;
     }
+
 
     bool GetOp(iterator& pc, opcodetype& opcodeRet, std::vector<unsigned char>& vchRet)
     {
@@ -661,7 +634,7 @@ public:
 
     bool IsPayToScriptHash() const;
 
-    // Called by IsStandardTx
+    // Called by CTransaction::IsStandard
     bool IsPushOnly() const
     {
         const_iterator pc = begin();
@@ -684,7 +657,7 @@ public:
         printf("CScript(%s)\n", HexStr(begin(), end(), true).c_str());
     }
 
-    std::string ToString() const
+    std::string ToString(bool fShort=false) const
     {
         std::string str;
         opcodetype opcode;
@@ -700,7 +673,7 @@ public:
                 return str;
             }
             if (0 <= opcode && opcode <= OP_PUSHDATA4)
-                str += ValueString(vch);
+                str += fShort? ValueString(vch).substr(0, 10) : ValueString(vch);
             else
                 str += GetOpName(opcode);
         }
@@ -791,10 +764,10 @@ public:
     }
 };
 
-bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& script, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType);
+bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& script, const CTransaction& txTo, unsigned int nIn, int nHashType);
 bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<std::vector<unsigned char> >& vSolutionsRet);
 int ScriptSigArgsExpected(txnouttype t, const std::vector<std::vector<unsigned char> >& vSolutions);
-bool IsStandard(const CScript& scriptPubKey, txnouttype& whichType);
+bool IsStandard(const CScript& scriptPubKey);
 bool IsMine(const CKeyStore& keystore, const CScript& scriptPubKey);
 bool IsMine(const CKeyStore& keystore, const CTxDestination &dest);
 void ExtractAffectedKeys(const CKeyStore &keystore, const CScript& scriptPubKey, std::vector<CKeyID> &vKeys);
@@ -802,7 +775,9 @@ bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet)
 bool ExtractDestinations(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<CTxDestination>& addressRet, int& nRequiredRet);
 bool SignSignature(const CKeyStore& keystore, const CScript& fromPubKey, CTransaction& txTo, unsigned int nIn, int nHashType=SIGHASH_ALL);
 bool SignSignature(const CKeyStore& keystore, const CTransaction& txFrom, CTransaction& txTo, unsigned int nIn, int nHashType=SIGHASH_ALL);
-bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType);
+bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const CTransaction& txTo, unsigned int nIn,
+                  bool fValidatePayToScriptHash, int nHashType);
+bool VerifySignature(const CTransaction& txFrom, const CTransaction& txTo, unsigned int nIn, bool fValidatePayToScriptHash, int nHashType);
 
 // Given two sets of signatures for scriptPubKey, possibly with OP_0 placeholders,
 // combine them intelligently and return the result.

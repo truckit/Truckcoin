@@ -82,13 +82,13 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("walletversion", pwalletMain->GetVersion()));
     obj.push_back(Pair("balance",       ValueFromAmount(pwalletMain->GetBalance())));
     obj.push_back(Pair("stake",         ValueFromAmount(pwalletMain->GetStake())));
-    obj.push_back(Pair("blocks",        (int)chainActive.Height()));
-    obj.push_back(Pair("moneysupply",   ValueFromAmount(chainActive.Tip()->nMoneySupply)));
+    obj.push_back(Pair("blocks",        (int)nBestHeight));
+    obj.push_back(Pair("moneysupply",   ValueFromAmount(pindexBest->nMoneySupply)));
     obj.push_back(Pair("connections",   (int)vNodes.size()));
     obj.push_back(Pair("proxy",         (proxy.first.IsValid() ? proxy.first.ToStringIPPort() : string())));
     obj.push_back(Pair("ip",            addrSeenByPeer.ToStringIP()));
 //    obj.push_back(Pair("PoW difficulty",    (double)GetDifficulty()));
-    obj.push_back(Pair("difficulty", GetDifficulty(GetLastBlockIndex(chainActive.Tip(), true))));
+    obj.push_back(Pair("difficulty", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
     obj.push_back(Pair("splitthreshold",   ValueFromAmount(nSplitThreshold)));
     obj.push_back(Pair("testnet",       fTestNet));
     obj.push_back(Pair("keypoololdest", DateTimeStrFormat(pwalletMain->GetOldestKeyPoolTime())));
@@ -97,7 +97,7 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("encrypted",     pwalletMain->IsCrypted()));
     if (pwalletMain->IsCrypted() && !pwalletMain->IsLocked() )
     {
-        obj.push_back(Pair("unlocked_until", DateTimeStrFormat(nWalletUnlockTime)));
+        obj.push_back(Pair("unlocked_until", DateTimeStrFormat(nWalletUnlockTime / 1000)));
     }
     else if(pwalletMain->IsCrypted() && pwalletMain->IsLocked() )
     {
@@ -296,7 +296,7 @@ Value sendtoaddress(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 2 || params.size() > 4)
         throw runtime_error(
-        "sendtoaddress <Truckcoinaddress> <amount> [comment] [comment-to]\n"
+		"sendtoaddress <Truckcoinaddress> <amount> [comment] [comment-to]\n"
             "<amount> is a real and is rounded to the nearest 0.000001"
             + HelpRequiringPassphrase());
 
@@ -456,7 +456,7 @@ Value getreceivedbyaddress(const Array& params, bool fHelp)
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it)
     {
         const CWalletTx& wtx = (*it).second;
-        if (wtx.IsCoinBase() || wtx.IsCoinStake() || !IsFinalTx(wtx))
+        if (wtx.IsCoinBase() || wtx.IsCoinStake() || !wtx.IsFinal())
             continue;
 
         for (const CTxOut& txout : wtx.vout)
@@ -502,7 +502,7 @@ Value getreceivedbyaccount(const Array& params, bool fHelp)
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it)
     {
         const CWalletTx& wtx = (*it).second;
-        if (wtx.IsCoinBase() || wtx.IsCoinStake() || !IsFinalTx(wtx))
+        if (wtx.IsCoinBase() || wtx.IsCoinStake() || !wtx.IsFinal())
             continue;
 
         for (const CTxOut& txout : wtx.vout)
@@ -526,7 +526,7 @@ int64_t GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMi
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it)
     {
         const CWalletTx& wtx = (*it).second;
-        if (!IsFinalTx(wtx))
+        if (!wtx.IsFinal())
             continue;
 
         int64_t nGeneratedImmature, nGeneratedMature, nReceived, nSent, nFee;
@@ -535,11 +535,11 @@ int64_t GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMi
         if (nReceived != 0 && wtx.GetDepthInMainChain() >= nMinDepth)
             nBalance += nReceived;
 
-		if((wtx.IsCoinBaseOrStake() && wtx.GetDepthInMainChain() >= nMinDepth && wtx.GetBlocksToMaturity() == 0)
-			|| !wtx.IsCoinBaseOrStake())
-		{
-			nBalance += nGeneratedMature - nSent - nFee;
-		}
+        if((wtx.IsCoinBaseOrStake() && wtx.GetDepthInMainChain() >= nMinDepth && wtx.GetBlocksToMaturity() == 0)
+            || !wtx.IsCoinBaseOrStake())
+        {
+            nBalance += nGeneratedMature - nSent - nFee;
+        }
     }
 
     // Tally internal accounting entries
@@ -578,7 +578,7 @@ Value getbalance(const Array& params, bool fHelp)
         for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it)
         {
             const CWalletTx& wtx = (*it).second;
-            if (!IsFinalTx(wtx))
+            if (!wtx.IsFinal())
                 continue;
 
             int64_t allGeneratedImmature, allGeneratedMature, allFee;
@@ -882,7 +882,7 @@ Value ListReceived(const Array& params, bool fByAccounts)
     {
         const CWalletTx& wtx = (*it).second;
 
-        if (wtx.IsCoinBase() || wtx.IsCoinStake() || !IsFinalTx(wtx))
+        if (wtx.IsCoinBase() || wtx.IsCoinStake() || !wtx.IsFinal())
             continue;
 
         int nDepth = wtx.GetDepthInMainChain();
@@ -1162,7 +1162,7 @@ Value listaccounts(const Array& params, bool fHelp)
     {
         const CWalletTx& wtx = (*it).second;
 
-        if(!IsFinalTx(wtx))
+        if(!wtx.IsFinal())
             continue;
 
         int64_t nGeneratedImmature, nGeneratedMature, nFee;
@@ -1218,9 +1218,7 @@ Value listsinceblock(const Array& params, bool fHelp)
         uint256 blockId = 0;
 
         blockId.SetHex(params[0].get_str());
-        std::map<uint256, CBlockIndex*>::iterator it = mapBlockIndex.find(blockId);
-        if (it != mapBlockIndex.end())
-            pindex = it->second;
+        pindex = CBlockLocator(blockId).GetBlockIndex();
     }
 
     if (params.size() > 1)
@@ -1231,7 +1229,7 @@ Value listsinceblock(const Array& params, bool fHelp)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter");
     }
 
-    int depth = pindex ? (1 + chainActive.Height() - pindex->nHeight) : -1;
+    int depth = pindex ? (1 + nBestHeight - pindex->nHeight) : -1;
 
     Array transactions;
 
@@ -1243,8 +1241,23 @@ Value listsinceblock(const Array& params, bool fHelp)
             ListTransactions(tx, "*", 0, true, transactions);
     }
 
-    CBlockIndex *pblockLast = chainActive[chainActive.Height() + 1 - target_confirms];
-    uint256 lastblock = pblockLast ? pblockLast->GetBlockHash() : 0;
+    uint256 lastblock;
+
+    if (target_confirms == 1)
+    {
+        lastblock = hashBestChain;
+    }
+    else
+    {
+        int target_height = pindexBest->nHeight + 1 - target_confirms;
+
+        CBlockIndex *block;
+        for (block = pindexBest;
+             block && block->nHeight > target_height;
+             block = block->pprev)  { }
+
+        lastblock = block ? block->GetBlockHash() : 0;
+    }
 
     Object ret;
     ret.push_back(Pair("transactions", transactions));
@@ -1273,7 +1286,7 @@ Value getstaketx(const Array& params, bool fHelp)
         for (const CTxIn& txin : wtx.vin) 
         { 
             Object in; 
-            if (wtx.IsCoinBase()) 
+            if (wtx.IsCoinBase())
                 entry.push_back(Pair("coinbase", HexStr(txin.scriptSig.begin(), txin.scriptSig.end()))); 
             else 
             { 
@@ -1289,7 +1302,7 @@ Value getstaketx(const Array& params, bool fHelp)
                 entry.push_back(Pair("Days To Stake", dDaysToStake));  
  
                 int64_t nDebit = wtx.GetDebit(); 
-                int64_t nFee = (wtx.IsFromMe() ? GetValueOut(wtx) - nDebit : 0); 
+                int64_t nFee = (wtx.IsFromMe() ? wtx.GetValueOut() - nDebit : 0); 
 
                 int64_t nGeneratedImmature, nGeneratedMature, nFee2; 
                 string strSentAccount; 
@@ -1332,7 +1345,7 @@ Value gettransaction(const Array& params, bool fHelp)
         int64_t nCredit = wtx.GetCredit();
         int64_t nDebit = wtx.GetDebit();
         int64_t nNet = nCredit - nDebit;
-        int64_t nFee = (wtx.IsFromMe() ? GetValueOut(wtx) - nDebit : 0);
+        int64_t nFee = (wtx.IsFromMe() ? wtx.GetValueOut() - nDebit : 0);
 
         entry.push_back(Pair("amount", ValueFromAmount(nNet - nFee)));
         if (wtx.IsFromMe())
@@ -1348,7 +1361,7 @@ Value gettransaction(const Array& params, bool fHelp)
     {
         CTransaction tx;
         uint256 hashBlock = 0;
-        if (GetTransaction(hash, tx, hashBlock, true))
+        if (GetTransaction(hash, tx, hashBlock))
         {
             entry.push_back(Pair("txid", hash.GetHex()));
             TxToJSON(tx, 0, entry);
@@ -1361,9 +1374,9 @@ Value gettransaction(const Array& params, bool fHelp)
                 if (mi != mapBlockIndex.end() && (*mi).second)
                 {
                     CBlockIndex* pindex = (*mi).second;
-                    if (chainActive.Contains(pindex))
+                    if (pindex->IsInMainChain())
                     {
-                        entry.push_back(Pair("confirmations", 1 + chainActive.Height() - pindex->nHeight));
+                        entry.push_back(Pair("confirmations", 1 + nBestHeight - pindex->nHeight));
                         entry.push_back(Pair("txntime", (int64_t)tx.nTime));
                         entry.push_back(Pair("time", (int64_t)pindex->nTime));
                     }
@@ -1414,11 +1427,56 @@ Value keypoolrefill(const Array& params, bool fHelp)
 }
 
 
-static void LockWallet(CWallet* pWallet)
+void ThreadTopUpKeyPool(void* parg)
 {
-    LOCK(cs_nWalletUnlockTime);
-    nWalletUnlockTime = 0;
-    pWallet->Lock();
+    // Make this thread recognisable as the key-topping-up thread
+    RenameThread("truckcoin-key-top");
+
+    pwalletMain->TopUpKeyPool();
+}
+
+void ThreadCleanWalletPassphrase(void* parg)
+{
+    // Make this thread recognisable as the wallet relocking thread
+    RenameThread("truckcoin-lock-wa");
+
+    int64_t nMyWakeTime = GetTimeMillis() + *((int64_t*)parg) * 1000;
+
+    ENTER_CRITICAL_SECTION(cs_nWalletUnlockTime);
+
+    if (nWalletUnlockTime == 0)
+    {
+        nWalletUnlockTime = nMyWakeTime;
+
+        do
+        {
+            if (nWalletUnlockTime==0)
+                break;
+            int64_t nToSleep = nWalletUnlockTime - GetTimeMillis();
+            if (nToSleep <= 0)
+                break;
+
+            LEAVE_CRITICAL_SECTION(cs_nWalletUnlockTime);
+            MilliSleep(nToSleep);
+            ENTER_CRITICAL_SECTION(cs_nWalletUnlockTime);
+
+        } while(1);
+
+        if (nWalletUnlockTime)
+        {
+            nWalletUnlockTime = 0;
+            pwalletMain->Lock();
+        }
+    }
+    else
+    {
+        if (nWalletUnlockTime < nMyWakeTime)
+            nWalletUnlockTime = nMyWakeTime;
+    }
+
+    LEAVE_CRITICAL_SECTION(cs_nWalletUnlockTime);
+
+    delete (int64_t*)parg;
 }
 
 Value walletpassphrase(const Array& params, bool fHelp)
@@ -1433,6 +1491,8 @@ Value walletpassphrase(const Array& params, bool fHelp)
     if (!pwalletMain->IsCrypted())
         throw JSONRPCError(RPC_WALLET_WRONG_ENC_STATE, "Error: running with an unencrypted wallet, but walletpassphrase was called.");
 
+    if (!pwalletMain->IsLocked())
+        throw JSONRPCError(RPC_WALLET_ALREADY_UNLOCKED, "Error: Wallet is already unlocked, use walletlock first if need to change unlock settings.");
     // Note that the walletpassphrase is stored in params[0] which is not mlock()ed
     SecureString strWalletPass;
     strWalletPass.reserve(100);
@@ -1450,13 +1510,10 @@ Value walletpassphrase(const Array& params, bool fHelp)
             "walletpassphrase <passphrase> <timeout>\n"
             "Stores the wallet decryption key in memory for <timeout> seconds.");
 
-    pwalletMain->TopUpKeyPool();
-
+    NewThread(ThreadTopUpKeyPool, NULL);
     // Zero unlock time means forever, well 68 years, forever for crypto.
-    int64_t nUnlockTime = (params[1].get_int64() == 0) ? int64_t(std::numeric_limits<int>::max()) : int64_t(params[1].get_int64());
-    LOCK(cs_nWalletUnlockTime);
-    nWalletUnlockTime = GetTime() + nUnlockTime;
-    RPCRunLater("lockwallet", boost::bind(LockWallet, pwalletMain), nUnlockTime);
+    int64_t* nUnlockTime = (params[1].get_int64() == 0) ? new int64_t(std::numeric_limits<int>::max()) : new int64_t(params[1].get_int64());
+    NewThread(ThreadCleanWalletPassphrase, nUnlockTime);
 
     // if user OS account compromised prevent trivial sendmoney commands
     if (params.size() > 2)
@@ -1521,7 +1578,6 @@ Value walletlock(const Array& params, bool fHelp)
 
     return Value::null;
 }
-
 
 Value encryptwallet(const Array& params, bool fHelp)
 {

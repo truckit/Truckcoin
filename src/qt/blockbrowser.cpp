@@ -3,7 +3,7 @@
 #include "main.h"
 #include "base58.h"
 #include "clientmodel.h"
-#include "db.h"
+#include "txdb.h"
 #include "wallet.h"
 
 double GetPoSKernelPS(const CBlockIndex* blockindex);
@@ -21,15 +21,15 @@ const CBlockIndex* getBlockIndex(int64_t height)
 
 std::string getBlockHash(int64_t Height)
 {
-    if(Height > chainActive.Height()) { return ""; }
+    if(Height > pindexBest->nHeight) { return ""; }
     if(Height < 0) { return ""; }
     int64_t desiredheight;
     desiredheight = Height;
-    if (desiredheight < 0 || desiredheight > chainActive.Height())
+    if (desiredheight < 0 || desiredheight > nBestHeight)
         return 0;
 
     CBlock block;
-    CBlockIndex* pblockindex = mapBlockIndex[chainActive.Tip()->GetBlockHash()];
+    CBlockIndex* pblockindex = mapBlockIndex[hashBestChain];
     while (pblockindex->nHeight > desiredheight)
         pblockindex = pblockindex->pprev;
     return  pblockindex->GetBlockHash().GetHex(); // pblockindex->phashBlock->GetHex();
@@ -93,7 +93,7 @@ double getTxTotalValue(std::string txid)
 
     CTransaction tx;
     uint256 hashBlock = 0;
-    if (!GetTransaction(hash, tx, hashBlock, false))
+    if (!GetTransaction(hash, tx, hashBlock))
         return 0;
 
     CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
@@ -136,7 +136,7 @@ std::string getOutputs(std::string txid)
 
     CTransaction tx;
     uint256 hashBlock = 0;
-    if (!GetTransaction(hash, tx, hashBlock, false))
+    if (!GetTransaction(hash, tx, hashBlock))
         return "N/A";
 
     std::string str = "";
@@ -167,7 +167,7 @@ std::string getInputs(std::string txid)
 
     CTransaction tx;
     uint256 hashBlock = 0;
-    if (!GetTransaction(hash, tx, hashBlock, false))
+    if (!GetTransaction(hash, tx, hashBlock))
         return "N/A";
 
     std::string str = "";
@@ -179,7 +179,7 @@ std::string getInputs(std::string txid)
         hash.SetHex(vin.prevout.hash.ToString());
         CTransaction wtxPrev;
         uint256 hashBlock = 0;
-        if (!GetTransaction(hash, wtxPrev, hashBlock, false))
+        if (!GetTransaction(hash, wtxPrev, hashBlock))
              return "N/A";
 
         CTxDestination address;
@@ -205,16 +205,19 @@ double BlockBrowser::getTxFees(std::string txid)
 
     CTransaction tx;
     uint256 hashBlock = 0;
-    CCoinsViewCache &view = *pcoinsTip;
+    CTxDB txdb("r");
 
-    if (!GetTransaction(hash, tx, hashBlock, false))
+    if (!GetTransaction(hash, tx, hashBlock))
         return convertCoins(MIN_TX_FEE);
 
-    CValidationState state;
-    if (!tx.CheckInputs(state, view, true, SCRIPT_VERIFY_P2SH))
+    MapPrevTx mapInputs;
+    map<uint256, CTxIndex> mapUnused;
+    bool fInvalid;
+
+    if (!tx.FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid))
         return convertCoins(MIN_TX_FEE);
 
-    int64_t nTxFees = tx.GetValueIn(view)-GetValueOut(tx);
+    int64_t nTxFees = tx.GetValueIn(mapInputs)-tx.GetValueOut();
 
     if(tx.IsCoinStake() || tx.IsCoinBase()) {
         ui->feesLabel->setText(QString("Reward:"));
@@ -244,10 +247,10 @@ void BlockBrowser::updateExplorer(bool block)
     if(block)
     {
         int64_t height = ui->heightBox->value(); 
-        if (height > chainActive.Height()) 
+        if (height > pindexBest->nHeight) 
         { 
-            ui->heightBox->setValue(chainActive.Height()); 
-            height = chainActive.Height(); 
+            ui->heightBox->setValue(pindexBest->nHeight); 
+            height = pindexBest->nHeight; 
         } 
  
         const CBlockIndex* pindex = getBlockIndex(height);
@@ -293,11 +296,11 @@ void BlockBrowser::updateExplorer(bool block)
   
      CTransaction tx; 
      uint256 hashBlock = 0; 
-     if (GetTransaction(hash, tx, hashBlock, false)) 
+     if (GetTransaction(hash, tx, hashBlock)) 
      { 
          CBlockIndex* pblockindex = mapBlockIndex[hashBlock]; 
          if (!pblockindex) 
-             ui->heightBox->setValue(chainActive.Height()); 
+             ui->heightBox->setValue(nBestHeight); 
          else 
              ui->heightBox->setValue(pblockindex->nHeight); 
          updateExplorer(true); 

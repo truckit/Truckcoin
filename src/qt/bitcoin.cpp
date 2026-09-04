@@ -11,7 +11,6 @@
 #include "winshutdownmonitor.h"
 
 #include "init.h"
-#include "util.h"
 #include "ui_interface.h"
 #include "qtipcserver.h"
 
@@ -39,27 +38,23 @@ Q_IMPORT_PLUGIN(qtaccessiblewidgets)
 static BitcoinGUI *guiref;
 static SplashScreen *splashref;
 
-static bool ThreadSafeMessageBox(const std::string& message, const std::string& caption, unsigned int style)
+static void ThreadSafeMessageBox(const std::string& message, const std::string& caption, int style)
 {
     // Message from network thread
     if(guiref)
     {
         bool modal = (style & CClientUIInterface::MODAL);
-        bool ret = false;
       // In case of modal message, use blocking connection to wait for user to click a button
       QMetaObject::invokeMethod(guiref, "message",
                                    modal ? GUIUtil::blockingGUIThreadConnection() : Qt::QueuedConnection,
                                    Q_ARG(QString, QString::fromStdString(caption)),
                                    Q_ARG(QString, QString::fromStdString(message)),
-                                   Q_ARG(unsigned int, style),
-                                   Q_ARG(bool*, &ret));
-        return ret;
+                                   Q_ARG(unsigned int, style));
     }
     else
     {
         printf("%s: %s\n", caption.c_str(), message.c_str());
         fprintf(stderr, "%s: %s\n", caption.c_str(), message.c_str());
-        return false;
     }
 }
 
@@ -223,10 +218,9 @@ int main(int argc, char *argv[])
         if (GUIUtil::GetStartOnSystemStartup())
             GUIUtil::SetStartOnSystemStartup(true);
 
-        boost::thread_group threadGroup;
         BitcoinGUI window;
         guiref = &window;
-        if(AppInit2(threadGroup))
+        if(AppInit2())
         {
             {
                 // Put this in a block, so that the Model objects are cleaned up before
@@ -272,9 +266,7 @@ int main(int argc, char *argv[])
                 guiref = 0;
             }
             // Shutdown the core and its threads, but don't exit Truckcoin-Qt here
-            threadGroup.interrupt_all();
-            threadGroup.join_all();
-            Shutdown();
+            Shutdown(NULL);
         }
         else
         {
@@ -287,4 +279,4 @@ int main(int argc, char *argv[])
     }
     return 0;
 }
-#endif // BITCOIN_QT_TEST
+#endif

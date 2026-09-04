@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2013-2019 The Truckcoin developers
+// Copyright (c) 2013-2024 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #ifndef BITCOIN_NET_H
@@ -19,12 +19,11 @@
 #include "protocol.h"
 #include "addrman.h"
 #include "hash.h"
-#include "bloom.h"
-#include <boost/signals2/signal.hpp>
 
 class CRequestTracker;
 class CNode;
 class CBlockIndex;
+extern int nBestHeight;
 
 inline unsigned int ReceiveFloodSize() { return 1000*GetArg("-maxreceivebuffer", 5*1000); }
 inline unsigned int SendBufferSize() { return 1000*GetArg("-maxsendbuffer", 1*1000); }
@@ -36,22 +35,12 @@ void AddressCurrentlyConnected(const CService& addr);
 CNode* FindNode(const CNetAddr& ip);
 CNode* FindNode(const CService& ip);
 CNode* ConnectNode(CAddress addrConnect, const char *strDest = NULL, int64_t nTimeout=0);
-void MapPort(bool fUseUPnP);
+void MapPort();
 unsigned short GetListenPort();
 bool BindListenPort(const CService &bindAddr, std::string& strError=REF(std::string()));
-void StartNode(boost::thread_group& threadGroup);
+void StartNode(void* parg);
 bool StopNode();
 void SocketSendData(CNode *pnode);
-
-// Signals for message handling
-struct CNodeSignals
-{
-    boost::signals2::signal<int ()> GetHeight;
-    boost::signals2::signal<bool (CNode*)> ProcessMessages;
-    boost::signals2::signal<bool (CNode*, bool)> SendMessages;
-};
-
-CNodeSignals& GetNodeSignals();
 
 enum
 {
@@ -77,6 +66,12 @@ bool IsReachable(const CNetAddr &addr);
 void SetReachable(enum Network net, bool fFlag = true);
 CAddress GetLocalAddress(const CNetAddr *paddrPeer = NULL);
 
+enum
+{
+    MSG_TX = 1,
+    MSG_BLOCK,
+};
+
 class CRequestTracker
 {
 public:
@@ -95,11 +90,32 @@ public:
     }
 };
 
+/** Thread types */
+enum threadId
+{
+    THREAD_SOCKETHANDLER,
+    THREAD_OPENCONNECTIONS,
+    THREAD_MESSAGEHANDLER,
+    THREAD_MINER,
+    THREAD_RPCLISTENER,
+    THREAD_UPNP,
+    THREAD_DNSSEED,
+    THREAD_ADDEDCONNECTIONS,
+    THREAD_DUMPADDRESS,
+    THREAD_RPCHANDLER,
+    THREAD_MINTER,
+
+    THREAD_MAX
+};
+
+extern bool fClient;
 extern bool fDiscover;
 extern bool fListen;
+extern bool fUseUPnP;
 extern uint64_t nLocalServices;
 extern uint64_t nLocalHostNonce;
 extern CAddress addrSeenByPeer;
+extern boost::array<int, THREAD_MAX> vnThreadsRunning;
 extern CAddrMan addrman;
 
 extern std::vector<CNode*> vNodes;
@@ -121,9 +137,10 @@ public:
     std::string strSubVer;
     bool fInbound;
     int64_t nReleaseTime;
+    uint nPingTime;
     int nStartingHeight;
     int nMisbehavior;
-	uint64_t nSendBytes; 
+    uint64_t nSendBytes; 
     uint64_t nRecvBytes; 
     uint64_t nBlocksRequested; 
 };
@@ -179,12 +196,12 @@ public:
     std::deque<CNetMessage> vRecvMsg;
     CCriticalSection cs_vRecvMsg;
     int nRecvVersion;
-	
+
     int64_t nLastSend;
     int64_t nLastRecv;
     int64_t nLastSendEmpty;
     int64_t nTimeConnected;
-	uint64_t nBlocksRequested; 
+    uint64_t nBlocksRequested; 
     uint64_t nRecvBytes; 
     uint64_t nSendBytes; 
     CAddress addr;
@@ -198,14 +215,7 @@ public:
     bool fNetworkNode;
     bool fSuccessfullyConnected;
     bool fDisconnect;
-    // We use fRelayTxes for two purposes -
-    // a) it allows us to not relay tx invs before receiving the peer's version message
-    // b) the peer may tell us in their version message that we should not relay tx invs
-    //    until they have initialized their bloom filter.
-    bool fRelayTxes;
     CSemaphoreGrant grantOutbound;
-    CCriticalSection cs_filter;
-    CBloomFilter* pfilter;
 protected:
     int nRefCount;
 
@@ -219,11 +229,13 @@ public:
     int64_t nReleaseTime;
     std::map<uint256, CRequestTracker> mapRequests;
     CCriticalSection cs_mapRequests;
-    uint256 hashContinue;
-    CBlockIndex* pindexLastGetBlocksBegin;
-    uint256 hashLastGetBlocksEnd;
+    uint nGetblocksAskTime;
+    uint nGetblocksReceiveTime;
+    uint nGetheadersReceiveTime;
+    uint nPingTime;
+    int64_t nPingStamp;
+    int64_t nPongStamp;
     int nStartingHeight;
-    bool fStartSync;
 
     // flood relay
     std::vector<CAddress> vAddrToSend;
@@ -264,17 +276,17 @@ public:
         nReleaseTime = 0;
         nSendSize = 0;
         nSendOffset = 0;
-        hashContinue = 0;
-        pindexLastGetBlocksBegin = 0;
-        hashLastGetBlocksEnd = 0;
+        nGetblocksAskTime = 0;
+        nGetblocksReceiveTime = 0;
+        nGetheadersReceiveTime = 0;
+        nPingTime = 0;
+        nPingStamp = 0;
+        nPongStamp = 0;
         nStartingHeight = -1;
-        fStartSync = false;
         fGetAddr = false;
         nMisbehavior = 0;
         hashCheckpointKnown = 0;
-        fRelayTxes = false;
         setInventoryKnown.max_size(SendBufferSize() / 1000);
-        pfilter = NULL;
 
         // Be shy and don't send version until we hear
         // Don't announce non-peer CNodes
@@ -289,8 +301,6 @@ public:
             closesocket(hSocket);
             hSocket = INVALID_SOCKET;
         }
-        if (pfilter)
-            delete pfilter;
     }
 
 private:
@@ -314,7 +324,7 @@ public:
     unsigned int GetTotalRecvSize()
     {
         unsigned int total = 0;
-        for (const CNetMessage &msg : vRecvMsg) 
+        for (const CNetMessage &msg : vRecvMsg)
             total += msg.vRecv.size() + 24;
         return total;
     }
@@ -656,6 +666,7 @@ public:
         PushMessage(pszCommand, hashReply, a1, a2);
     }
 
+    void PushGetBlocks(CBlockIndex* pindexBegin, uint256 hashEnd);
     bool IsSubscribed(unsigned int nChannel);
     void Subscribe(unsigned int nChannel, unsigned int nHops=0);
     void CancelSubscribe(unsigned int nChannel);
@@ -680,14 +691,24 @@ public:
     static bool IsBanned(CNetAddr ip);
     bool Misbehaving(int howmuch); // 1 == a little, 100 == a lot
     void copyStats(CNodeStats &stats);
-	
-    // Network stats 
-    static void RecordBytesRecv(uint64_t bytes); 
-    static void RecordBytesSent(uint64_t bytes); 
- 
-    static uint64_t GetTotalBytesRecv(); 
-    static uint64_t GetTotalBytesSent(); 
+
+    // Network stats
+    static void RecordBytesRecv(uint64_t bytes);
+    static void RecordBytesSent(uint64_t bytes);
+
+    static uint64_t GetTotalBytesRecv();
+    static uint64_t GetTotalBytesSent();
 };
+
+inline void RelayInventory(const CInv& inv)
+{
+    // Put on lists to offer to the other nodes
+    {
+        LOCK(cs_vNodes);
+        for (CNode* pnode : vNodes)
+            pnode->PushInventory(inv);
+    }
+}
 
 class CTransaction;
 void RelayTransaction(const CTransaction& tx, const uint256& hash);
