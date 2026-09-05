@@ -296,7 +296,7 @@ Value sendtoaddress(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 2 || params.size() > 4)
         throw runtime_error(
-        "sendtoaddress <Truckcoinaddress> <amount> [comment] [comment-to]\n"
+		"sendtoaddress <Truckcoinaddress> <amount> [comment] [comment-to]\n"
             "<amount> is a real and is rounded to the nearest 0.000001"
             + HelpRequiringPassphrase());
 
@@ -535,11 +535,11 @@ int64_t GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMi
         if (nReceived != 0 && wtx.GetDepthInMainChain() >= nMinDepth)
             nBalance += nReceived;
 
-		if((wtx.IsCoinBaseOrStake() && wtx.GetDepthInMainChain() >= nMinDepth && wtx.GetBlocksToMaturity() == 0)
-			|| !wtx.IsCoinBaseOrStake())
-		{
-			nBalance += nGeneratedMature - nSent - nFee;
-		}
+        if((wtx.IsCoinBaseOrStake() && wtx.GetDepthInMainChain() >= nMinDepth && wtx.GetBlocksToMaturity() == 0)
+            || !wtx.IsCoinBaseOrStake())
+        {
+            nBalance += nGeneratedMature - nSent - nFee;
+        }
     }
 
     // Tally internal accounting entries
@@ -1286,7 +1286,7 @@ Value getstaketx(const Array& params, bool fHelp)
         for (const CTxIn& txin : wtx.vin) 
         { 
             Object in; 
-            if (wtx.IsCoinBase()) 
+            if (wtx.IsCoinBase())
                 entry.push_back(Pair("coinbase", HexStr(txin.scriptSig.begin(), txin.scriptSig.end()))); 
             else 
             { 
@@ -1361,7 +1361,7 @@ Value gettransaction(const Array& params, bool fHelp)
     {
         CTransaction tx;
         uint256 hashBlock = 0;
-        if (GetTransaction(hash, tx, hashBlock, true))
+        if (GetTransaction(hash, tx, hashBlock))
         {
             entry.push_back(Pair("txid", hash.GetHex()));
             TxToJSON(tx, 0, entry);
@@ -1511,7 +1511,6 @@ Value walletpassphrase(const Array& params, bool fHelp)
             "Stores the wallet decryption key in memory for <timeout> seconds.");
 
     NewThread(ThreadTopUpKeyPool, NULL);
-
     // Zero unlock time means forever, well 68 years, forever for crypto.
     int64_t* nUnlockTime = (params[1].get_int64() == 0) ? new int64_t(std::numeric_limits<int>::max()) : new int64_t(params[1].get_int64());
     NewThread(ThreadCleanWalletPassphrase, nUnlockTime);
@@ -1524,7 +1523,6 @@ Value walletpassphrase(const Array& params, bool fHelp)
 
     return Value::null;
 }
-
 
 Value walletpassphrasechange(const Array& params, bool fHelp)
 {
@@ -1580,7 +1578,6 @@ Value walletlock(const Array& params, bool fHelp)
 
     return Value::null;
 }
-
 
 Value encryptwallet(const Array& params, bool fHelp)
 {

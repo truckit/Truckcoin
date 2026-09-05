@@ -24,7 +24,7 @@ SplashScreen::SplashScreen(const QPixmap &pixmap, Qt::WindowFlags f) :
     float fontFactor            = 1.0;
 
     // define text to place
-    QString titleText        = tr("Truckcoin Core");
+    QString titleText        = tr("Truckcoin Classic");
     QString versionText      = QString("Version %1").arg(QString::fromStdString(FormatFullVersion()));
     QString copyrightText1   = QChar(0xA9)+QString(" 2009-%1 ").arg(COPYRIGHT_YEAR) + QString(tr("Bitcoin developers"));
     QString copyrightText2   = QChar(0xA9)+QString(" 2012-%1 ").arg(COPYRIGHT_YEAR) + QString(tr("PPCoin Developers"));

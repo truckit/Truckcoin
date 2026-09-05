@@ -104,11 +104,10 @@ OBJS= \
     obj/addrman.o \
     obj/cleanse.o \
     obj/crypter.o \
-    obj/pubkey.o \
     obj/key.o \
-    obj/db.o \
-    obj/leveldb.o \
+    obj/pubkey.o \
     obj/txdb.o \
+    obj/db.o \
     obj/init.o \
     obj/keystore.o \
     obj/main.o \
@@ -127,18 +126,18 @@ OBJS= \
     obj/sync.o \
     obj/random.o \
     obj/util.o \
+    obj/hash.o \
     obj/wallet.o \
     obj/walletdb.o \
-    obj/crypto/aes.o \
-    obj/crypto/sha512.o \
-    obj/crypto/sha1.o \
-    obj/crypto/sha256.o \
-    obj/crypto/hmac_sha256.o \
-    obj/crypto/ripemd160.o \
-    obj/hash.o \
     obj/noui.o \
     obj/kernel.o \
     obj/pbkdf2.o \
+    obj/crypto/aes.o \
+    obj/crypto/sha256.o \
+    obj/crypto/hmac_sha256.o \
+    obj/crypto/sha512.o \
+    obj/crypto/ripemd160.o \
+    obj/crypto/sha1.o \
     obj/crypto/aes_helper.o \
     obj/crypto/cubehash.o \
     obj/crypto/luffa.o \
@@ -156,9 +155,21 @@ all: truckcoind
 
 # build secp256k1
 DEFS += $(addprefix -I,$(CURDIR)/secp256k1/include)
-secp256k1/src/libsecp256k1_la-secp256k1.o:
-	@echo "Building Secp256k1 ..."; cd secp256k1; chmod 755 *; ./autogen.sh; ./configure --disable-shared --with-pic --enable-benchmark=no --enable-tests=no --enable-exhaustive-tests=no --enable-module-recovery --enable-module-schnorrsig --enable-experimental; make; cd ..;
-truckcoind: secp256k1/src/libsecp256k1_la-secp256k1.o
+LIBS += $(CURDIR)/secp256k1/.libs/libsecp256k1.a
+
+SECP256K1_SRC := $(shell find secp256k1/src secp256k1/include -type f \( -name '*.c' -o -name '*.h' \) 2>/dev/null) \
+                  secp256k1/configure.ac secp256k1/Makefile.am
+
+secp256k1/.libs/libsecp256k1.a: $(SECP256K1_SRC)
+	@echo "Building Secp256k1 ..."; \
+	cd secp256k1; \
+	chmod 755 *; \
+	./autogen.sh; \
+	./configure --disable-shared --with-pic --enable-benchmark=no --enable-tests=no --enable-exhaustive-tests=no --enable-module-recovery --enable-module-schnorrsig --enable-experimental; \
+	$(MAKE); \
+	cd ..
+
+truckcoind: secp256k1/.libs/libsecp256k1.a
 
 # build leveldb
 LIBS += $(CURDIR)/leveldb/out-static/libleveldb.a $(CURDIR)/leveldb/out-static/libmemenv.a
@@ -166,7 +177,7 @@ DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
 leveldb/out-static/libleveldb.a:
 	@echo "Building LevelDB ..."; cd leveldb; make out-static/libleveldb.a out-static/libmemenv.a; cd ..;
-obj/leveldb.o: leveldb/out-static/libleveldb.a
+obj/txdb.o: leveldb/out-static/libleveldb.a
 
 # auto-generated dependencies:
 -include obj/*.P

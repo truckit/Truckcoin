@@ -150,14 +150,15 @@ namespace Checkpoints
 
     bool WriteSyncCheckpoint(const uint256& hashCheckpoint)
     {
+        CTxDB txdb;
+        txdb.TxnBegin();
+        if (!txdb.WriteSyncCheckpoint(hashCheckpoint))
         {
-            LOCK(Checkpoints::cs_hashSyncCheckpoint);
-
-            if (!pblocktree->WriteSyncCheckpoint(hashCheckpoint))
-            {
-                return error("WriteSyncCheckpoint(): failed to write to db sync checkpoint %s", hashCheckpoint.ToString().c_str());
-            }
+            txdb.TxnAbort();
+            return error("WriteSyncCheckpoint(): failed to write to db sync checkpoint %s", hashCheckpoint.ToString().c_str());
         }
+        if (!txdb.TxnCommit())
+            return error("WriteSyncCheckpoint(): failed to commit to db sync checkpoint %s", hashCheckpoint.ToString().c_str());
 
         Checkpoints::hashSyncCheckpoint = hashCheckpoint;
         return true;
@@ -175,13 +176,14 @@ namespace Checkpoints
                 return false;
             }
 
+            CTxDB txdb;
             CBlockIndex* pindexCheckpoint = mapBlockIndex[hashPendingCheckpoint];
             if (!pindexCheckpoint->IsInMainChain())
             {
                 CBlock block;
                 if (!block.ReadFromDisk(pindexCheckpoint))
                     return error("AcceptPendingSyncCheckpoint: ReadFromDisk failed for sync checkpoint %s", hashPendingCheckpoint.ToString().c_str());
-                if (!SetBestChain(pindexCheckpoint))
+                if (!block.SetBestChain(txdb, pindexCheckpoint))
                 {
                     hashInvalidCheckpoint = hashPendingCheckpoint;
                     return error("AcceptPendingSyncCheckpoint: SetBestChain failed for sync checkpoint %s", hashPendingCheckpoint.ToString().c_str());
@@ -197,8 +199,8 @@ namespace Checkpoints
             // relay the checkpoint
             if (!checkpointMessage.IsNull())
             {
-                for (CNode* pnode : vNodes)
-                    checkpointMessage.RelayTo(pnode);
+                for (std::vector<CNode*>::iterator it = vNodes.begin(); it != vNodes.end(); ++it)
+                    checkpointMessage.RelayTo(*it);
             }
             return true;
         }
@@ -265,10 +267,11 @@ namespace Checkpoints
         {
             // checkpoint block accepted but not yet in main chain
             printf("ResetSyncCheckpoint: SetBestChain to hardened checkpoint %s\n", hash.ToString().c_str());
+            CTxDB txdb;
             CBlock block;
             if (!block.ReadFromDisk(mapBlockIndex[hash]))
                 return error("ResetSyncCheckpoint: ReadFromDisk failed for hardened checkpoint %s", hash.ToString().c_str());
-            if (!SetBestChain(mapBlockIndex[hash]))
+            if (!block.SetBestChain(txdb, mapBlockIndex[hash]))
             {
                 return error("ResetSyncCheckpoint: SetBestChain failed for hardened checkpoint %s", hash.ToString().c_str());
             }
@@ -314,7 +317,7 @@ namespace Checkpoints
 
         std::vector<unsigned char> vchPrivKey = ParseHex(strPrivKey);
         CKey key;
-        key.SetPrivKey(CPrivKey(vchPrivKey.begin(), vchPrivKey.end()), 0); // if key is not correct openssl may crash
+        key.SetPrivKey(CPrivKey(vchPrivKey.begin(), vchPrivKey.end()), false); // if key is not correct openssl may crash
         if (!key.Sign(Hash(checkpoint.vchMsg.begin(), checkpoint.vchMsg.end()), checkpoint.vchSig))
             return false;
 
@@ -335,7 +338,7 @@ namespace Checkpoints
             return error("SendSyncCheckpoint: Checkpoint master key unavailable.");
         std::vector<unsigned char> vchPrivKey = ParseHex(CSyncCheckpoint::strMasterPrivKey);
         CKey key;
-        key.SetPrivKey(CPrivKey(vchPrivKey.begin(), vchPrivKey.end()), 0); // if key is not correct openssl may crash
+        key.SetPrivKey(CPrivKey(vchPrivKey.begin(), vchPrivKey.end()), false); // if key is not correct openssl may crash
         if (!key.Sign(Hash(checkpoint.vchMsg.begin(), checkpoint.vchMsg.end()), checkpoint.vchSig))
             return error("SendSyncCheckpoint: Unable to sign checkpoint, check private key?");
 
@@ -348,8 +351,8 @@ namespace Checkpoints
         // Relay checkpoint
         {
             LOCK(cs_vNodes);
-            for (CNode* pnode : vNodes)
-                checkpoint.RelayTo(pnode);
+            for (std::vector<CNode*>::iterator it = vNodes.begin(); it != vNodes.end(); ++it)
+                checkpoint.RelayTo(*it);
         }
         return true;
     }
@@ -421,6 +424,7 @@ bool CSyncCheckpoint::ProcessSyncCheckpoint(CNode* pfrom)
     if (!Checkpoints::ValidateSyncCheckpoint(hashCheckpoint))
         return false;
 
+    CTxDB txdb;
     CBlockIndex* pindexCheckpoint = mapBlockIndex[hashCheckpoint];
     if (!pindexCheckpoint->IsInMainChain())
     {
@@ -428,7 +432,7 @@ bool CSyncCheckpoint::ProcessSyncCheckpoint(CNode* pfrom)
         CBlock block;
         if (!block.ReadFromDisk(pindexCheckpoint))
             return error("ProcessSyncCheckpoint: ReadFromDisk failed for sync checkpoint %s", hashCheckpoint.ToString().c_str());
-        if (!SetBestChain(pindexCheckpoint))
+        if (!block.SetBestChain(txdb, pindexCheckpoint))
         {
             Checkpoints::hashInvalidCheckpoint = hashCheckpoint;
             return error("ProcessSyncCheckpoint: SetBestChain failed for sync checkpoint %s", hashCheckpoint.ToString().c_str());

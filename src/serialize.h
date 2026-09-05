@@ -78,6 +78,10 @@ enum
     SER_NETWORK         = (1 << 0),
     SER_DISK            = (1 << 1),
     SER_GETHASH         = (1 << 2),
+
+    // modifiers
+    SER_SKIPSIG         = (1 << 16),
+    SER_BLOCKHEADERONLY = (1 << 17),
 };
 
 #define IMPLEMENT_SERIALIZE(statements)    \
@@ -133,10 +137,8 @@ inline unsigned int GetSerializeSize(signed short a,   int, int=0) { return size
 inline unsigned int GetSerializeSize(unsigned short a, int, int=0) { return sizeof(a); }
 inline unsigned int GetSerializeSize(signed int a,     int, int=0) { return sizeof(a); }
 inline unsigned int GetSerializeSize(unsigned int a,   int, int=0) { return sizeof(a); }
-//inline unsigned int GetSerializeSize(signed long a,    int, int=0) { return sizeof(a); }
-//inline unsigned int GetSerializeSize(unsigned long a,  int, int=0) { return sizeof(a); }
-inline unsigned int GetSerializeSize(int64_t a,        int, int=0) { return sizeof(a); }
-inline unsigned int GetSerializeSize(uint64_t a,       int, int=0) { return sizeof(a); }
+inline unsigned int GetSerializeSize(int64_t a,          int, int=0) { return sizeof(a); }
+inline unsigned int GetSerializeSize(uint64_t a,         int, int=0) { return sizeof(a); }
 inline unsigned int GetSerializeSize(float a,          int, int=0) { return sizeof(a); }
 inline unsigned int GetSerializeSize(double a,         int, int=0) { return sizeof(a); }
 
@@ -147,10 +149,8 @@ template<typename Stream> inline void Serialize(Stream& s, signed short a,   int
 template<typename Stream> inline void Serialize(Stream& s, unsigned short a, int, int=0) { WRITEDATA(s, a); }
 template<typename Stream> inline void Serialize(Stream& s, signed int a,     int, int=0) { WRITEDATA(s, a); }
 template<typename Stream> inline void Serialize(Stream& s, unsigned int a,   int, int=0) { WRITEDATA(s, a); }
-//template<typename Stream> inline void Serialize(Stream& s, signed long a,    int, int=0) { WRITEDATA(s, a); }
-//template<typename Stream> inline void Serialize(Stream& s, unsigned long a,  int, int=0) { WRITEDATA(s, a); }
-template<typename Stream> inline void Serialize(Stream& s, int64_t a,        int, int=0) { WRITEDATA(s, a); }
-template<typename Stream> inline void Serialize(Stream& s, uint64_t a,       int, int=0) { WRITEDATA(s, a); }
+template<typename Stream> inline void Serialize(Stream& s, int64_t a,          int, int=0) { WRITEDATA(s, a); }
+template<typename Stream> inline void Serialize(Stream& s, uint64_t a,         int, int=0) { WRITEDATA(s, a); }
 template<typename Stream> inline void Serialize(Stream& s, float a,          int, int=0) { WRITEDATA(s, a); }
 template<typename Stream> inline void Serialize(Stream& s, double a,         int, int=0) { WRITEDATA(s, a); }
 
@@ -161,17 +161,14 @@ template<typename Stream> inline void Unserialize(Stream& s, signed short& a,   
 template<typename Stream> inline void Unserialize(Stream& s, unsigned short& a, int, int=0) { READDATA(s, a); }
 template<typename Stream> inline void Unserialize(Stream& s, signed int& a,     int, int=0) { READDATA(s, a); }
 template<typename Stream> inline void Unserialize(Stream& s, unsigned int& a,   int, int=0) { READDATA(s, a); }
-//template<typename Stream> inline void Unserialize(Stream& s, signed long& a,    int, int=0) { READDATA(s, a); }
-//template<typename Stream> inline void Unserialize(Stream& s, unsigned long& a,  int, int=0) { READDATA(s, a); }
-template<typename Stream> inline void Unserialize(Stream& s, int64_t& a,        int, int=0) { READDATA(s, a); }
-template<typename Stream> inline void Unserialize(Stream& s, uint64_t& a,       int, int=0) { READDATA(s, a); }
+template<typename Stream> inline void Unserialize(Stream& s, int64_t& a,          int, int=0) { READDATA(s, a); }
+template<typename Stream> inline void Unserialize(Stream& s, uint64_t& a,         int, int=0) { READDATA(s, a); }
 template<typename Stream> inline void Unserialize(Stream& s, float& a,          int, int=0) { READDATA(s, a); }
 template<typename Stream> inline void Unserialize(Stream& s, double& a,         int, int=0) { READDATA(s, a); }
 
 inline unsigned int GetSerializeSize(bool a, int, int=0)                          { return sizeof(char); }
 template<typename Stream> inline void Serialize(Stream& s, bool a, int, int=0)    { char f=a; WRITEDATA(s, f); }
 template<typename Stream> inline void Unserialize(Stream& s, bool& a, int, int=0) { char f; READDATA(s, f); a=f; }
-
 
 #ifndef THROW_WITH_STACKTRACE
 #define THROW_WITH_STACKTRACE(exception)  \
@@ -706,8 +703,6 @@ void Unserialize(Stream& is, boost::tuple<T0, T1, T2, T3>& item, int nType, int 
     Unserialize(is, boost::get<3>(item), nType, nVersion);
 }
 
-
-
 //
 // map
 //
@@ -741,8 +736,6 @@ void Unserialize(Stream& is, std::map<K, T, Pred, A>& m, int nType, int nVersion
         mi = m.insert(mi, item);
     }
 }
-
-
 
 //
 // set
@@ -812,35 +805,6 @@ struct ser_streamplaceholder
 };
 
 typedef std::vector<char, zero_after_free_allocator<char> > CSerializeData;
-
-class CSizeComputer
-{
-protected:
-    size_t nSize;
-
-public:
-    int nType;
-    int nVersion;
-
-    CSizeComputer(int nTypeIn, int nVersionIn) : nSize(0), nType(nTypeIn), nVersion(nVersionIn) {}
-
-    CSizeComputer& write(const char *psz, int nSize)
-    {
-        this->nSize += nSize;
-        return *this;
-    }
-
-    template<typename T>
-    CSizeComputer& operator<<(const T& obj)
-    {
-        ::Serialize(*this, obj, nType, nVersion);
-        return (*this);
-    }
-
-    size_t size() const {
-        return nSize;
-    }
-};
 
 /** Double ended buffer combining vector and stream-like interfaces.
  *
@@ -1026,7 +990,6 @@ public:
         return true;
     }
 
-
     //
     // Stream subset
     //
@@ -1186,7 +1149,6 @@ public:
     FILE* operator=(FILE* pnew) { return file = pnew; }
     bool operator!()            { return (file == NULL); }
 
-
     //
     // Stream subset
     //
@@ -1253,150 +1215,6 @@ public:
             throw std::ios_base::failure("CAutoFile::operator>> : file handle is NULL");
         ::Unserialize(*this, obj, nType, nVersion);
         return (*this);
-    }
-};
-
-/** Wrapper around a FILE* that implements a ring buffer to
- *  deserialize from. It guarantees the ability to rewind
- *  a given number of bytes. */
-class CBufferedFile
-{
-private:
-    FILE *src;          // source file
-    uint64_t nSrcPos;     // how many bytes have been read from source
-    uint64_t nReadPos;    // how many bytes have been read from this
-    uint64_t nReadLimit;  // up to which position we're allowed to read
-    uint64_t nRewind;     // how many bytes we guarantee to rewind
-    std::vector<char> vchBuf; // the buffer
-
-    short state;
-    short exceptmask;
-
-protected:
-    void setstate(short bits, const char *psz) {
-        state |= bits;
-        if (state & exceptmask)
-            throw std::ios_base::failure(psz);
-    }
-
-    // read data from the source to fill the buffer
-    bool Fill() {
-        unsigned int pos = nSrcPos % vchBuf.size();
-        unsigned int readNow = vchBuf.size() - pos;
-        unsigned int nAvail = vchBuf.size() - (nSrcPos - nReadPos) - nRewind;
-        if (nAvail < readNow)
-            readNow = nAvail;
-        if (readNow == 0)
-            return false;
-        size_t read = fread((void*)&vchBuf[pos], 1, readNow, src);
-        if (read == 0) {
-            setstate(std::ios_base::failbit, feof(src) ? "CBufferedFile::Fill : end of file" : "CBufferedFile::Fill : fread failed");
-            return false;
-        } else {
-            nSrcPos += read;
-            return true;
-        }
-    }
-
-public:
-    int nType;
-    int nVersion;
-
-    CBufferedFile(FILE *fileIn, uint64_t nBufSize, uint64_t nRewindIn, int nTypeIn, int nVersionIn) :
-        src(fileIn), nSrcPos(0), nReadPos(0), nReadLimit((uint64_t)(-1)), nRewind(nRewindIn), vchBuf(nBufSize, 0),
-        state(0), exceptmask(std::ios_base::badbit | std::ios_base::failbit), nType(nTypeIn), nVersion(nVersionIn) {
-    }
-
-    // check whether no error occurred
-    bool good() const {
-        return state == 0;
-    }
-
-    // check whether we're at the end of the source file
-    bool eof() const {
-        return nReadPos == nSrcPos && feof(src);
-    }
-
-    // read a number of bytes
-    CBufferedFile& read(char *pch, size_t nSize) {
-        if (nSize + nReadPos > nReadLimit)
-            throw std::ios_base::failure("Read attempted past buffer limit");
-        if (nSize + nRewind > vchBuf.size())
-            throw std::ios_base::failure("Read larger than buffer size");
-        while (nSize > 0) {
-            if (nReadPos == nSrcPos)
-                Fill();
-            unsigned int pos = nReadPos % vchBuf.size();
-            size_t nNow = nSize;
-            if (nNow + pos > vchBuf.size())
-                nNow = vchBuf.size() - pos;
-            if (nNow + nReadPos > nSrcPos)
-                nNow = nSrcPos - nReadPos;
-            memcpy(pch, &vchBuf[pos], nNow);
-            nReadPos += nNow;
-            pch += nNow;
-            nSize -= nNow;
-        }
-        return (*this);
-    }
-
-    // return the current reading position
-    uint64_t GetPos() {
-        return nReadPos;
-    }
-
-    // rewind to a given reading position
-    bool SetPos(uint64_t nPos) {
-        nReadPos = nPos;
-        if (nReadPos + nRewind < nSrcPos) {
-            nReadPos = nSrcPos - nRewind;
-            return false;
-        } else if (nReadPos > nSrcPos) {
-            nReadPos = nSrcPos;
-            return false;
-        } else {
-            return true;
-        }
-    }
-
-    bool Seek(uint64_t nPos) {
-        long nLongPos = nPos;
-        if (nPos != (uint64_t)nLongPos)
-            return false;
-        if (fseek(src, nLongPos, SEEK_SET))
-            return false;
-        nLongPos = ftell(src);
-        nSrcPos = nLongPos;
-        nReadPos = nLongPos;
-        state = 0;
-        return true;
-    }
-
-    // prevent reading beyond a certain position
-    // no argument removes the limit
-    bool SetLimit(uint64_t nPos = (uint64_t)(-1)) {
-        if (nPos < nReadPos)
-            return false;
-        nReadLimit = nPos;
-        return true;
-    }
-
-    template<typename T>
-    CBufferedFile& operator>>(T& obj) {
-        // Unserialize from this stream
-        ::Unserialize(*this, obj, nType, nVersion);
-        return (*this);
-    }
-
-    // search for a given byte in the stream, and remain positioned on it
-    void FindByte(char ch) {
-        while (true) {
-            if (nReadPos == nSrcPos)
-                Fill();
-            if (vchBuf[nReadPos % vchBuf.size()] == ch)
-                break;
-            nReadPos++;
-        }
     }
 };
 

@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2013-2019 The Truckcoin developers
+// Copyright (c) 2013-2024 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #ifndef BITCOIN_DB_H
@@ -18,8 +18,10 @@ class CAddress;
 class CAddrMan;
 class CBlockLocator;
 class CDiskBlockIndex;
+class CDiskTxPos;
 class CMasterKey;
 class COutPoint;
+class CTxIndex;
 class CWallet;
 class CWalletTx;
 
@@ -36,6 +38,7 @@ private:
     bool fDbEnvInit;
     bool fMockDb;
     boost::filesystem::path pathEnv;
+    std::string strPath;
 
     void EnvShutdown();
 
@@ -88,7 +91,6 @@ public:
 
 extern CDBEnv bitdb;
 
-
 /** RAII class that provides access to a Berkeley database */
 class CDB
 {
@@ -101,7 +103,6 @@ protected:
     explicit CDB(const char* pszFile, const char* pszMode="r+");
     ~CDB() { Close(); }
 public:
-    void Flush();
     void Close();
 private:
     CDB(const CDB&);

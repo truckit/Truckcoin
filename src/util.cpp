@@ -5,12 +5,9 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "util.h"
-
-#include "random.h"
 #include "cleanse.h"
 #include "db.h"
 #include "sync.h"
-#include "strlcpy.h"
 #include "version.h"
 #include "ui_interface.h"
 #include <boost/algorithm/string/join.hpp>
@@ -25,6 +22,8 @@ namespace boost {
     }
 }
 
+#include <boost/algorithm/string/case_conv.hpp> // for to_lower()
+#include <boost/algorithm/string/predicate.hpp> // for startswith() and endswith()
 #include <boost/program_options/detail/config_file.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <boost/filesystem.hpp>
@@ -75,7 +74,7 @@ map<string, vector<string> > mapMultiArgs;
 bool fDebug = false;
 bool fDebugNet = false;
 bool fPrintToConsole = false;
-bool fPrintToDebugger = false;
+bool fPrintToDebugLog = true;
 bool fRequestShutdown = false;
 bool fShutdown = false;
 bool fDaemon = false;
@@ -167,7 +166,7 @@ inline int OutputDebugStringF(const char* pszFormat, ...)
         ret = vprintf(pszFormat, arg_ptr);
         va_end(arg_ptr);
     }
-    else if (!fPrintToDebugger)
+    else if (fPrintToDebugLog)
     {
         // print to debug.log
 
@@ -212,31 +211,6 @@ inline int OutputDebugStringF(const char* pszFormat, ...)
         }
     }
 
-#ifdef WIN32
-    if (fPrintToDebugger)
-    {
-        static CCriticalSection cs_OutputDebugStringF;
-
-        // accumulate and output a line at a time
-        {
-            LOCK(cs_OutputDebugStringF);
-            static std::string buffer;
-
-            va_list arg_ptr;
-            va_start(arg_ptr, pszFormat);
-            buffer += vstrprintf(pszFormat, arg_ptr);
-            va_end(arg_ptr);
-
-            int line_start = 0, line_end;
-            while((line_end = buffer.find('\n', line_start)) != -1)
-            {
-                OutputDebugStringA(buffer.substr(line_start, line_end - line_start).c_str());
-                line_start = line_end + 1;
-            }
-            buffer.erase(0, line_start);
-        }
-    }
-#endif
     return ret;
 }
 
@@ -385,7 +359,6 @@ bool ParseMoney(const char* pszIn, int64_t& nRet)
     return true;
 }
 
-
 const signed char p_util_hexdigit[256] =
 { -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
   -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
@@ -404,35 +377,34 @@ const signed char p_util_hexdigit[256] =
   -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
   -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, };
 
-
 static const long hextable[] = 
 {
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 10-19
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 30-39
-    -1, -1, -1, -1, -1, -1, -1, -1,  0,  1,
-     2,  3,  4,  5,  6,  7,  8,  9, -1, -1,		// 50-59
-    -1, -1, -1, -1, -1, 10, 11, 12, 13, 14,
-    15, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 70-79
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, 10, 11, 12,		// 90-99
-    13, 14, 15, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 110-109
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 130-139
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 150-159
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 170-179
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 190-199
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 210-219
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 230-239
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 10-19
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 30-39
+	-1, -1, -1, -1, -1, -1, -1, -1,  0,  1,
+	 2,  3,  4,  5,  6,  7,  8,  9, -1, -1,		// 50-59
+	-1, -1, -1, -1, -1, 10, 11, 12, 13, 14,
+	15, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 70-79
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, 10, 11, 12,		// 90-99
+	13, 14, 15, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 110-109
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 130-139
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 150-159
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 170-179
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 190-199
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 210-219
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 230-239
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1
 };
 
 long hex2long(const char* hexString)
@@ -505,24 +477,24 @@ void ParseParameters(int argc, const char* const argv[])
     mapMultiArgs.clear();
     for (int i = 1; i < argc; i++)
     {
-        char psz[10000];
-        strlcpy(psz, argv[i], sizeof(psz));
-        char* pszValue = (char*)"";
-        if (strchr(psz, '='))
+        std::string str(argv[i]);
+        std::string strValue;
+        size_t is_index = str.find('=');
+        if (is_index != std::string::npos)
         {
-            pszValue = strchr(psz, '=');
-            *pszValue++ = '\0';
+            strValue = str.substr(is_index+1);
+            str = str.substr(0, is_index);
         }
-        #ifdef WIN32
-        _strlwr(psz);
-        if (psz[0] == '/')
-            psz[0] = '-';
-        #endif
-        if (psz[0] != '-')
+#ifdef WIN32
+        boost::to_lower(str);
+        if (boost::algorithm::starts_with(str, "/"))
+            str = "-" + str.substr(1);
+#endif
+        if (str[0] != '-')
             break;
 
-        mapArgs[psz] = pszValue;
-        mapMultiArgs[psz].push_back(pszValue);
+        mapArgs[str] = strValue;
+        mapMultiArgs[str].push_back(strValue);
     }
 
     // New 0.6 features:
@@ -1116,7 +1088,7 @@ const boost::filesystem::path &GetDataDir(bool fNetSpecific)
 boost::filesystem::path GetConfigFile()
 {
     boost::filesystem::path pathConfigFile(GetArg("-conf", "Truckcoin.conf"));
-    if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir(false) / pathConfigFile;
+    if (!pathConfigFile.is_absolute()) pathConfigFile = GetDataDir(false) / pathConfigFile;
     return pathConfigFile;
 }
 
@@ -1147,7 +1119,7 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
 boost::filesystem::path GetPidFile()
 {
     boost::filesystem::path pathPidFile(GetArg("-pid", "Truckcoind.pid"));
-    if (!pathPidFile.is_complete()) pathPidFile = GetDataDir() / pathPidFile;
+    if (!pathPidFile.is_absolute()) pathPidFile = GetDataDir() / pathPidFile;
     return pathPidFile;
 }
 
@@ -1190,20 +1162,6 @@ int GetFilesize(FILE* file)
         nFilesize = ftell(file);
     fseek(file, nSavePos, SEEK_SET);
     return nFilesize;
-}
-
-// this function tries to make a particular range of a file allocated (corresponding to disk space)
-// it is advisory, and the range specified in the arguments will never contain live data
-void AllocateFileRange(FILE *file, unsigned int offset, unsigned int length) {
-    static const char buf[65536] = {};
-    fseek(file, offset, SEEK_SET);
-    while (length > 0) {
-        unsigned int now = 65536;
-        if (length < now)
-            now = length;
-        fwrite(buf, 1, now, file); // allowed to fail; this function is advisory anyway
-        length -= now;
-    }
 }
 
 void ShrinkDebugFile()

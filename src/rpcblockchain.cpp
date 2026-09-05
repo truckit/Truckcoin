@@ -52,9 +52,9 @@ double GetPoSKernelPS(const CBlockIndex* blockindex)
 
     const CBlockIndex* pindex = pindexBest;
     const CBlockIndex* pindexPrevStake = NULL;
-	
-	if (blockindex != NULL)
-		pindex = blockindex;
+
+    if (blockindex != NULL)
+        pindex = blockindex;
 
     while (pindex && nStakesHandled < nPoSInterval)
     {
@@ -238,7 +238,7 @@ Value getblock(const Array& params, bool fHelp)
 
     CBlock block;
     CBlockIndex* pblockindex = mapBlockIndex[hash];
-    block.ReadFromDisk(pblockindex);
+    block.ReadFromDisk(pblockindex, true);
 
     return blockToJSON(block, pblockindex, params.size() > 1 ? params[1].get_bool() : false);
 }
@@ -263,7 +263,7 @@ Value getblockbynumber(const Array& params, bool fHelp)
     uint256 hash = *pblockindex->phashBlock;
 
     pblockindex = mapBlockIndex[hash];
-    block.ReadFromDisk(pblockindex);
+    block.ReadFromDisk(pblockindex, true);
 
     return blockToJSON(block, pblockindex, params.size() > 1 ? params[1].get_bool() : false);
 }

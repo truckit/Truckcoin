@@ -87,7 +87,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 {
     updateStyle();
     resize(860, 600);
-    setWindowTitle(tr("Truckcoin") + " - " + tr("Wallet ") + QString::fromStdString(FormatFullVersion()));
+    setWindowTitle(tr("Truckcoin Classic ") + QString::fromStdString(FormatFullVersion()));
 #ifndef Q_OS_MAC
     qApp->setWindowIcon(QIcon(":icons/bitcoin"));
     setWindowIcon(QIcon(":icons/bitcoin"));
@@ -172,7 +172,9 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     timerMintingWeights->start(30 * 1000);
     connect(timerMintingWeights, SIGNAL(timeout()), this, SLOT(updateMintingWeights()));
     // Set initial values for user and network weights
-    nWeight, nHoursToMaturity, nNetworkWeight = 0;
+    nWeight = 0;
+    nNetworkWeight = 0;
+    nHoursToMaturity = 0;
 
     // Progress bar and label for blocks download
     progressBarLabel = new QLabel();
@@ -195,7 +197,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     statusBar()->addPermanentWidget(frameBlocks);
 
     syncIconMovie = new QMovie(":/movies/update_spinner", "mng", this);
-    // this->setStyleSheet("background-color: #effbef;");
+	// this->setStyleSheet("background-color: #effbef;");
 
     // Clicking on a transaction on the overview page simply sends you to transaction history page
     connect(overviewPage, SIGNAL(transactionClicked(QModelIndex)), this, SLOT(gotoHistoryPage()));
@@ -456,7 +458,7 @@ void BitcoinGUI::setClientModel(ClientModel *clientModel)
 
             aboutAction->setIcon(QIcon(":/icons/toolbar_testnet"));
         }
-		
+
         // Create system tray menu (or setup the dock menu) that late to prevent users from calling actions, 
         // while the client has not yet fully loaded 
         if(trayIcon) 
@@ -616,8 +618,7 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
     statusBar()->clearMessage();
 
     // don't show / hide progress bar and its label if we have no connection to the network
-    enum BlockSource blockSource = clientModel ? clientModel->getBlockSource() : BLOCK_SOURCE_NONE;
-    if (blockSource == BLOCK_SOURCE_NONE || (blockSource == BLOCK_SOURCE_NETWORK && clientModel->getNumConnections() == 0))
+    if (!clientModel || clientModel->getNumConnections() == 0)
     {
         progressBarLabel->setVisible(false);
         progressBar->setVisible(false);
@@ -627,17 +628,6 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
 
     QString strStatusBarWarnings = clientModel->getStatusBarWarnings();
     QString tooltip;
-    
-    QString importText;
-    switch (blockSource) {
-    case BLOCK_SOURCE_NONE:
-    case BLOCK_SOURCE_NETWORK:
-        importText = tr("Synchronizing with network...");
-    case BLOCK_SOURCE_DISK:
-        importText = tr("Importing blocks from disk...");
-    case BLOCK_SOURCE_REINDEX:
-        importText = tr("Reindexing blocks on disk...");
-    }
 
     if(count < nTotalBlocks)
     {
@@ -646,7 +636,7 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
 
         if (strStatusBarWarnings.isEmpty())
         {
-            progressBarLabel->setText(importText);
+            progressBarLabel->setText(tr("Synchronizing with network..."));
             progressBarLabel->setVisible(true);
             progressBar->setFormat(tr("~%n block(s) remaining", "", nRemainingBlocks));
             progressBar->setMaximum(nTotalBlocks);
@@ -654,7 +644,7 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
             progressBar->setVisible(true);
         }
 
-        tooltip = tr("Processed %1 of %2 blocks of transaction history (%3% done).").arg(count).arg(nTotalBlocks).arg(nPercentageDone, 0, 'f', 2);
+        tooltip = tr("Downloaded %1 of %2 blocks of transaction history (%3% done).").arg(count).arg(nTotalBlocks).arg(nPercentageDone, 0, 'f', 2);
     }
     else
     {
@@ -662,7 +652,7 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
             progressBarLabel->setVisible(false);
 
         progressBar->setVisible(false);
-        tooltip = tr("Processed %1 blocks of transaction history.").arg(count);
+        tooltip = tr("Downloaded %1 blocks of transaction history.").arg(count);
     }
 
     // Override progressBarLabel text and hide progress bar, when we have warnings to display
@@ -732,7 +722,7 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
     progressBar->setToolTip(tooltip);
 }
 
-void BitcoinGUI::message(const QString &title, const QString &message, unsigned int style, bool *ret)
+void BitcoinGUI::message(const QString &title, const QString &message, unsigned int style)
 {
   QString strTitle = tr("Truckcoin") + " - ";
   // Default to information icon
@@ -772,9 +762,7 @@ void BitcoinGUI::message(const QString &title, const QString &message, unsigned 
           buttons = QMessageBox::Ok;
 
       QMessageBox mBox((QMessageBox::Icon)nMBoxIcon, strTitle, message, buttons);
-        int r = mBox.exec();
-        if (ret != NULL)
-            *ret = r == QMessageBox::Ok;
+     mBox.exec();
   }
   else
      notificator->notify((Notificator::Class)nNotifyIcon, strTitle, message);
@@ -891,10 +879,10 @@ void BitcoinGUI::gotoAddressBookPage()
 
 void BitcoinGUI::gotoBlockBrowser(QString transactionId)
 {
-	if(!transactionId.isEmpty())
-		blockBrowser->setTransactionId(transactionId);
-	
-	blockBrowser->show();
+    if(!transactionId.isEmpty())
+        blockBrowser->setTransactionId(transactionId);
+
+    blockBrowser->show();
 }
 
 void BitcoinGUI::gotoReceiveCoinsPage()
@@ -1104,7 +1092,7 @@ void BitcoinGUI::backupWallet()
 #if QT_VERSION < 0x050000
     QString saveDir = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation);
 #else 
-	QString saveDir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation); 
+    QString saveDir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation); 
 #endif 
 
     QString filename = QFileDialog::getSaveFileName(this, tr("Backup Wallet"), saveDir, tr("Wallet Data (*.dat)"));
@@ -1181,7 +1169,6 @@ void BitcoinGUI::importWallet()
                       ,CClientUIInterface::MSG_INFORMATION);
     }
 }
-
 void BitcoinGUI::changePassphrase()
 {
     AskPassphraseDialog dlg(AskPassphraseDialog::ChangePass, this);

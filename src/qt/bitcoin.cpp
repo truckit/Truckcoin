@@ -38,27 +38,23 @@ Q_IMPORT_PLUGIN(qtaccessiblewidgets)
 static BitcoinGUI *guiref;
 static SplashScreen *splashref;
 
-static bool ThreadSafeMessageBox(const std::string& message, const std::string& caption, unsigned int style)
+static void ThreadSafeMessageBox(const std::string& message, const std::string& caption, int style)
 {
     // Message from network thread
     if(guiref)
     {
         bool modal = (style & CClientUIInterface::MODAL);
-        bool ret = false;
       // In case of modal message, use blocking connection to wait for user to click a button
       QMetaObject::invokeMethod(guiref, "message",
                                    modal ? GUIUtil::blockingGUIThreadConnection() : Qt::QueuedConnection,
                                    Q_ARG(QString, QString::fromStdString(caption)),
                                    Q_ARG(QString, QString::fromStdString(message)),
-                                   Q_ARG(unsigned int, style),
-                                   Q_ARG(bool*, &ret));
-        return ret;
+                                   Q_ARG(unsigned int, style));
     }
     else
     {
         printf("%s: %s\n", caption.c_str(), message.c_str());
         fprintf(stderr, "%s: %s\n", caption.c_str(), message.c_str());
-        return false;
     }
 }
 
@@ -240,7 +236,7 @@ int main(int argc, char *argv[])
 
                 window.setClientModel(&clientModel);
                 window.setWalletModel(&walletModel);
-				
+
 #if defined(Q_OS_WIN) && QT_VERSION >= 0x050000
                 app.installNativeEventFilter(new WinShutdownMonitor());
 #endif
@@ -257,7 +253,7 @@ int main(int argc, char *argv[])
 
                 // Place this here as guiref has to be defined if we don't want to lose URIs
                 ipcInit(argc, argv);
-				
+
 #if defined(Q_OS_WIN) && QT_VERSION >= 0x050000
                 WinShutdownMonitor::registerShutdownBlockReason(QObject::tr("Truckcoin shutting down. Please wait..."), (HWND)window.getMainWinId()); 
 #endif
@@ -283,4 +279,4 @@ int main(int argc, char *argv[])
     }
     return 0;
 }
-#endif // BITCOIN_QT_TEST
+#endif

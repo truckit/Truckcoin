@@ -1,6 +1,6 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2013-2019 The Truckcoin developers
+// Copyright (c) 2013-2024 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -120,42 +120,6 @@ std::string HexBits(unsigned int nBits)
     return HexStr(BEGIN(uBits.cBits), END(uBits.cBits));
 }
 
-//
-// Utilities: convert hex-encoded Values
-// (throws error if not hex).
-//
-uint256 ParseHashV(const Value& v, string strName)
-{
-    string strHex;
-    if (v.type() == str_type)
-        strHex = v.get_str();
-    if (!IsHex(strHex)) // Note: IsHex("") is false
-        throw JSONRPCError(RPC_INVALID_PARAMETER, strName+" must be hexadecimal string (not '"+strHex+"')");
-    uint256 result;
-    result.SetHex(strHex);
-    return result;
-}
-
-uint256 ParseHashO(const Object& o, string strKey)
-{
-    return ParseHashV(find_value(o, strKey), strKey);
-}
-
-vector<unsigned char> ParseHexV(const Value& v, string strName)
-{
-    string strHex;
-    if (v.type() == str_type)
-        strHex = v.get_str();
-    if (!IsHex(strHex))
-        throw JSONRPCError(RPC_INVALID_PARAMETER, strName+" must be hexadecimal string (not '"+strHex+"')");
-    return ParseHex(strHex);
-}
-
-vector<unsigned char> ParseHexO(const Object& o, string strKey)
-{
-    return ParseHexV(find_value(o, strKey), strKey);
-}
-
 ///
 /// Note: This interface may still be subject to change.
 ///
@@ -223,12 +187,9 @@ Value stop(const Array& params, bool fHelp)
     return "Truckcoin server stopping";
 }
 
-
-
 //
 // Call Table
 //
-
 
 static const CRPCCommand vRPCCommands[] =
 { //  name                      function                 safemd  unlocked
@@ -242,7 +203,7 @@ static const CRPCCommand vRPCCommands[] =
     { "getgenerate",            &getgenerate,            true,   false },
     { "setgenerate",            &setgenerate,            true,   false },
     { "gethashespersec",        &gethashespersec,        true,   false },
-	{ "getnettotals",           &getnettotals,           true,   true },
+    { "getnettotals",           &getnettotals,           true,      true },
     { "getinfo",                &getinfo,                true,   false },
     { "getmininginfo",          &getmininginfo,          true,   false },
     { "getnewaddress",          &getnewaddress,          true,   false },
@@ -274,7 +235,7 @@ static const CRPCCommand vRPCCommands[] =
     { "getblockbynumber",       &getblockbynumber,       false,  false },
     { "getblockhash",           &getblockhash,           false,  false },
     { "gettransaction",         &gettransaction,         false,  false },
-	{ "getstaketx",             &getstaketx,             false,  false },
+    { "getstaketx",             &getstaketx,             false,  false },
     { "listtransactions",       &listtransactions,       false,  false },
     { "listaddressgroupings",   &listaddressgroupings,   false,  false },
     { "signmessage",            &signmessage,            false,  false },
@@ -295,15 +256,15 @@ static const CRPCCommand vRPCCommands[] =
     { "signrawtransaction",     &signrawtransaction,     false,  false },
     { "sendrawtransaction",     &sendrawtransaction,     false,  false },
     { "getcheckpoint",          &getcheckpoint,          true,   false },
-    { "reservebalance",         &reservebalance,         false,  true },
-    { "checkwallet",            &checkwallet,            false,  true },
-    { "repairwallet",           &repairwallet,           false,  true },
-    { "resendtx",               &resendtx,               false,  true },
-    { "makekeypair",            &makekeypair,            false,  true },
-    { "sendalert",              &sendalert,              false,  false },
+    { "reservebalance",         &reservebalance,         false,  true},
+    { "checkwallet",            &checkwallet,            false,  true},
+    { "repairwallet",           &repairwallet,           false,  true},
+    { "resendtx",               &resendtx,               false,  true},
+    { "makekeypair",            &makekeypair,            false,  true},
+    { "sendalert",              &sendalert,              false,  false},
     { "getstaking",             &getstaking,             true,   false },
     { "setstaking",             &setstaking,             true,   false },
-    { "getstakereport",         &getstakereport,         false,  false },
+    { "getstakereport",         &getstakereport,         false,  false},
 };
 
 CRPCTable::CRPCTable()
@@ -407,41 +368,6 @@ static string HTTPReply(int nStatus, const string& strMsg, bool keepalive)
         strMsg.c_str());
 }
 
-bool ReadHTTPRequestLine(std::basic_istream<char>& stream, int &proto,
-                         string& http_method, string& http_uri)
-{
-    string str;
-    getline(stream, str);
-
-    // HTTP request line is space-delimited
-    vector<string> vWords;
-    boost::split(vWords, str, boost::is_any_of(" "));
-    if (vWords.size() < 2)
-        return false;
-
-    // HTTP methods permitted: GET, POST
-    http_method = vWords[0];
-    if (http_method != "GET" && http_method != "POST")
-        return false;
-
-    // HTTP URI must be an absolute path, relative to current host
-    http_uri = vWords[1];
-    if (http_uri.size() == 0 || http_uri[0] != '/')
-        return false;
-
-    // parse proto, if present
-    string strProto = "";
-    if (vWords.size() > 2)
-        strProto = vWords[2];
-
-    proto = 0;
-    const char *ver = strstr(strProto.c_str(), "HTTP/1.");
-    if (ver != NULL)
-        proto = atoi(ver+7);
-
-    return true;
-}
-
 int ReadHTTPStatus(std::basic_istream<char>& stream, int &proto)
 {
     string str;
@@ -457,7 +383,7 @@ int ReadHTTPStatus(std::basic_istream<char>& stream, int &proto)
     return atoi(vWords[1].c_str());
 }
 
-int ReadHTTPHeaders(std::basic_istream<char>& stream, map<string, string>& mapHeadersRet)
+int ReadHTTPHeader(std::basic_istream<char>& stream, map<string, string>& mapHeadersRet)
 {
     int nLen = 0;
     while (true)
@@ -482,15 +408,17 @@ int ReadHTTPHeaders(std::basic_istream<char>& stream, map<string, string>& mapHe
     return nLen;
 }
 
-int ReadHTTPMessage(std::basic_istream<char>& stream, map<string,
-                    string>& mapHeadersRet, string& strMessageRet,
-                    int nProto)
+int ReadHTTP(std::basic_istream<char>& stream, map<string, string>& mapHeadersRet, string& strMessageRet)
 {
     mapHeadersRet.clear();
     strMessageRet = "";
 
+    // Read status
+    int nProto = 0;
+    int nStatus = ReadHTTPStatus(stream, nProto);
+
     // Read header
-    int nLen = ReadHTTPHeaders(stream, mapHeadersRet);
+    int nLen = ReadHTTPHeader(stream, mapHeadersRet);
     if (nLen < 0 || nLen > (int)MAX_SIZE)
         return HTTP_INTERNAL_SERVER_ERROR;
 
@@ -512,7 +440,7 @@ int ReadHTTPMessage(std::basic_istream<char>& stream, map<string,
             mapHeadersRet["connection"] = "close";
     }
 
-    return HTTP_OK;
+    return nStatus;
 }
 
 bool HTTPAuthorized(map<string, string>& mapHeaders)
@@ -866,12 +794,12 @@ void ThreadRPCServer2(void* parg)
         context.set_options(ssl::context::no_sslv2);
 
         boost::filesystem::path pathCertFile(GetArg("-rpcsslcertificatechainfile", "server.cert"));
-        if (!pathCertFile.is_complete()) pathCertFile = boost::filesystem::path(GetDataDir()) / pathCertFile;
+        if (!pathCertFile.is_absolute()) pathCertFile = boost::filesystem::path(GetDataDir()) / pathCertFile;
         if (boost::filesystem::exists(pathCertFile)) context.use_certificate_chain_file(pathCertFile.string());
         else printf("ThreadRPCServer ERROR: missing server certificate file %s\n", pathCertFile.string().c_str());
 
         boost::filesystem::path pathPKFile(GetArg("-rpcsslprivatekeyfile", "server.pem"));
-        if (!pathPKFile.is_complete()) pathPKFile = boost::filesystem::path(GetDataDir()) / pathPKFile;
+        if (!pathPKFile.is_absolute()) pathPKFile = boost::filesystem::path(GetDataDir()) / pathPKFile;
         if (boost::filesystem::exists(pathPKFile)) context.use_private_key_file(pathPKFile.string(), ssl::context::pem);
         else printf("ThreadRPCServer ERROR: missing server private key file %s\n", pathPKFile.string().c_str());
 
@@ -1058,17 +986,10 @@ void ThreadRPCServer3(void* parg)
             }
             return;
         }
-
-        int nProto = 0;
         map<string, string> mapHeaders;
-        string strRequest, strMethod, strURI;
+        string strRequest;
 
-        // Read HTTP request line
-        if (!ReadHTTPRequestLine(conn->stream(), nProto, strMethod, strURI))
-            break;
-
-        // Read HTTP message headers and body
-        ReadHTTPMessage(conn->stream(), mapHeaders, strRequest, nProto);
+        ReadHTTP(conn->stream(), mapHeaders, strRequest);
 
         // Check authorization
         if (mapHeaders.count("authorization") == 0)
@@ -1170,7 +1091,6 @@ json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_s
     }
 }
 
-
 Object CallRPC(const string& strMethod, const Array& params)
 {
     if (mapArgs["-rpcuser"] == "" && mapArgs["-rpcpassword"] == "")
@@ -1206,15 +1126,10 @@ Object CallRPC(const string& strMethod, const Array& params)
     string strPost = HTTPPost(strRequest, mapRequestHeaders);
     stream << strPost << std::flush;
 
-    // Receive HTTP reply status
-    int nProto = 0;
-    int nStatus = ReadHTTPStatus(stream, nProto);
-
-    // Receive HTTP reply message headers and body
+    // Receive reply
     map<string, string> mapHeaders;
     string strReply;
-    ReadHTTPMessage(stream, mapHeaders, strReply, nProto);
-
+    int nStatus = ReadHTTP(stream, mapHeaders, strReply);
     if (nStatus == HTTP_UNAUTHORIZED)
         throw runtime_error("incorrect rpcuser or rpcpassword (authorization failed)");
     else if (nStatus >= 400 && nStatus != HTTP_BAD_REQUEST && nStatus != HTTP_NOT_FOUND && nStatus != HTTP_INTERNAL_SERVER_ERROR)
@@ -1307,7 +1222,7 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "createrawtransaction"   && n > 1) ConvertTo<Object>(params[1]);
     if (strMethod == "signrawtransaction"     && n > 1) ConvertTo<Array>(params[1], true);
     if (strMethod == "signrawtransaction"     && n > 2) ConvertTo<Array>(params[2], true);
-	if (strMethod == "sendalert"              && n > 2) ConvertTo<int64_t>(params[2]);
+    if (strMethod == "sendalert"              && n > 2) ConvertTo<int64_t>(params[2]);
     if (strMethod == "sendalert"              && n > 3) ConvertTo<int64_t>(params[3]);
     if (strMethod == "sendalert"              && n > 4) ConvertTo<int64_t>(params[4]);
     if (strMethod == "sendalert"              && n > 5) ConvertTo<int64_t>(params[5]);
@@ -1380,9 +1295,6 @@ int CommandLineRPC(int argc, char *argv[])
     }
     return nRet;
 }
-
-
-
 
 #ifdef TEST
 int main(int argc, char *argv[])

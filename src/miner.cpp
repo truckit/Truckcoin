@@ -4,8 +4,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "db.h"
 #include "miner.h"
+#include "txdb.h"
 #include "util.h"
 #include "kernel.h"
 #include <boost/algorithm/string/replace.hpp>
@@ -135,10 +135,10 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
         int64_t nSearchTime = txCoinStake.nTime; // search to current time
         if (nSearchTime > nLastCoinStakeSearchTime)
         {
-			// printf(">>> OK1\n");
+            // printf(">>> OK1\n");
             if (pwallet->CreateCoinStake(*pwallet, pblock->nBits, nSearchTime-nLastCoinStakeSearchTime, txCoinStake))
             {
-				if (txCoinStake.nTime >= max(pindexPrev->GetMedianTimePast()+1, PastDrift(pindexPrev->GetBlockTime())))
+                if (txCoinStake.nTime >= max(pindexPrev->GetMedianTimePast()+1, PastDrift(pindexPrev->GetBlockTime())))
                 {   // make sure coinstake would meet timestamp protocol
                     // as it would be the same as the block timestamp
                     pblock->vtx[0].nTime = txCoinStake.nTime;
@@ -156,7 +156,8 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
     int64_t nFees = 0;
     {
         LOCK2(cs_main, mempool.cs);
-        CCoinsViewCache view(*pcoinsTip, true);
+        CBlockIndex* pindexPrev = pindexBest;
+        CTxDB txdb("r");
 
         // Priority order to process transactions
         list<COrphan> vOrphan; // list memory doesn't move
@@ -178,8 +179,9 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
             for (const CTxIn& txin : tx.vin)
             {
                 // Read prev transaction
-                CCoins coins;
-                if (!view.GetCoins(txin.prevout.hash, coins))
+                CTransaction txPrev;
+                CTxIndex txindex;
+                if (!txPrev.ReadFromDisk(txdb, txin.prevout, txindex))
                 {
                     // This should never happen; all transactions in the memory
                     // pool should connect to either transactions in the chain
@@ -206,10 +208,10 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
                     nTotalIn += mempool.mapTx[txin.prevout.hash].vout[txin.prevout.n].nValue;
                     continue;
                 }
-                int64_t nValueIn = coins.vout[txin.prevout.n].nValue;
+                int64_t nValueIn = txPrev.vout[txin.prevout.n].nValue;
                 nTotalIn += nValueIn;
 
-                int nConf = pindexPrev->nHeight - coins.nHeight;
+                int nConf = txindex.GetDepthInMainChain();
                 dPriority += (double)nValueIn * nConf;
             }
             if (fMissingInputs) continue;
@@ -233,6 +235,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
         }
 
         // Collect transactions into block
+        map<uint256, CTxIndex> mapTestPool;
         uint64_t nBlockSize = 1000;
         uint64_t nBlockTx = 0;
         int nBlockSigOps = 100;
@@ -250,9 +253,6 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
 
             std::pop_heap(vecPriority.begin(), vecPriority.end(), comparer);
             vecPriority.pop_back();
-            
-            // second layer cached modifications just for this transaction
-            CCoinsViewCache viewTemp(view, true);
 
             // Size limits
             unsigned int nTxSize = ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);
@@ -285,30 +285,27 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
                 std::make_heap(vecPriority.begin(), vecPriority.end(), comparer);
             }
 
-            if (!tx.HaveInputs(viewTemp))
+            // Connecting shouldn't fail due to dependency on other memory pool transactions
+            // because we're already processing them in order of dependency
+            map<uint256, CTxIndex> mapTestPoolTmp(mapTestPool);
+            MapPrevTx mapInputs;
+            bool fInvalid;
+            if (!tx.FetchInputs(txdb, mapTestPoolTmp, false, true, mapInputs, fInvalid))
                 continue;
 
-            int64_t nTxFees = tx.GetValueIn(viewTemp)-tx.GetValueOut();
+            int64_t nTxFees = tx.GetValueIn(mapInputs)-tx.GetValueOut();
             if (nTxFees < nMinFee)
                 continue;
 
-            nTxSigOps += tx.GetP2SHSigOpCount(viewTemp);
+            nTxSigOps += tx.GetP2SHSigOpCount(mapInputs);
             if (nBlockSigOps + nTxSigOps >= MAX_BLOCK_SIGOPS)
                 continue;
-            
-            if (!tx.CheckInputs(viewTemp, true, SCRIPT_VERIFY_P2SH))
-                continue;
-            
-/*
- * We need to call UpdateCoins using actual block timestamp, so don't perform this here.
- *
-            CTxUndo txundo;
-            if (!tx.UpdateCoins(viewTemp, txundo, pindexPrev->nHeight+1, pblock->nTime))
-                continue;
 
-            // push changes from the second layer cache to the first one
-            viewTemp.Flush();
- */           
+            if (!tx.ConnectInputs(txdb, mapInputs, mapTestPoolTmp, CDiskTxPos(1,1,1), pindexPrev, false, true))
+                continue;
+            mapTestPoolTmp[tx.GetHash()] = CTxIndex(CDiskTxPos(1,1,1), tx.vout.size());
+            swap(mapTestPool, mapTestPoolTmp);
+
             // Added
             pblock->vtx.push_back(tx);
             nBlockSize += nTxSize;

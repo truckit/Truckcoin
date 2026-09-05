@@ -5,7 +5,7 @@
 
 #include "main.h"
 #include "wallet.h"
-#include "db.h"
+#include "txdb.h"
 #include "ui_interface.h"
 #include "base58.h"
 
@@ -204,17 +204,19 @@ QString TransactionDesc::toHTML(CWallet *wallet, CWalletTx &wtx)
         }
 
         strHTML += "<b>" + tr("Net amount") + ":</b> " + BitcoinUnits::formatWithUnit(BitcoinUnits::BTC, nNet, true) + "<br>";
-
+			
         //
         // Message
         //
         if (!wtx.mapValue["message"].empty())
              strHTML += "<br><b>" + tr("Message") + ":</b><br>" + GUIUtil::HtmlEscape(wtx.mapValue["message"], true) + "<br>";
 
-        if (!wtx.mapValue["comment"].empty())
+		if (!wtx.mapValue["comment"].empty())
             strHTML += "<br><b>" + tr("Comment") + ":</b><br>" + GUIUtil::HtmlEscape(wtx.mapValue["comment"], true) + "<br>";
 
         strHTML += "<b>" + tr("Transaction ID") + ":</b> " + wtx.GetHash().ToString().c_str() + "<br>";
+
+		
 
         if (wtx.IsCoinBase() || wtx.IsCoinStake())
             strHTML += "<br>" + tr("Generated coins must mature 180 blocks before they can be spent. When you generated this block, it was broadcast to the network to be added to the block chain. If it fails to get into the chain, its state will change to \"not accepted\" and it won't be spendable. This may occasionally happen if another node generates a block within a few seconds of yours.") + "<br>";
@@ -228,12 +230,14 @@ QString TransactionDesc::toHTML(CWallet *wallet, CWalletTx &wtx)
             for (const CTxIn& txin : wtx.vin)
                 if(wallet->IsMine(txin))
                     strHTML += "<b>" + tr("Debit") + ":</b> " + BitcoinUnits::formatWithUnit(BitcoinUnits::BTC, -wallet->GetDebit(txin)) + "<br>";
-           for (const CTxOut& txout : wtx.vout)
+            for (const CTxOut& txout : wtx.vout)
                 if(wallet->IsMine(txout))
                     strHTML += "<b>" + tr("Credit") + ":</b> " + BitcoinUnits::formatWithUnit(BitcoinUnits::BTC, wallet->GetCredit(txout)) + "<br>";
 
             strHTML += "<br><b>" + tr("Transaction") + ":</b><br>";
             strHTML += GUIUtil::HtmlEscape(wtx.ToString(), true);
+
+            CTxDB txdb("r"); // To fetch source txouts
 
             strHTML += "<br><b>" + tr("Inputs") + ":</b>";
             strHTML += "<ul>";
@@ -244,8 +248,8 @@ QString TransactionDesc::toHTML(CWallet *wallet, CWalletTx &wtx)
                 {
                     COutPoint prevout = txin.prevout;
 
-                    CCoins prev;
-                    if(pcoinsTip->GetCoins(prevout.hash, prev))
+                    CTransaction prev;
+                    if(txdb.ReadDiskTx(prevout.hash, prev))
                     {
                         if (prevout.n < prev.vout.size())
                         {

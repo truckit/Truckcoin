@@ -58,7 +58,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
                 sub.credit = txout.nValue;
                 if (ExtractDestination(txout.scriptPubKey, address) && IsMine(*wallet, address))
                 {
-                    // Received by Bitcoin Address
+                    // Received by Truckcoin Address
                     sub.type = TransactionRecord::RecvWithAddress;
                     sub.address = CBitcoinAddress(address).ToString();
                 }
@@ -245,4 +245,3 @@ std::string TransactionRecord::getTxID()
 {
     return hash.ToString() + strprintf("-%03d", idx);
 }
-

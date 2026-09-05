@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2013-2019 The Truckcoin developers
+// Copyright (c) 2013-2024 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #ifndef BITCOIN_NET_H
@@ -104,12 +104,11 @@ enum threadId
     THREAD_DUMPADDRESS,
     THREAD_RPCHANDLER,
     THREAD_MINTER,
-    THREAD_IMPORT,
-    THREAD_SCRIPTCHECK,
 
     THREAD_MAX
 };
 
+extern bool fClient;
 extern bool fDiscover;
 extern bool fListen;
 extern bool fUseUPnP;
@@ -138,9 +137,10 @@ public:
     std::string strSubVer;
     bool fInbound;
     int64_t nReleaseTime;
+    uint nPingTime;
     int nStartingHeight;
     int nMisbehavior;
-	uint64_t nSendBytes; 
+    uint64_t nSendBytes; 
     uint64_t nRecvBytes; 
     uint64_t nBlocksRequested; 
 };
@@ -196,12 +196,12 @@ public:
     std::deque<CNetMessage> vRecvMsg;
     CCriticalSection cs_vRecvMsg;
     int nRecvVersion;
-	
+
     int64_t nLastSend;
     int64_t nLastRecv;
     int64_t nLastSendEmpty;
     int64_t nTimeConnected;
-	uint64_t nBlocksRequested; 
+    uint64_t nBlocksRequested; 
     uint64_t nRecvBytes; 
     uint64_t nSendBytes; 
     CAddress addr;
@@ -229,9 +229,12 @@ public:
     int64_t nReleaseTime;
     std::map<uint256, CRequestTracker> mapRequests;
     CCriticalSection cs_mapRequests;
-    uint256 hashContinue;
-    CBlockIndex* pindexLastGetBlocksBegin;
-    uint256 hashLastGetBlocksEnd;
+    uint nGetblocksAskTime;
+    uint nGetblocksReceiveTime;
+    uint nGetheadersReceiveTime;
+    uint nPingTime;
+    int64_t nPingStamp;
+    int64_t nPongStamp;
     int nStartingHeight;
 
     // flood relay
@@ -256,7 +259,7 @@ public:
         nLastRecv = 0;
         nLastSendEmpty = GetTime();
         nTimeConnected = GetTime();
-		nSendBytes = 0; 
+        nSendBytes = 0; 
         nRecvBytes = 0; 
         nBlocksRequested = 0; 
         addr = addrIn;
@@ -273,9 +276,12 @@ public:
         nReleaseTime = 0;
         nSendSize = 0;
         nSendOffset = 0;
-        hashContinue = 0;
-        pindexLastGetBlocksBegin = 0;
-        hashLastGetBlocksEnd = 0;
+        nGetblocksAskTime = 0;
+        nGetblocksReceiveTime = 0;
+        nGetheadersReceiveTime = 0;
+        nPingTime = 0;
+        nPingStamp = 0;
+        nPongStamp = 0;
         nStartingHeight = -1;
         fGetAddr = false;
         nMisbehavior = 0;
@@ -283,7 +289,7 @@ public:
         setInventoryKnown.max_size(SendBufferSize() / 1000);
 
         // Be shy and don't send version until we hear
-		// Don't announce non-peer CNodes
+        // Don't announce non-peer CNodes
         if (hSocket != INVALID_SOCKET && !fInbound)
             PushVersion();
     }
@@ -318,7 +324,7 @@ public:
     unsigned int GetTotalRecvSize()
     {
         unsigned int total = 0;
-        for (const CNetMessage &msg : vRecvMsg) 
+        for (const CNetMessage &msg : vRecvMsg)
             total += msg.vRecv.size() + 24;
         return total;
     }
@@ -685,13 +691,13 @@ public:
     static bool IsBanned(CNetAddr ip);
     bool Misbehaving(int howmuch); // 1 == a little, 100 == a lot
     void copyStats(CNodeStats &stats);
-	
-    // Network stats 
-    static void RecordBytesRecv(uint64_t bytes); 
-    static void RecordBytesSent(uint64_t bytes); 
- 
-    static uint64_t GetTotalBytesRecv(); 
-    static uint64_t GetTotalBytesSent(); 
+
+    // Network stats
+    static void RecordBytesRecv(uint64_t bytes);
+    static void RecordBytesSent(uint64_t bytes);
+
+    static uint64_t GetTotalBytesRecv();
+    static uint64_t GetTotalBytesSent();
 };
 
 inline void RelayInventory(const CInv& inv)

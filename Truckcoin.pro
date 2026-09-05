@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = truckcoin-qt
-VERSION = 2.2.7.0
+VERSION = 2.3.0
 INCLUDEPATH += src src/json src/qt
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE BOOST_THREAD_PROVIDES_GENERIC_SHARED_MUTEX_ON_WIN __STDC_FORMAT_MACROS
 CONFIG += no_include_pwd
@@ -141,25 +141,25 @@ QMAKE_CLEAN += $$PWD/src/leveldb/out-static/libleveldb.a; cd $$PWD/src/leveldb ;
 #Build Secp256k1
 !win32 {
     INCLUDEPATH += src/secp256k1/include
-    LIBS += $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o
+    LIBS += $$PWD/src/secp256k1/.libs/libsecp256k1.a
     # we use QMAKE_CXXFLAGS_RELEASE even without RELEASE=1 because we use RELEASE to indicate linking preferences not -O preferences
     gensecp256k1.commands = cd $$PWD/src/secp256k1 && chmod 755 * && ./autogen.sh && ./configure --disable-shared --with-pic --enable-benchmark=no --enable-tests=no --enable-exhaustive-tests=no --enable-module-recovery --enable-module-schnorrsig --enable-experimental && CC=$$QMAKE_CC CXX=$$QMAKE_CXX $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\"
-    gensecp256k1.target = $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o
+    gensecp256k1.target = $$PWD/src/secp256k1/.libs/libsecp256k1.a
     gensecp256k1.depends = FORCE
-    PRE_TARGETDEPS += $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o
+    PRE_TARGETDEPS += $$PWD/src/secp256k1/.libs/libsecp256k1.a
     QMAKE_EXTRA_TARGETS += gensecp256k1
     # Gross ugly hack that depends on qmake internals, unfortunately there is no other way to do it.
-    QMAKE_CLEAN += $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o; cd $$PWD/src/secp256k1; $(MAKE) clean
+    QMAKE_CLEAN += $$PWD/src/secp256k1/.libs/libsecp256k1.a; cd $$PWD/src/secp256k1; $(MAKE) clean
 } else {
     INCLUDEPATH += src/secp256k1/include
-    LIBS += $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o
+    LIBS += $$PWD/src/secp256k1/.libs/libsecp256k1.a
     gensecp256k1.commands = cd $$PWD/src/secp256k1 && ./autogen.sh && ./configure --disable-shared --with-pic --enable-benchmark=no --enable-tests=no --enable-exhaustive-tests=no --enable-module-recovery --enable-module-schnorrsig --enable-experimental --host=i686-w64-mingw32.static CC=$$QMAKE_CC && CXX=$$QMAKE_CXX $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\"
-    gensecp256k1.target = $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o
+    gensecp256k1.target = $$PWD/src/secp256k1/.libs/libsecp256k1.a
     gensecp256k1.depends = FORCE
-    PRE_TARGETDEPS += $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o
+    PRE_TARGETDEPS += $$PWD/src/secp256k1/.libs/libsecp256k1.a
     QMAKE_EXTRA_TARGETS += gensecp256k1
     # Gross ugly hack that depends on qmake internals, unfortunately there is no other way to do it.
-    QMAKE_CLEAN += $$PWD/src/secp256k1/src/libsecp256k1_la-secp256k1.o; cd $$PWD/src/secp256k1; $(MAKE) clean
+    QMAKE_CLEAN += $$PWD/src/secp256k1/.libs/libsecp256k1.a; cd $$PWD/src/secp256k1; $(MAKE) clean
 }
 
 # regenerate src/build.h
@@ -206,27 +206,17 @@ HEADERS += src/qt/bitcoingui.h \
     src/kernel.h \
     src/pbkdf2.h \
     src/serialize.h \
-    src/crypto/common.h \
-    src/crypto/aes.h \
-    src/crypto/sha512.h \
-    src/crypto/sha1.h \
-    src/crypto/sha256.h \
-    src/crypto/hmac_sha256.h \
-    src/crypto/ripemd160.h \
-    src/strlcpy.h \
     src/main.h \
     src/miner.h \
     src/net.h \
-    src/pubkey.h \
     src/key.h \
-    src/db.h \
-    src/leveldb.h \
+    src/pubkey.h \
     src/txdb.h \
+    src/db.h \
     src/walletdb.h \
     src/script.h \
     src/init.h \
     src/mruset.h \
-    src/checkqueue.h \
     src/json/json_spirit_writer_template.h \
     src/json/json_spirit_writer.h \
     src/json/json_spirit_value.h \
@@ -276,6 +266,13 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/splitthresholdfield.h \
     src/qt/stakereportdialog.h \
     src/hashblock.h \
+    src/crypto/common.h \
+    src/crypto/aes.h \
+    src/crypto/sha256.h \
+    src/crypto/hmac_sha256.h \
+    src/crypto/sha512.h \
+    src/crypto/ripemd160.h \
+    src/crypto/sha1.h \
     src/crypto/sph_blake.h \
     src/crypto/sph_skein.h \
     src/crypto/sph_keccak.h \
@@ -309,25 +306,18 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/util.cpp \
     src/hash.cpp \
     src/netbase.cpp \
-    src/pubkey.cpp \
     src/key.cpp \
-    src/base58.cpp \
+    src/pubkey.cpp \
     src/script.cpp \
-    src/crypto/aes.cpp \
-    src/crypto/sha512.cpp \
-    src/crypto/sha1.cpp \
-    src/crypto/sha256.cpp \
-    src/crypto/hmac_sha256.cpp \
-    src/crypto/ripemd160.cpp \
     src/main.cpp \
     src/miner.cpp \
     src/init.cpp \
     src/net.cpp \
     src/checkpoints.cpp \
     src/addrman.cpp \
-    src/db.cpp \
-    src/leveldb.cpp \
+    src/base58.cpp \
     src/txdb.cpp \
+    src/db.cpp \
     src/walletdb.cpp \
     src/qt/clientmodel.cpp \
     src/qt/guiutil.cpp \
@@ -371,6 +361,12 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/noui.cpp \
     src/kernel.cpp \
     src/pbkdf2.cpp \
+    src/crypto/aes.cpp \
+    src/crypto/sha256.cpp \
+    src/crypto/hmac_sha256.cpp \
+    src/crypto/sha512.cpp \
+    src/crypto/ripemd160.cpp \
+    src/crypto/sha1.cpp \
     src/crypto/blake.c \
     src/crypto/bmw.c \
     src/crypto/groestl.c \

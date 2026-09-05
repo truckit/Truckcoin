@@ -6,7 +6,6 @@
 #ifndef BITCOIN_UTIL_H
 #define BITCOIN_UTIL_H
 
-#include <inttypes.h>
 #include "uint256.h"
 
 #ifndef WIN32
@@ -17,6 +16,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <inttypes.h>
 
 #include <boost/thread.hpp>
 #include <boost/filesystem.hpp>
@@ -32,7 +32,6 @@
 static const int64_t COIN = 1000000;
 static const int64_t CENT = 10000;
 
-// #define loop                for (;;)
 #define BEGIN(a)            ((char*)&(a))
 #define END(a)              ((char*)&((&(a))[1]))
 #define UBEGIN(a)           ((unsigned char*)&(a))
@@ -64,9 +63,6 @@ void LogStackTrace();
 #define PRIpdx    "tx"
 #define PRIpdu    "tu"
 #define PRIpdd    "td"
-
-// This is needed because the foreach macro can't get over the comma in pair<t1, t2>
-#define PAIRTYPE(t1, t2)    std::pair<t1, t2>
 
 // Align by increasing pointer, must have extra space at end of buffer
 template <size_t nBytes, typename T>
@@ -109,7 +105,7 @@ extern std::map<std::string, std::vector<std::string> > mapMultiArgs;
 extern bool fDebug;
 extern bool fDebugNet;
 extern bool fPrintToConsole;
-extern bool fPrintToDebugger;
+extern bool fPrintToDebugLog;
 extern bool fRequestShutdown;
 extern bool fShutdown;
 extern bool fDaemon;
@@ -178,7 +174,6 @@ bool WildcardMatch(const char* psz, const char* mask);
 bool WildcardMatch(const std::string& str, const std::string& mask);
 void FileCommit(FILE *fileout);
 int GetFilesize(FILE* file);
-void AllocateFileRange(FILE *file, unsigned int offset, unsigned int length);
 bool RenameOver(boost::filesystem::path src, boost::filesystem::path dest);
 boost::filesystem::path GetDefaultDataDir();
 const boost::filesystem::path &GetDataDir(bool fNetSpecific = true);
@@ -204,7 +199,7 @@ void runCommand(std::string strCommand);
 
 inline std::string i64tostr(int64_t n)
 {
-    return strprintf("%" PRId64, n);
+    return strprintf("%" PRId64 "", n);
 }
 
 inline std::string itostr(int n)
@@ -327,7 +322,6 @@ inline std::string DateTimeStrFormat(int64_t nTime)
 {
     return DateTimeStrFormat(strTimestampFormat.c_str(), nTime);
 }
-
 
 template<typename T>
 void skipspaces(T& it)

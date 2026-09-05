@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2013-2019 The Truckcoin developers
+// Copyright (c) 2013-2024 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -8,7 +8,6 @@
 #include "net.h"
 #include "util.h"
 #include "init.h"
-#include "strlcpy.h"
 #include "addrman.h"
 #include "ui_interface.h"
 
@@ -26,7 +25,7 @@
 using namespace std;
 using namespace boost;
 
-static const int MAX_OUTBOUND_CONNECTIONS = 16;
+static const int MAX_OUTBOUND_CONNECTIONS = 32;
 
 void ThreadMessageHandler2(void* parg);
 void ThreadSocketHandler2(void* parg);
@@ -47,10 +46,11 @@ struct LocalServiceInfo {
 //
 // Global state variables
 //
+bool fClient = false;
 bool fDiscover = true;
 bool fListen = true;
 bool fUseUPnP = false;
-uint64_t nLocalServices = NODE_NETWORK;
+uint64_t nLocalServices = (fClient ? 0 : NODE_NETWORK);
 static CCriticalSection cs_mapLocalHost;
 static map<CNetAddr, LocalServiceInfo> mapLocalHost;
 static bool vfReachable[NET_MAX] = {};
@@ -90,13 +90,18 @@ unsigned short GetListenPort()
 
 void CNode::PushGetBlocks(CBlockIndex* pindexBegin, uint256 hashEnd)
 {
-    // Filter out duplicate requests
-    if (pindexBegin == pindexLastGetBlocksBegin && hashEnd == hashLastGetBlocksEnd)
-        return;
-    pindexLastGetBlocksBegin = pindexBegin;
-    hashLastGetBlocksEnd = hashEnd;
+    uint nCurrentTime = (uint)GetTime();
+
+    /* Time limit for asking a particular peer */
+    if((nCurrentTime - 5U) < nGetblocksAskTime)
+      return;
+    else
+      nGetblocksAskTime = nCurrentTime;
 
     PushMessage("getblocks", CBlockLocator(pindexBegin), hashEnd);
+
+    printf("getblocks height %d sent to peer %s\n",
+      pindexBegin->nHeight, addr.ToString().c_str());
 }
 
 // find 'best' local address for a particular peer
@@ -363,7 +368,7 @@ bool GetMyExternalIP(CNetAddr& ipRet)
         //  <?php echo $_SERVER["REMOTE_ADDR"]; ?>
         if (nHost == 1)
         {
-            addrConnect = CService("216.146.43.71",80); // checkip.dyndns.org
+            addrConnect = CService("193.122.130.0",80); // checkip.dyndns.org
 
             if (nLookup == 1)
             {
@@ -382,7 +387,7 @@ bool GetMyExternalIP(CNetAddr& ipRet)
         }
         else if (nHost == 2)
         {
-            addrConnect = CService("108.61.29.222", 80); // ip.truckcoin.net
+            addrConnect = CService("23.158.40.11", 80); // ip.truckcoin.net
 
             if (nLookup == 1)
             {
@@ -482,7 +487,6 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, int64_t nTimeout)
             return pnode;
         }
     }
-
 
     /// debug print
     printf("trying connection %s lastseen=%.1fhrs\n",
@@ -628,6 +632,7 @@ void CNode::copyStats(CNodeStats &stats)
     X(strSubVer);
     X(fInbound);
     X(nReleaseTime);
+    X(nPingTime);
     X(nStartingHeight);
     X(nMisbehavior);
     X(nSendBytes); 
@@ -916,7 +921,6 @@ void ThreadSocketHandler2(void* parg)
             MilliSleep(timeout.tv_usec/1000);
         }
 
-
         //
         // Accept new connections
         //
@@ -974,7 +978,6 @@ void ThreadSocketHandler2(void* parg)
                 }
             }
         }
-
 
         //
         // Service each socket
@@ -1085,14 +1088,6 @@ void ThreadSocketHandler2(void* parg)
         MilliSleep(10);
     }
 }
-
-
-
-
-
-
-
-
 
 #ifdef USE_UPNP
 void ThreadMapPort(void* parg)
@@ -1312,22 +1307,6 @@ void ThreadDNSAddressSeed2(void* parg)
     printf("%d addresses found from DNS seeds\n", found);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-unsigned int pnSeed[] =
-{
-//	0x68FF4383, 0x6C3D125B, 0x45C5A17A,
-};
-
 void DumpAddresses()
 {
     int64_t nStart = GetTimeMillis();
@@ -1461,7 +1440,6 @@ void ThreadOpenConnections2(void* parg)
     }
 
     // Initiate network connections
-    int64_t nStart = GetTime();
     while (true)
     {
         ProcessOneShot();
@@ -1478,26 +1456,6 @@ void ThreadOpenConnections2(void* parg)
         vnThreadsRunning[THREAD_OPENCONNECTIONS]++;
         if (fShutdown)
             return;
-
-        // Add seed nodes
-        if (addrman.size()==0 && (GetTime() - nStart > 60) && !fTestNet)
-        {
-            std::vector<CAddress> vAdd;
-            for (unsigned int i = 0; i < ARRAYLEN(pnSeed); i++)
-            {
-                // It'll only connect to one or two seed nodes because once it connects,
-                // it'll get a pile of addresses with newer timestamps.
-                // Seed nodes are given a random 'last seen time' of between one and two
-                // weeks ago.
-                const int64_t nOneWeek = 7*24*60*60;
-                struct in_addr ip;
-                memcpy(&ip, &pnSeed[i], sizeof(ip));
-                CAddress addr(CService(ip, GetDefaultPort()));
-                addr.nTime = GetTime()-GetRand(nOneWeek)-nOneWeek;
-                vAdd.push_back(addr);
-            }
-            addrman.Add(vAdd, CNetAddr("127.0.0.1"));
-        }
 
         //
         // Choose an address to connect to based on most recently seen
@@ -1681,13 +1639,6 @@ bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOu
     return true;
 }
 
-
-
-
-
-
-
-
 void ThreadMessageHandler(void* parg)
 {
     // Make this thread recognisable as the message handling thread
@@ -1723,10 +1674,11 @@ void ThreadMessageHandler2(void* parg)
                 pnode->AddRef();
         }
 
-        // Poll the connected nodes for messages
-        CNode* pnodeTrickle = NULL;
-        if (!vNodesCopy.empty())
-            pnodeTrickle = vNodesCopy[GetRand(vNodesCopy.size())];
+        /* Random peer */
+        CNode *pnodeTrickle = NULL;
+        if(!vNodesCopy.empty())
+          pnodeTrickle = vNodesCopy[GetRand(vNodesCopy.size())];
+
         for (CNode* pnode : vNodesCopy)
         {
             if (pnode->fDisconnect)
@@ -2097,26 +2049,26 @@ void RelayTransaction(const CTransaction& tx, const uint256& hash, const CDataSt
     RelayInventory(inv);
 }
 
-void CNode::RecordBytesRecv(uint64_t bytes) 
-{ 
-    LOCK(cs_totalBytesRecv); 
-    nTotalBytesRecv += bytes; 
-} 
- 
-void CNode::RecordBytesSent(uint64_t bytes) 
-{ 
-    LOCK(cs_totalBytesSent); 
-    nTotalBytesSent += bytes; 
-} 
- 
-uint64_t CNode::GetTotalBytesRecv() 
-{ 
-    LOCK(cs_totalBytesRecv); 
-    return nTotalBytesRecv; 
-} 
- 
-uint64_t CNode::GetTotalBytesSent() 
-{ 
-    LOCK(cs_totalBytesSent); 
-    return nTotalBytesSent; 
-} 
+void CNode::RecordBytesRecv(uint64_t bytes)
+{
+    LOCK(cs_totalBytesRecv);
+    nTotalBytesRecv += bytes;
+}
+
+void CNode::RecordBytesSent(uint64_t bytes)
+{
+    LOCK(cs_totalBytesSent);
+    nTotalBytesSent += bytes;
+}
+
+uint64_t CNode::GetTotalBytesRecv()
+{
+    LOCK(cs_totalBytesRecv);
+    return nTotalBytesRecv;
+}
+
+uint64_t CNode::GetTotalBytesSent()
+{
+    LOCK(cs_totalBytesSent);
+    return nTotalBytesSent;
+}

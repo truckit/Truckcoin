@@ -15,7 +15,6 @@
 using namespace std;
 using namespace boost;
 
-
 static uint64_t nAccountingEntryNumber = 0;
 
 //
@@ -355,7 +354,7 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
         }
         else if (strType == "ckey")
         {
-		    wss.nCKeys++;
+            wss.nCKeys++;
             vector<unsigned char> vchPubKey;
             ssKey >> vchPubKey;
             vector<unsigned char> vchPrivKey;
@@ -390,11 +389,11 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
         {
             int64_t nIndex;
             ssKey >> nIndex;
-			CKeyPool keypool;
-			ssValue >> keypool;
+            CKeyPool keypool;
+            ssValue >> keypool;
             pwallet->setKeyPool.insert(nIndex);
-			
-			              // If no metadata exists yet, create a default with the pool key's
+
+            // If no metadata exists yet, create a default with the pool key's
             // creation time. Note that this may be overwritten by actually
             // stored metadata for that key later, which is fine.
             CKeyID keyid = keypool.vchPubKey.GetID();
@@ -619,7 +618,9 @@ bool BackupWallet(const CWallet& wallet, const string& strDest)
                     pathDest /= wallet.strWalletFile;
 
                 try {
-#if BOOST_VERSION >= 104000
+#if BOOST_VERSION >= 107400
+                    boost::filesystem::copy_file(pathSrc, pathDest, boost::filesystem::copy_options::overwrite_existing);
+#elif BOOST_VERSION >= 104000
                     boost::filesystem::copy_file(pathSrc, pathDest, boost::filesystem::copy_option::overwrite_if_exists);
 #else
                     boost::filesystem::copy_file(pathSrc, pathDest);
@@ -774,7 +775,6 @@ bool DumpWallet(CWallet* pwallet, const string& strDest)
      }
    return false;
 }
-
 
 bool ImportWallet(CWallet *pwallet, const string& strLocation)
 {

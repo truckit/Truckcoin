@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2012 Bitcoin Developers
-// Copyright (c) 2013-2019 The Truckcoin developers
+// Copyright (c) 2013-2024 The Truckcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -54,9 +54,14 @@ Value getpeerinfo(const Array& params, bool fHelp)
 
         obj.push_back(Pair("addr", stats.addrName));
         obj.push_back(Pair("services", strprintf("%08" PRIx64, stats.nServices)));
-        obj.push_back(Pair("lastsend", (int64_t)stats.nLastSend));
-        obj.push_back(Pair("lastrecv", (int64_t)stats.nLastRecv));
-        obj.push_back(Pair("conntime", (int64_t)stats.nTimeConnected));
+        obj.push_back(Pair("lastsend", DateTimeStrFormat(stats.nLastSend)));
+        obj.push_back(Pair("lastrecv", DateTimeStrFormat(stats.nLastRecv)));
+        obj.push_back(Pair("conntime", DateTimeStrFormat(stats.nTimeConnected)));
+        if(stats.nPingTime < (~0U - 1U)) {
+            obj.push_back(Pair("pingtime", strprintf("%u ms", stats.nPingTime)));
+        } else {
+            obj.push_back(Pair("pingtime", "invalid"));
+        }
         obj.push_back(Pair("bytessent", (int64_t)stats.nSendBytes)); 
         obj.push_back(Pair("bytesrecv", (int64_t)stats.nRecvBytes)); 
         obj.push_back(Pair("blocksrequested", (int64_t)stats.nBlocksRequested)); 
@@ -139,17 +144,17 @@ Value sendalert(const Array& params, bool fHelp)
     return result;
 }
 
-Value getnettotals(const Array& params, bool fHelp) 
-{ 
-    if (fHelp || params.size() > 0) 
-        throw runtime_error( 
-            "getnettotals\n" 
-            "Returns information about network traffic, including bytes in, bytes out,\n" 
-            "and current time."); 
- 
-    Object obj; 
-    obj.push_back(Pair("totalbytesrecv", static_cast<uint64_t>(CNode::GetTotalBytesRecv()))); 
-    obj.push_back(Pair("totalbytessent", static_cast<uint64_t>(CNode::GetTotalBytesSent()))); 
-    obj.push_back(Pair("timemillis", static_cast<int64_t>(GetTimeMillis()))); 
-    return obj; 
-} 
+Value getnettotals(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() > 0)
+        throw runtime_error(
+            "getnettotals\n"
+            "Returns information about network traffic, including bytes in, bytes out,\n"
+            "and current time.");
+
+    Object obj;
+    obj.push_back(Pair("totalbytesrecv", static_cast<uint64_t>(CNode::GetTotalBytesRecv())));
+    obj.push_back(Pair("totalbytessent", static_cast<uint64_t>(CNode::GetTotalBytesSent())));
+    obj.push_back(Pair("timemillis", static_cast<int64_t>(GetTimeMillis())));
+    return obj;
+}

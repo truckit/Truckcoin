@@ -98,7 +98,7 @@ CoinControlDialog::CoinControlDialog(QWidget *parent) :
 #if QT_VERSION < 0x050000
     ui->treeWidget->header()->setClickable(true);
 #else 
-    ui->treeWidget->header()->setSectionsClickable(true); 
+	ui->treeWidget->header()->setSectionsClickable(true); 
 #endif 
 
     connect(ui->treeWidget->header(), SIGNAL(sectionClicked(int)), this, SLOT(headerSectionClicked(int)));
@@ -131,12 +131,12 @@ CoinControlDialog::CoinControlDialog(QWidget *parent) :
     sortView(COLUMN_AMOUNT_INT64, Qt::DescendingOrder);
 
     // combo box to select coin filter 
-    ui->QComboBoxFilterCoins->addItem("Amount <");
-    ui->QComboBoxFilterCoins->addItem("Amount >");
-    ui->QComboBoxFilterCoins->addItem("Weight <");
-    ui->QComboBoxFilterCoins->addItem("Weight >");
-    ui->QComboBoxFilterCoins->addItem("Age <");
-    ui->QComboBoxFilterCoins->addItem("Age >");
+    ui->QComboBoxFilterCoins->addItem("Amount <"); 
+    ui->QComboBoxFilterCoins->addItem("Amount >"); 
+    ui->QComboBoxFilterCoins->addItem("Weight <"); 
+    ui->QComboBoxFilterCoins->addItem("Weight >"); 
+    ui->QComboBoxFilterCoins->addItem("Age <"); 
+    ui->QComboBoxFilterCoins->addItem("Age >"); 	
 }
 
 CoinControlDialog::~CoinControlDialog()
@@ -232,7 +232,7 @@ void CoinControlDialog::customSelectCoins()
 
     //selecting the coins 
         if (strComboText == "Amount <") 
-        { 
+        {
             if (dCoinAmount < dUserAmount * COIN) 
             {
                 COutPoint outpt(txhash, out.i); 
@@ -449,7 +449,7 @@ void CoinControlDialog::headerSectionClicked(int logicalIndex)
             logicalIndex = COLUMN_AMOUNT_INT64;
 
         if (logicalIndex == COLUMN_AGE) // sort by age 
-            logicalIndex = COLUMN_AGE_INT64;
+            logicalIndex = COLUMN_AGE_INT64;	 
  
         if (logicalIndex == COLUMN_PRIORITY) // sort by priority
             logicalIndex = COLUMN_PRIORITY_INT64;
@@ -554,16 +554,16 @@ void CoinControlDialog::updateLabels(WalletModel *model, QDialog* dialog)
         }
     }
 
-    QString sPriorityLabel      = "";
-    int64_t nAmount             = 0;
-    int64_t nPayFee             = 0;
-    int64_t nAfterFee           = 0;
-    int64_t nChange             = 0;
-    unsigned int nBytes         = 0;
-    unsigned int nBytesInputs   = 0;
-    double dPriority            = 0;
-    double dPriorityInputs      = 0;
-    unsigned int nQuantity      = 0;
+    QString sPriorityLabel        = "";
+    int64_t nAmount               = 0;
+    int64_t nPayFee               = 0;
+    int64_t nAfterFee             = 0;
+    int64_t nChange               = 0;
+    unsigned int nBytes           = 0;
+    unsigned int nBytesInputs     = 0;
+    double dPriority              = 0;
+    double dPriorityInputs        = 0;
+    unsigned int nQuantity        = 0;
     
     vector<COutPoint> vCoinControl;
     vector<COutput>   vOutputs;
@@ -612,7 +612,7 @@ void CoinControlDialog::updateLabels(WalletModel *model, QDialog* dialog)
         int64_t nMinFee = txDummy.GetMinFee(1, false, GMF_SEND, nBytes);
         
         nPayFee = max(nFee, nMinFee);
-        
+
         if(pwalletMain->fSplitBlock) 
         { 
             nPayFee = COIN / 1000; // make the fee more expensive if using splitblock, this avoids having to calc fee based on multiple vouts 
@@ -836,12 +836,12 @@ void CoinControlDialog::updateView()
             nInputSum    += nInputSize;
 
             // List Mode Weight 
-            itemOutput->setText(COLUMN_WEIGHT, strPad(QString::number(nDisplayWeight), 8, " ")); 
+            itemOutput->setText(COLUMN_WEIGHT, strPad(QString::number(nDisplayWeight), 8, " "));
 
             // Age 
             int64_t age = COIN * (GetTime() - nTime) / (1440 * 60); 
-            itemOutput->setText(COLUMN_AGE, strPad(BitcoinUnits::formatAge(nDisplayUnit, age), 2, " ")); 
-            itemOutput->setText(COLUMN_AGE_INT64, strPad(QString::number(age), 15, " ")); 
+            itemOutput->setText(COLUMN_AGE, strPad(BitcoinUnits::formatAge(nDisplayUnit, age), 2, " "));
+            itemOutput->setText(COLUMN_AGE_INT64, strPad(QString::number(age), 15, " "));
            
             // transaction hash
             uint256 txhash = out.tx->GetHash();

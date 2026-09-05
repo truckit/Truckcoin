@@ -9,11 +9,11 @@
 
 #include <string>
 
-static bool noui_ThreadSafeMessageBox(const std::string& message, const std::string& caption, int style)
+static int noui_ThreadSafeMessageBox(const std::string& message, const std::string& caption, int style)
 {
     printf("%s: %s\n", caption.c_str(), message.c_str());
     fprintf(stderr, "%s: %s\n", caption.c_str(), message.c_str());
-    return false;
+    return 4;
 }
 
 static bool noui_ThreadSafeAskFee(int64_t nFeeRequired, const std::string& strCaption)
